@@ -2,16 +2,52 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>net.wagstrom.research.github</groupId>
+  <groupId>net.wagstrom.research</groupId>
   <artifactId>github</artifactId>
   <version>0.1-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>github</name>
-  <url>http://maven.apache.org</url>
+  <description>A collection of tools for mining archival data from GitHub using
+    the GitHub public APIs
+  </description>
+  <url>http://academic.patrick.wagstrom.net/projects/github</url>
+  <inceptionYear>2011</inceptionYear>
+  <developers>
+    <developer>
+      <name>Patrick Wagstrom</name>
+      <email>patrick@wagstrom.net</email>
+      <url>http://patrick.wagstrom.net/</url>
+    </developer>
+    <developer>
+      <name>Corey Jergensen</name>
+      <email>corey.jergensen@gmail.com</email>
+    </developer>
+  </developers>
+
+  <!--
+    We need another repository because github-java-sdk is not in a maven repo.
+    After compiling the code with ant, the following command was used to generate
+    the maven stuff which was uploaded to my server.
+
+    mvn deploy:deploy-file  -DgroupId=com.github.api.v2 -DartifactId=github-java-sdk -Dversion=patrick-1.35 -DgeneratePom=true -Dpackaging=jar -Dfile=github-java-sdk-patrick-1.35.jar -DrepositoryId=external_free -Durl=file://.
+  -->
+  <repositories>
+    <repository>
+        <id>wagstrom-net-external_free</id>
+        <url>http://patrick.wagstrom.net/maven/external_free</url>
+        <releases>
+            <updatePolicy>never</updatePolicy>
+        </releases>
+        <snapshots>
+            <updatePolicy>never</updatePolicy>
+        </snapshots>
+    </repository>
+  </repositories>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <github-java-sdk-version>patrick-1.35</github-java-sdk-version>
   </properties>
 
   <dependencies>
@@ -21,5 +57,51 @@
       <version>3.8.1</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.github.api.v2</groupId>
+      <artifactId>github-java-sdk</artifactId>
+      <version>${github-java-sdk-version}</version>
+    </dependency>
   </dependencies>
+
+  <build>
+    <directory>${basedir}/target</directory>
+    <finalName>${project.artifactId}-${project.version}</finalName>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.3.2</version>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <descriptors>
+            <descriptor>src/assembly/standalone.xml</descriptor>
+            <!-- <descriptor>src/assembly/distribution.xml</descriptor> -->
+          </descriptors>
+          <finalName>${project.artifactId}-${project.version}</finalName>
+          <outputDirectory>target</outputDirectory>
+          <workDirectory>target/assembly/work</workDirectory>
+          <tarLongFileMode>warn</tarLongFileMode>
+          <archive>
+            <manifest>
+              <mainClass>net.wagstrom.research.github.Github</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>
