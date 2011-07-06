@@ -3,11 +3,11 @@
 # Getting Going
 This project uses Apache Maven to manage all dependencies and versioning. The
 simplest way to get going is to run the following command:
-    mvn clean compile assembly:single
+    mvn clean compile package assembly:single
 
-This will clean the source tream, compile the code, and finally copy all the
-libraries to a location that makes some modicum of sense. Then to run the
-mining scripts just run:
+This will clean the source tree, compile the code, run the tests, package the
+code into a jar file, and finally copy all the libraries to a location that
+makes some modicum of sense. Then to run the mining scripts just run:
     ./github.sh
 
 # Configuration

@@ -12,7 +12,7 @@
             <fileMode>0755</fileMode>
         </fileSet>
         <fileSet>
-            <directory>target/classes</directory>
+            <directory>target/*.jar</directory>
             <outputDirectory>/lib</outputDirectory>
         </fileSet>
     </fileSets>

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CP=$( echo `dirname $0`/../lib/*.jar . | sed 's/ /:/g')
-CP=$CP:$(dirname $0)/../lib
+# CP=$CP:$(dirname $0)/../lib
 #echo $CP
 
 # Find Java
