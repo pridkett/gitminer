@@ -48,6 +48,8 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <github-java-sdk-version>patrick-1.35</github-java-sdk-version>
+    <slf4j-version>1.6.1</slf4j-version>
+    <gson-version>1.7.1</gson-version>
   </properties>
 
   <dependencies>
@@ -61,6 +63,22 @@
       <groupId>com.github.api.v2</groupId>
       <artifactId>github-java-sdk</artifactId>
       <version>${github-java-sdk-version}</version>
+    </dependency>
+    <!-- the maven repo for github-java-sdk does not contain all the dependencies -->
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>${gson-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>${slf4j-version}</version>
     </dependency>
   </dependencies>
 
