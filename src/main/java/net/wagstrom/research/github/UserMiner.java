@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 
 import com.github.api.v2.schema.User;
 import com.github.api.v2.services.UserService;
-import com.tinkerpop.blueprints.pgm.Graph;
 
 public class UserMiner {
 	private UserService service = null;
@@ -40,9 +39,9 @@ public class UserMiner {
 	 * @param graph
 	 * @return
 	 */
-	public User getUserInformation(String username, Graph graph) {
+	public User getUserInformation(String username) {
 		User user = service.getUserByUsername(username);
-		log.info(user.getEmail());
+		log.debug("Fetched user: " + username + " email: " + user.getEmail());
 		return user;
 	}
 }

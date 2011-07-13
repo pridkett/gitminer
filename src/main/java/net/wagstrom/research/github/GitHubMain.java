@@ -22,9 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.api.v2.services.GitHubServiceFactory;
-import com.tinkerpop.blueprints.pgm.Graph;
-import com.tinkerpop.blueprints.pgm.IndexableGraph;
-import com.tinkerpop.blueprints.pgm.impls.neo4j.Neo4jGraph;
 
 /**
  * Main driver class for GitHub data processing.
@@ -65,35 +62,33 @@ public class GitHubMain {
 			System.exit(1);
 		}
 		
-		IndexableGraph graph = connectToGraph(p);
+		BlueprintsDriver bp = connectToGraph(p);
+
 		RepositoryMiner rm = new RepositoryMiner(factory.createRepositoryService());
 		for (String proj : projects) {
 			String [] projsplit = proj.split("/");
-			rm.getRepositoryInformation(projsplit[0], projsplit[1], graph);
+			bp.saveRepository(rm.getRepositoryInformation(projsplit[0], projsplit[1]));
 		}
 	
 		UserMiner um = new UserMiner(factory.createUserService());
 		for (String user : users) {
-			um.getUserInformation(user, graph);
+			bp.saveUser(um.getUserInformation(user));
 		}
 		
 		log.info("Shutting down graph");
-		graph.shutdown();
+		bp.shutdown();
 	}
 	
-	private IndexableGraph connectToGraph(Properties p) {
-		IndexableGraph graph = null;
+	private BlueprintsDriver connectToGraph(Properties p) {
+		BlueprintsDriver bp = null;
 		
 		try {
-			String dbapi = p.getProperty("net.wagstrom.research.github.dbengine").trim();
+			String dbengine = p.getProperty("net.wagstrom.research.github.dbengine").trim();
 			String dburl = p.getProperty("net.wagstrom.research.github.dburl").trim();
-			if (dbapi.toLowerCase().equals("neo4j")) {
-				log.info("opening neo4j graph at " + dburl);
-				graph = new Neo4jGraph(dburl);
-			}
+			bp = new BlueprintsDriver(dbengine, dburl);
 		} catch (NullPointerException e) {
 			log.error("properties undefined, must define both net.wagstrom.research.github.dbengine and net.wagstrom.research.github.dburl");
 		}
-		return graph;
+		return bp;
 	}
 }

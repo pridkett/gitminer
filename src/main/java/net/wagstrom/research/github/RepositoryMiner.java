@@ -20,12 +20,6 @@ import org.slf4j.LoggerFactory;
 
 import com.github.api.v2.schema.Repository;
 import com.github.api.v2.services.RepositoryService;
-import com.github.api.v2.services.UserService;
-import com.tinkerpop.blueprints.pgm.Element;
-import com.tinkerpop.blueprints.pgm.Graph;
-import com.tinkerpop.blueprints.pgm.Index;
-import com.tinkerpop.blueprints.pgm.IndexableGraph;
-import com.tinkerpop.blueprints.pgm.Vertex;
 
 public class RepositoryMiner {
 	private RepositoryService service = null;
@@ -36,42 +30,9 @@ public class RepositoryMiner {
 		log = LoggerFactory.getLogger(this.getClass());
 	}
 	
-	public Repository getRepositoryInformation(String username, String reponame, IndexableGraph graph) {
+	public Repository getRepositoryInformation(String username, String reponame) {
 		Repository repo = service.getRepository(username, reponame);
-		Index<Vertex> repoidx = null;
-		for (Index<? extends Element> idx : graph.getIndices()) {
-			log.debug("Found index name: " + idx.getIndexName() + " class: " + idx.getIndexClass().toString());
-			if (idx.getIndexName().equals("repo-idx") && Vertex.class.isAssignableFrom(idx.getIndexClass())) {
-				log.debug("Found matching index in database");
-				repoidx = (Index<Vertex>) idx; // ignore warning - we've checked for it
-				break;
-			}
-		}
-		if (repoidx == null) {
-			repoidx = graph.createManualIndex("repo-idx", Vertex.class);
-		}
-		
-		Vertex node = null;
-		Iterable<Vertex> results = repoidx.get("name", repo.getName());
-		for (Vertex v : results) {
-			node = v;
-		}
-		if (node == null) {
-			node = graph.addVertex(null);
-			repoidx.put("name", repo.getName(), node);
-		}
-		
-		node.setProperty("name", repo.getName());
-		if (repo.getParent() != null) {
-			node.setProperty("parent", repo.getParent());
-		}
-		if (repo.getSource() != null) {
-			node.setProperty("source", repo.getSource());
-		}
-		
-		log.info(repo.getName());
-		log.info(repo.getParent());	
-		log.info(repo.getSource());
+		log.debug("Fetched repository: " + username + "/" + reponame);
 		return repo;
 	}
 
