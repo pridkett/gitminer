@@ -47,13 +47,13 @@ public class Github {
 			System.exit(1);
 		}
 		
-		RepositoryMiner rm = new RepositoryMiner(factory.createRepositoryService());
-		for (String proj : projects) {
-			String [] projsplit = proj.split("/");
-			rm.getRepositoryInformation(projsplit[0], projsplit[1]);
-		}
+//		RepositoryMiner rm = new RepositoryMiner(factory.createRepositoryService());
+//		for (String proj : projects) {
+//			String [] projsplit = proj.split("/");
+//			rm.getRepositoryInformation(projsplit[0], projsplit[1]);
+//		}
 	
-		UserMiner um = new UserMiner(factory.createUserService());
+		UserMiner um = new UserMiner(ThrottledGitHubInvocationHandler.createThrottledUserService(factory.createUserService()));
 		for (String user : users) {
 			um.getUserInformation(user);
 		}
