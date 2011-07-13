@@ -23,6 +23,7 @@ public class Github {
 	public static void main(String[] args) {
         Logger log = LoggerFactory.getLogger(Github.class);
 
+        ApiThrottle throttle = new ApiThrottle();
 		ArrayList <String> projects = new ArrayList<String> ();
 		ArrayList <String> users = new ArrayList<String> ();
 		GitHubServiceFactory factory = GitHubServiceFactory.newInstance();
@@ -53,7 +54,7 @@ public class Github {
 //			rm.getRepositoryInformation(projsplit[0], projsplit[1]);
 //		}
 	
-		UserMiner um = new UserMiner(ThrottledGitHubInvocationHandler.createThrottledUserService(factory.createUserService()));
+		UserMiner um = new UserMiner(ThrottledGitHubInvocationHandler.createThrottledUserService(factory.createUserService(), throttle));
 		for (String user : users) {
 			um.getUserInformation(user);
 		}

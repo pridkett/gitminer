@@ -12,24 +12,25 @@ import com.github.api.v2.services.UserService;
 
 public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 	GitHubService wrapped;
+	ApiThrottle throttle;
 	private Logger log;
 	
-	public ThrottledGitHubInvocationHandler(GitHubService s) {
+	public ThrottledGitHubInvocationHandler(GitHubService s, ApiThrottle t) {
 		wrapped = s;
+		throttle = t;
 		log = LoggerFactory.getLogger(ThrottledGitHubInvocationHandler.class);
 	}
 	
 	public Object invoke(Object proxy, Method method, Object[] args)
 			throws Throwable {
-		// TODO Auto-generated method stub
 		log.info("Method invoked: " + method.getName());
-		return null;
-		// return method.invoke(wrapped, args);
+		throttle.callWait();
+		return method.invoke(wrapped, args);
 	}
 
-	public static UserService createThrottledUserService(UserService toWrap) {
+	public static UserService createThrottledUserService(UserService toWrap, ApiThrottle throttle) {
         return (UserService)(Proxy.newProxyInstance(UserService.class.getClassLoader(),
                 new Class[] {UserService.class},
-                    new ThrottledGitHubInvocationHandler(toWrap)));
+                    new ThrottledGitHubInvocationHandler(toWrap, throttle)));
 	}
 }
