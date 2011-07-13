@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.api.v2.services.GitHubService;
+import com.github.api.v2.services.RepositoryService;
 import com.github.api.v2.services.UserService;
 
 public class ThrottledGitHubInvocationHandler implements InvocationHandler {
@@ -32,5 +33,11 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
         return (UserService)(Proxy.newProxyInstance(UserService.class.getClassLoader(),
                 new Class[] {UserService.class},
                     new ThrottledGitHubInvocationHandler(toWrap, throttle)));
+	}
+	
+	public static RepositoryService createThrottledRepositoryService(RepositoryService toWrap, ApiThrottle throttle) {
+        return (RepositoryService)(Proxy.newProxyInstance(RepositoryService.class.getClassLoader(),
+                new Class[] {RepositoryService.class},
+                    new ThrottledGitHubInvocationHandler(toWrap, throttle)));		
 	}
 }

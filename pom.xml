@@ -43,6 +43,11 @@
             <updatePolicy>never</updatePolicy>
         </snapshots>
     </repository>
+    <repository>
+      <id>tinkerpop-repository</id>
+      <name>TinkerPop Maven2 Repository</name>
+      <url>http://tinkerpop.com/maven2</url>
+    </repository>
   </repositories>
 
   <properties>
@@ -50,6 +55,7 @@
     <github-java-sdk-version>patrick-1.35</github-java-sdk-version>
     <slf4j-version>1.6.1</slf4j-version>
     <gson-version>1.7.1</gson-version>
+    <blueprints-version>0.8</blueprints-version>
   </properties>
 
   <dependencies>
@@ -79,6 +85,11 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
       <version>${slf4j-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.tinkerpop.blueprints</groupId>
+      <artifactId>blueprints-neo4j-graph</artifactId>
+      <version>${blueprints-version}</version>
     </dependency>
   </dependencies>
 
