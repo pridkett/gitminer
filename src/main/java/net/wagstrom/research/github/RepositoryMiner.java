@@ -15,10 +15,13 @@
  */
 package net.wagstrom.research.github;
 
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.api.v2.schema.Repository;
+import com.github.api.v2.schema.User;
 import com.github.api.v2.services.RepositoryService;
 
 public class RepositoryMiner {
@@ -35,5 +38,24 @@ public class RepositoryMiner {
 		log.debug("Fetched repository: " + username + "/" + reponame);
 		return repo;
 	}
+	
+	public List<String> getRepositoryCollaborators(String username, String reponame) {
+		List<String> collabs = service.getCollaborators(username, reponame);
+		log.debug("Fetched collaborators: " + username + "/" + reponame + " number: " + collabs.size());
+		return collabs;
+	}
+	
+	public List<User> getRepositoryContributors(String username, String reponame) {
+		List<User> contributors = service.getContributors(username, reponame);
+		log.debug("Fetched contributors: " + username + "/" + reponame + " number: " + contributors.size());
+		return contributors;
+	}
+	
+	public List<Repository> getUserRepositories(String username) {
+		List<Repository> repos = service.getRepositories(username);
+		log.debug("Fetched repositories for user: " + username + " number: " + repos.size());
+		return repos;
+	}
+	
 
 }

@@ -15,9 +15,12 @@
  */
 package net.wagstrom.research.github;
 
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.api.v2.schema.Repository;
 import com.github.api.v2.schema.User;
 import com.github.api.v2.services.UserService;
 
@@ -43,5 +46,29 @@ public class UserMiner {
 		User user = service.getUserByUsername(username);
 		log.debug("Fetched user: " + username + " email: " + user.getEmail());
 		return user;
+	}
+	
+	/**
+	 * Gets the followers of the user
+	 * 
+	 * @param username the username to fetch
+	 * @return a List of the users
+	 */
+	public List<String> getUserFollowers(String username) {
+		List<String> rv = service.getUserFollowers(username);
+		log.debug("Fetched users followers: " + username + " number: " + rv.size());
+		return rv;
+	}
+	
+	public List<String> getUserFollowing(String username) {
+		List<String> rv = service.getUserFollowing(username);
+		log.debug("Fetched users following: " + username + " number: " + rv.size());
+		return rv;
+	}
+	
+	public List<Repository> getWatchedRepositories (String username) {
+		List <Repository> rv = service.getWatchedRepositories(username);
+		log.debug("Fetched watched repositories: " + username + " number: " + rv.size());
+		return rv;
 	}
 }

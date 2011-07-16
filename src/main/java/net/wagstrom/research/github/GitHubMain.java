@@ -69,11 +69,17 @@ public class GitHubMain {
 		for (String proj : projects) {
 			String [] projsplit = proj.split("/");
 			bp.saveRepository(rm.getRepositoryInformation(projsplit[0], projsplit[1]));
+			bp.saveRepositoryCollaborators(proj, rm.getRepositoryCollaborators(projsplit[0], projsplit[1]));
+			bp.saveRepositoryContributors(proj, rm.getRepositoryContributors(projsplit[0], projsplit[1]));
 		}
 	
 		UserMiner um = new UserMiner(ThrottledGitHubInvocationHandler.createThrottledUserService(factory.createUserService(), throttle));
 		for (String user : users) {
 			bp.saveUser(um.getUserInformation(user));
+			bp.saveUserFollowers(user, um.getUserFollowers(user));
+			bp.saveUserFollowing(user, um.getUserFollowing(user));
+			bp.saveUserWatchedRepositories(user, um.getWatchedRepositories(user));
+			bp.saveUserRepositories(user, rm.getUserRepositories(user));
 		}
 		
 		log.info("Shutting down graph");
