@@ -26,11 +26,8 @@
   </developers>
 
   <!--
-    We need another repository because github-java-sdk is not in a maven repo.
-    After compiling the code with ant, the following command was used to generate
-    the maven stuff which was uploaded to my server.
-
-    mvn deploy:deploy-file  -DgroupId=com.github.api.v2 -DartifactId=github-java-sdk -Dversion=patrick-1.35 -DgeneratePom=true -Dpackaging=jar -Dfile=github-java-sdk-patrick-1.35.jar -DrepositoryId=external_free -Durl=file://.
+    We need another repository because github-java-sdk is not in a maven repo. I've pushed it
+    to my maven repo.
   -->
   <repositories>
     <repository>
@@ -52,10 +49,10 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <github-java-sdk-version>patrick-1.35</github-java-sdk-version>
+    <github-java-sdk-version>0.1</github-java-sdk-version>
     <slf4j-version>1.6.1</slf4j-version>
-    <gson-version>1.7.1</gson-version>
     <blueprints-version>0.8</blueprints-version>
+    <junit-version>3.8.1</junit-version>
   </properties>
 
   <dependencies>
@@ -69,12 +66,6 @@
       <groupId>com.github.api.v2</groupId>
       <artifactId>github-java-sdk</artifactId>
       <version>${github-java-sdk-version}</version>
-    </dependency>
-    <!-- the maven repo for github-java-sdk does not contain all the dependencies -->
-    <dependency>
-      <groupId>com.google.code.gson</groupId>
-      <artifactId>gson</artifactId>
-      <version>${gson-version}</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
