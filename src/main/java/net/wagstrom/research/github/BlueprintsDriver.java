@@ -16,7 +16,6 @@
 
 package net.wagstrom.research.github;
 
-import java.lang.Exception;
 import java.util.List;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -285,7 +284,6 @@ public class BlueprintsDriver {
 	 * @return
 	 */
 	public Set<String> getVertexHelper(double age, String idxname, String vtxtype, String fieldname) {
-		Index <Vertex> useridx = (Index <Vertex>)getOrCreateIndex(idxname);
 		Set<String> s = new HashSet<String>();
 		// FIXME: How do we get all of the values from an index?
 		// Right now we iterate over all of the nodes, which is CRAPTASTIC

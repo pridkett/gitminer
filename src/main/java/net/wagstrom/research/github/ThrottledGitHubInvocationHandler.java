@@ -3,6 +3,9 @@ package net.wagstrom.research.github;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +18,9 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 	GitHubService wrapped;
 	ApiThrottle throttle;
 	private Logger log;
+	// this acts as a shared white list of methods that don't get throttled
+	private static final HashSet<String> methods = new HashSet<String>(Arrays.asList("getRateLimit", "getRateLimitRemaining", "getRequestHeaders"));
+	
 	
 	public ThrottledGitHubInvocationHandler(GitHubService s, ApiThrottle t) {
 		wrapped = s;
@@ -25,8 +31,13 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 	public Object invoke(Object proxy, Method method, Object[] args)
 			throws Throwable {
 		log.info("Method invoked: " + method.getName());
+		if (methods.contains(method.getName()))
+			return method.invoke(wrapped, args);
 		throttle.callWait();
-		return method.invoke(wrapped, args);
+		Object rv = method.invoke(wrapped, args);
+		throttle.setRateLimit(wrapped.getRateLimit());
+		throttle.setRateLimitRemaining(wrapped.getRateLimitRemaining());
+		return rv;
 	}
 
 	public static UserService createThrottledUserService(UserService toWrap, ApiThrottle throttle) {

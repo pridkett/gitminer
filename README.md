@@ -14,3 +14,22 @@ makes some modicum of sense. Then to run the mining scripts just run:
 Project configuration is controlled through the `configuration.properties`
 file in `src/main/resources`. Don't commit it with your github username
 and apitoken, that would be bad.
+
+Actually, right now it doesn't actually use those fields and it probably won't
+anytime in the future. So don't worry so much about that.
+
+# Explanation of fields
+Every Vertex in the database should have the following:
+* type: one of USER, REPOSITORY
+* created_at: ISO 8601 formatted date of when the node was created
+
+Every Edge in the database should have the followning fields:
+* label: not really a field, but always present
+* created_at: ISO 8601 formatted date of when the edge was created
+
+## User Vertex Fields
+
+## Repository Vertex Fields
+
+
+

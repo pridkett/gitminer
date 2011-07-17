@@ -16,6 +16,7 @@
 package net.wagstrom.research.github;
 
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,7 @@ public class RepositoryMiner {
 	
 	public List<Repository> getUserRepositories(String username) {
 		List<Repository> repos = service.getRepositories(username);
+		Map<String, String> headers = service.getRequestHeaders();
 		log.debug("Fetched repositories for user: " + username + " number: " + repos.size());
 		return repos;
 	}
