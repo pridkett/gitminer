@@ -21,7 +21,9 @@ import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.api.v2.services.GitHubException;
 import com.github.api.v2.services.GitHubServiceFactory;
+import com.github.api.v2.services.OrganizationService;
 
 /**
  * Main driver class for GitHub data processing.
@@ -41,6 +43,7 @@ public class GitHubMain {
 
 		ArrayList <String> projects = new ArrayList<String> ();
 		ArrayList <String> users = new ArrayList<String> ();
+		ArrayList <String> organizations = new ArrayList<String> ();
 		GitHubServiceFactory factory = GitHubServiceFactory.newInstance();
 		
 		Properties p = GithubProperties.props();
@@ -63,6 +66,15 @@ public class GitHubMain {
 			System.exit(1);
 		}
 		
+		try {
+			for (String organization : p.getProperty("net.wagstrom.research.github.organizations").split(",")){
+				organizations.add(organization.trim());
+			}
+		} catch (NullPointerException e) {
+			log.error("property net.wagstrom.research.github.organizations undefined");
+			System.exit(1);
+		}
+		
 		BlueprintsDriver bp = connectToGraph(p);
 
 		RepositoryMiner rm = new RepositoryMiner(ThrottledGitHubInvocationHandler.createThrottledRepositoryService(factory.createRepositoryService(), throttle));
@@ -71,6 +83,8 @@ public class GitHubMain {
 			bp.saveRepository(rm.getRepositoryInformation(projsplit[0], projsplit[1]));
 			bp.saveRepositoryCollaborators(proj, rm.getRepositoryCollaborators(projsplit[0], projsplit[1]));
 			bp.saveRepositoryContributors(proj, rm.getRepositoryContributors(projsplit[0], projsplit[1]));
+			bp.saveRepositoryWatchers(proj, rm.getWatchers(projsplit[0], projsplit[1]));
+			bp.saveRepositoryForks(proj, rm.getForks(projsplit[0], projsplit[1]));
 		}
 	
 		UserMiner um = new UserMiner(ThrottledGitHubInvocationHandler.createThrottledUserService(factory.createUserService(), throttle));
@@ -80,6 +94,20 @@ public class GitHubMain {
 			bp.saveUserFollowing(user, um.getUserFollowing(user));
 			bp.saveUserWatchedRepositories(user, um.getWatchedRepositories(user));
 			bp.saveUserRepositories(user, rm.getUserRepositories(user));
+		}
+	
+		ThrottledGitHubInvocationHandler.createThrottledOrganizationService(factory.createOrganizationService(), throttle);
+		
+		OrganizationMiner om = new OrganizationMiner(ThrottledGitHubInvocationHandler.createThrottledOrganizationService(factory.createOrganizationService(), throttle));
+		for (String organization : organizations) {
+			bp.saveOrganization(om.getOrganizationInformation(organization));
+//			try {
+//				bp.saveOrganizationOwners(organization, om.getOrganizationOwners(organization));
+//			} catch (Exception e) {
+//				log.error("Exception trying to get owners for organization: {} exception: {}", organization, e);
+//			}
+			bp.saveOrganizationPublicMembers(organization, om.getOrganizationPublicMembers(organization));
+			bp.saveOrganizationPublicRepositories(organization, om.getOrganizationPublicRepositories(organization));
 		}
 		
 		log.info("Shutting down graph");

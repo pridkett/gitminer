@@ -2,7 +2,6 @@ package net.wagstrom.research.github;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +43,7 @@ public class ApiThrottle {
 	 */
 	public void callWait() throws InterruptedException {
 		if (lastReset != null)
-			log.info("API Estimates: Limit: " + limit + " Remaining: " + limitRemaining + " Last Reset: " + dateFormatter.format(lastReset.getTime()));
+			log.info("API Estimates: Limit: {} Remaining: {} Last Reset: {}", new Object[] {limit, limitRemaining, dateFormatter.format(lastReset.getTime())});
 		if (limitRemaining < 1 && limit != -1) {
 			log.info("Going to try and wait a little bit...");
 			Calendar sleepEnd = (Calendar)lastReset.clone();
@@ -57,7 +56,7 @@ public class ApiThrottle {
 			sleepEnd.add(Calendar.SECOND, timeDiff);
 			long sleepTime = sleepEnd.getTimeInMillis() - Calendar.getInstance().getTimeInMillis();
 			if (sleepTime > 0) {
-				log.info("Sleeping for " + sleepTime + " milliseconds");
+				log.info("Sleeping for {}ms", sleepTime);
 				Thread.sleep(sleepTime);
 			} else {
 				log.info("Should be no reason to sleep");

@@ -16,7 +16,6 @@
 package net.wagstrom.research.github;
 
 import java.util.List;
-import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,28 +35,38 @@ public class RepositoryMiner {
 	
 	public Repository getRepositoryInformation(String username, String reponame) {
 		Repository repo = service.getRepository(username, reponame);
-		log.debug("Fetched repository: " + username + "/" + reponame);
+		log.debug("Fetched repository: {}/{}", username, reponame);
 		return repo;
 	}
 	
 	public List<String> getRepositoryCollaborators(String username, String reponame) {
 		List<String> collabs = service.getCollaborators(username, reponame);
-		log.debug("Fetched collaborators: " + username + "/" + reponame + " number: " + collabs.size());
+		log.debug("Fetched collaborators: {}/{} number: {}", new Object[] {username, reponame, collabs.size()});
 		return collabs;
 	}
 	
 	public List<User> getRepositoryContributors(String username, String reponame) {
 		List<User> contributors = service.getContributors(username, reponame);
-		log.debug("Fetched contributors: " + username + "/" + reponame + " number: " + contributors.size());
+		log.debug("Fetched contributors: {}/{} number: {}", new Object[] {username, reponame, contributors.size()});
 		return contributors;
 	}
 	
 	public List<Repository> getUserRepositories(String username) {
 		List<Repository> repos = service.getRepositories(username);
-		Map<String, String> headers = service.getRequestHeaders();
-		log.debug("Fetched repositories for user: " + username + " number: " + repos.size());
+		log.debug("Fetched repositories for user: {} number: {}", username, repos.size());
 		return repos;
 	}
 	
-
+	public List<String> getWatchers(String username, String reponame) {
+		List<String> watchers = service.getWatchers(username,  reponame);
+		log.debug("Fetched watchers for repository: {}/{} number: {}", new Object[] {username, reponame, watchers.size()});
+		return watchers;
+	}
+	
+	public List<Repository> getForks(String username, String reponame) {
+		List<Repository> forks = service.getForks(username, reponame);
+		log.debug("Fetched forks for repository: {}/{} number: {}", new Object[] {username, reponame, forks.size()});
+		return forks;
+	}
+	
 }

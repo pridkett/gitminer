@@ -44,7 +44,7 @@ public class UserMiner {
 	 */
 	public User getUserInformation(String username) {
 		User user = service.getUserByUsername(username);
-		log.debug("Fetched user: " + username + " email: " + user.getEmail());
+		log.debug("Fetched user: {} email: {}", username, user.getEmail());
 		return user;
 	}
 	
@@ -56,19 +56,19 @@ public class UserMiner {
 	 */
 	public List<String> getUserFollowers(String username) {
 		List<String> rv = service.getUserFollowers(username);
-		log.debug("Fetched users followers: " + username + " number: " + rv.size());
+		log.debug("Fetched users followers: {} number: {}", username, rv.size());
 		return rv;
 	}
 	
 	public List<String> getUserFollowing(String username) {
 		List<String> rv = service.getUserFollowing(username);
-		log.debug("Fetched users following: " + username + " number: " + rv.size());
+		log.debug("Fetched users following: {} number: {}", username, rv.size());
 		return rv;
 	}
 	
 	public List<Repository> getWatchedRepositories (String username) {
 		List <Repository> rv = service.getWatchedRepositories(username);
-		log.debug("Fetched watched repositories: " + username + " number: " + rv.size());
+		log.debug("Fetched watched repositories: {} number: {}", username, rv.size());
 		return rv;
 	}
 }
