@@ -16,14 +16,16 @@
 package net.wagstrom.research.github;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.api.v2.schema.Team;
 import com.github.api.v2.services.GitHubException;
 import com.github.api.v2.services.GitHubServiceFactory;
-import com.github.api.v2.services.OrganizationService;
+import com.google.gson.Gson;
 
 /**
  * Main driver class for GitHub data processing.
@@ -101,13 +103,29 @@ public class GitHubMain {
 		OrganizationMiner om = new OrganizationMiner(ThrottledGitHubInvocationHandler.createThrottledOrganizationService(factory.createOrganizationService(), throttle));
 		for (String organization : organizations) {
 			bp.saveOrganization(om.getOrganizationInformation(organization));
+			// This method fails when you're not an administrator of the organization
 //			try {
 //				bp.saveOrganizationOwners(organization, om.getOrganizationOwners(organization));
-//			} catch (Exception e) {
-//				log.error("Exception trying to get owners for organization: {} exception: {}", organization, e);
+//			} catch (GitHubException e) {
+//				Gson gson = new Gson();
+//				GitHubErrorPrimative primative = gson.fromJson(e.getMessage(), GitHubErrorPrimative.class);
+//				log.info("Unable to fetch owners: {}", primative.getError());
 //			}
 			bp.saveOrganizationPublicMembers(organization, om.getOrganizationPublicMembers(organization));
 			bp.saveOrganizationPublicRepositories(organization, om.getOrganizationPublicRepositories(organization));
+			// This fails when not an administrator of the organization
+//			try {
+//				List<Team> teams = om.getOrganizationTeams(organization);
+//				bp.saveOrganizationTeams(organization, teams);
+//				for (Team team : teams) {
+//					bp.saveTeamMembers(team.getId(), om.getOrganizationTeamMembers(team.getId()));
+//					bp.saveTeamRepositories(team.getId(), om.getOrganizationTeamRepositories(team.getId()));
+//				}
+//			} catch (GitHubException e) {
+//				Gson gson = new Gson();
+//				GitHubErrorPrimative primative = gson.fromJson(e.getMessage(), GitHubErrorPrimative.class);
+//				log.info("Unable to fetch teams: {}", primative.getError());
+//			}
 		}
 		
 		log.info("Shutting down graph");

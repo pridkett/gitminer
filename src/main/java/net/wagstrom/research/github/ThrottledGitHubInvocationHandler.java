@@ -1,8 +1,10 @@
 package net.wagstrom.research.github;
 
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.HashSet;
 
@@ -34,10 +36,18 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 		if (methods.contains(method.getName()))
 			return method.invoke(wrapped, args);
 		throttle.callWait();
-		Object rv = method.invoke(wrapped, args);
-		throttle.setRateLimit(wrapped.getRateLimit());
-		throttle.setRateLimitRemaining(wrapped.getRateLimitRemaining());
-		return rv;
+		try {
+			Object rv = method.invoke(wrapped, args);
+			throttle.setRateLimit(wrapped.getRateLimit());
+			throttle.setRateLimitRemaining(wrapped.getRateLimitRemaining());
+			return rv;
+		} catch (UndeclaredThrowableException e) {
+			log.error("Undeclared Throwable Exception (propagated):", e);
+			throw e.getCause();
+		} catch (InvocationTargetException e) {
+			log.error("Invocation target exception (propagated):", e);
+			throw e.getCause();
+		}
 	}
 
 	public static UserService createThrottledUserService(UserService toWrap, ApiThrottle throttle) {

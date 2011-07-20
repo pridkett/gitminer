@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import com.github.api.v2.schema.Organization;
 import com.github.api.v2.schema.Repository;
+import com.github.api.v2.schema.Team;
 import com.github.api.v2.schema.User;
 import com.github.api.v2.services.OrganizationService;
 
@@ -40,6 +41,24 @@ public class OrganizationMiner {
 	public List<Repository> getOrganizationPublicRepositories(String organization) {
 		List<Repository> repos = service.getPublicRepositories(organization);
 		log.debug("Fetched public repositories for organization: {} number: {}", organization, repos.size());
+		return repos;
+	}
+	
+	public List<Team> getOrganizationTeams(String organization) {
+		List<Team> teams = service.getTeams(organization);
+		log.debug("Fetched teams for organization: {} number: {}", organization, teams.size());
+		return teams;
+	}
+	
+	public List<User> getOrganizationTeamMembers(String teamId) {
+		List<User> users = service.getTeamMembers(teamId);
+		log.debug("Fetched organization team members for team: {} number: {}", teamId, users.size());
+		return users;
+	}
+	
+	public List<Repository> getOrganizationTeamRepositories(String teamId) {
+		List<Repository> repos = service.getTeamRepositories(teamId);
+		log.debug("Fetched organization repositories for team: {} number: {}", teamId, repos.size());
 		return repos;
 	}
 }

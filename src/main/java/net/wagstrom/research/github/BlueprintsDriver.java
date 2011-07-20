@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import com.github.api.v2.schema.Organization;
 import com.github.api.v2.schema.Repository;
+import com.github.api.v2.schema.Team;
 import com.github.api.v2.schema.User;
 import com.tinkerpop.blueprints.pgm.Edge;
 import com.tinkerpop.blueprints.pgm.Element;
@@ -51,19 +52,23 @@ public class BlueprintsDriver {
 	private static final String TYPE_USER = "USER";
 	private static final String TYPE_REPO = "REPOSITORY";
 	private static final String TYPE_ORGANIZATION = "ORGANIZATION";
+	private static final String TYPE_TEAM = "TEAM";
 	private static final String EDGE_FOLLOWER = "FOLLOWER";
 	private static final String EDGE_FOLLOWING = "FOLLOWING";
 	private static final String EDGE_ORGANIZATIONOWNER = "ORGANIZATION_OWNER";
 	private static final String EDGE_ORGANIZATIONMEMBER = "ORGANIZATION_MEMBER";
+	private static final String EDGE_ORGANIZATIONTEAM = "ORGANIZATION_TEAM";
 	private static final String EDGE_REPOWATCHED = "REPO_WATCHED";
 	private static final String EDGE_REPOOWNER = "REPO_OWNER";
 	private static final String EDGE_REPOCOLLABORATOR = "REPO_COLLABORATOR";
 	private static final String EDGE_REPOCONTRIBUTOR = "REPO_CONTRIBUTOR";
 	private static final String EDGE_REPOFORK = "REPO_FORK";
+	private static final String EDGE_TEAMMEMBER = "TEAM_MEMBER";
 	private static final String INDEX_USER = "user-idx";
 	private static final String INDEX_REPO = "repo-idx";
 	private static final String INDEX_TYPE = "type-idx";
 	private static final String INDEX_ORGANIZATION = "org-idx";
+	private static final String INDEX_TEAM = "team-idx";
 	private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
 	
 	private static final int COMMITMGR_COMMITS = 2000;
@@ -76,6 +81,7 @@ public class BlueprintsDriver {
 	private Index <Vertex> repoidx = null;
 	private Index <Vertex> typeidx = null;
 	private Index <Vertex> orgidx = null;
+	private Index <Vertex> teamidx = null;
 	
 	private CommitManager manager = null;
 	/**
@@ -100,6 +106,8 @@ public class BlueprintsDriver {
 		repoidx = (Index <Vertex>)getOrCreateIndex(INDEX_REPO);
 		typeidx = (Index <Vertex>)getOrCreateIndex(INDEX_TYPE);
 		orgidx = (Index <Vertex>)getOrCreateIndex(INDEX_ORGANIZATION);
+		teamidx = (Index <Vertex>)getOrCreateIndex(INDEX_TEAM);
+		
 		manager = TransactionalGraphHelper.createCommitManager((TransactionalGraph) graph, COMMITMGR_COMMITS);
 	}
 	
@@ -421,6 +429,25 @@ public class BlueprintsDriver {
 		return node;
 	}
 	
+	public Vertex getOrCreateTeam(String teamId) {
+		Vertex node = null;
+		Iterable<Vertex> resuls = teamidx.get("teamId", teamId);
+		for (Vertex v : resuls) {
+			node = v;
+			break;
+		}
+		if (node == null) {
+			node = graph.addVertex(null);
+			node.setProperty("type", TYPE_TEAM);
+			node.setProperty("teamId", teamId);
+			node.setProperty("created_at", dateFormatter.format(new Date()));
+			teamidx.put("teamId", teamId, node);
+			typeidx.put("type", TYPE_TEAM, node);
+			manager.incrCounter();
+		}
+		return node;
+	}
+	
 	/**
 	 * Saves a repository to the graph database.
 	 * 
@@ -487,6 +514,14 @@ public class BlueprintsDriver {
 		return node;
 	}
 
+	public Vertex saveTeam(Team team) {
+		Vertex node = getOrCreateTeam(team.getId());
+		if (team.getName() != null) node.setProperty("name", team.getName());
+		// getPermission
+		// getRepoNames
+		return node;
+	}
+	
 	protected Map<String, Vertex> saveOrganizationMembersHelper(String organization, List<User> owners, String edgetype) {
 		Vertex org = getOrCreateOrganization(organization);
 		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
@@ -514,12 +549,46 @@ public class BlueprintsDriver {
 	 * @return
 	 */
 	public Map<String, Vertex> saveOrganizationPublicRepositories(String organization, List<Repository> repositories) {
-		Vertex source = getOrCreateUser(organization);
+		Vertex source = getOrCreateOrganization(organization);
 		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
 		for (Repository repo : repositories) {
 			String projectFullName = repo.getUsername() + "/" + repo.getName();
 			Vertex reponode = saveRepository(repo);
 			createEdgeIfNotExist(null, source, reponode, EDGE_REPOOWNER);
+			mapper.put(projectFullName, reponode);
+		}
+		return mapper;
+	}
+	
+	public Map<String, Vertex> saveOrganizationTeams(String organization, List<Team> teams) {
+		Vertex org = getOrCreateOrganization(organization);
+		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
+		for (Team team: teams) {
+			Vertex teamnode = saveTeam(team);
+			createEdgeIfNotExist(null, org, teamnode, EDGE_ORGANIZATIONTEAM);
+			mapper.put(team.getId(), teamnode);
+		}
+		return mapper;
+	}
+	
+	public Map<String,Vertex> saveTeamMembers(String team, List<User> users) {
+		Vertex teamnode = getOrCreateTeam(team);
+		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
+		for (User user : users) {
+			Vertex usernode = saveUser(user);
+			createEdgeIfNotExist(null, usernode, teamnode, EDGE_TEAMMEMBER);
+			mapper.put(user.getLogin(), usernode);
+		}
+		return mapper;
+	}
+	
+	public Map<String,Vertex> saveTeamRepositories(String team, List<Repository> repos) {
+		Vertex teamnode = getOrCreateTeam(team);
+		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
+		for (Repository repo : repos) {
+			String projectFullName = repo.getUsername() + "/" + repo.getName();
+			Vertex reponode = saveRepository(repo);
+			createEdgeIfNotExist(null, teamnode, reponode, EDGE_REPOOWNER);
 			mapper.put(projectFullName, reponode);
 		}
 		return mapper;
