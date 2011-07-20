@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import com.github.api.v2.schema.Team;
 import com.github.api.v2.services.GitHubException;
 import com.github.api.v2.services.GitHubServiceFactory;
-import com.google.gson.Gson;
 
 /**
  * Main driver class for GitHub data processing.
@@ -107,9 +106,7 @@ public class GitHubMain {
 //			try {
 //				bp.saveOrganizationOwners(organization, om.getOrganizationOwners(organization));
 //			} catch (GitHubException e) {
-//				Gson gson = new Gson();
-//				GitHubErrorPrimative primative = gson.fromJson(e.getMessage(), GitHubErrorPrimative.class);
-//				log.info("Unable to fetch owners: {}", primative.getError());
+//				log.info("Unable to fetch owners: {}", GitHubErrorPrimative.createGitHubErrorPrimative(e).getError());
 //			}
 			bp.saveOrganizationPublicMembers(organization, om.getOrganizationPublicMembers(organization));
 			bp.saveOrganizationPublicRepositories(organization, om.getOrganizationPublicRepositories(organization));
@@ -122,9 +119,7 @@ public class GitHubMain {
 //					bp.saveTeamRepositories(team.getId(), om.getOrganizationTeamRepositories(team.getId()));
 //				}
 //			} catch (GitHubException e) {
-//				Gson gson = new Gson();
-//				GitHubErrorPrimative primative = gson.fromJson(e.getMessage(), GitHubErrorPrimative.class);
-//				log.info("Unable to fetch teams: {}", primative.getError());
+//				log.info("Unable to fetch teams: {}", GitHubErrorPrimative.createGitHubErrorPrimative(e).getError());
 //			}
 		}
 		
