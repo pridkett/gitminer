@@ -29,6 +29,8 @@ import java.util.TimeZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.api.v2.schema.Comment;
+import com.github.api.v2.schema.Gist;
 import com.github.api.v2.schema.Organization;
 import com.github.api.v2.schema.Repository;
 import com.github.api.v2.schema.Team;
@@ -53,8 +55,15 @@ public class BlueprintsDriver {
 	private static final String TYPE_REPO = "REPOSITORY";
 	private static final String TYPE_ORGANIZATION = "ORGANIZATION";
 	private static final String TYPE_TEAM = "TEAM";
+	private static final String TYPE_GIST = "GIST";
+	private static final String TYPE_COMMENT = "COMMENT";
+	private static final String TYPE_GISTFILE = "GIST_FILE";
 	private static final String EDGE_FOLLOWER = "FOLLOWER";
 	private static final String EDGE_FOLLOWING = "FOLLOWING";
+	private static final String EDGE_GISTCOMMENT = "GIST_COMMENT";
+	private static final String EDGE_GISTCOMMENTOWNER = "GIST_COMMENT_OWNER";
+	private static final String EDGE_GISTFILE = "GIST_FILE";
+	private static final String EDGE_GISTOWNER = "GIST_OWNER";
 	private static final String EDGE_ORGANIZATIONOWNER = "ORGANIZATION_OWNER";
 	private static final String EDGE_ORGANIZATIONMEMBER = "ORGANIZATION_MEMBER";
 	private static final String EDGE_ORGANIZATIONTEAM = "ORGANIZATION_TEAM";
@@ -69,6 +78,9 @@ public class BlueprintsDriver {
 	private static final String INDEX_TYPE = "type-idx";
 	private static final String INDEX_ORGANIZATION = "org-idx";
 	private static final String INDEX_TEAM = "team-idx";
+	private static final String INDEX_GIST = "gist-idx";
+	private static final String INDEX_GISTFILE = "gistfile-idx";
+	private static final String INDEX_COMMENT = "comment-idx";
 	private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
 	
 	private static final int COMMITMGR_COMMITS = 2000;
@@ -82,6 +94,9 @@ public class BlueprintsDriver {
 	private Index <Vertex> typeidx = null;
 	private Index <Vertex> orgidx = null;
 	private Index <Vertex> teamidx = null;
+	private Index <Vertex> gistidx = null;
+	private Index <Vertex> gistfileidx = null;
+	private Index <Vertex> commentidx = null;
 	
 	private CommitManager manager = null;
 	/**
@@ -107,6 +122,9 @@ public class BlueprintsDriver {
 		typeidx = (Index <Vertex>)getOrCreateIndex(INDEX_TYPE);
 		orgidx = (Index <Vertex>)getOrCreateIndex(INDEX_ORGANIZATION);
 		teamidx = (Index <Vertex>)getOrCreateIndex(INDEX_TEAM);
+		gistidx = (Index <Vertex>)getOrCreateIndex(INDEX_GIST);
+		commentidx = (Index <Vertex>)getOrCreateIndex(INDEX_COMMENT);
+		gistfileidx = (Index <Vertex>)getOrCreateIndex(INDEX_GISTFILE);
 		
 		manager = TransactionalGraphHelper.createCommitManager((TransactionalGraph) graph, COMMITMGR_COMMITS);
 	}
@@ -448,6 +466,64 @@ public class BlueprintsDriver {
 		return node;
 	}
 	
+	public Vertex getOrCreateGist(String repoId) {
+		Vertex node = null;
+		Iterable<Vertex> results = repoidx.get("repoId", repoId);
+		for (Vertex v : results) {
+			node = v;
+			break;
+		}
+		if (node == null) {
+			node = graph.addVertex(null);
+			node.setProperty("repoId", repoId);
+			node.setProperty("type", TYPE_GIST);
+			node.setProperty("created_at", dateFormatter.format(new Date()));
+			gistidx.put("repoId", repoId, node);
+			typeidx.put("type", TYPE_GIST, node);
+			manager.incrCounter();
+		}
+		return node;
+	}
+
+	public Vertex getOrCreateComment(long commentId) {
+		Vertex node = null;
+		Iterable<Vertex> results = commentidx.get("commentId", commentId);
+		for (Vertex v : results) {
+			node = v;
+			break;
+		}
+		if (node == null) {
+			node = graph.addVertex(null);
+			node.setProperty("commentId", commentId);
+			node.setProperty("type", TYPE_COMMENT);
+			node.setProperty("created_at", dateFormatter.format(new Date()));
+			commentidx.put("commentId", commentId, node);
+			typeidx.put("type", TYPE_COMMENT, node);
+			manager.incrCounter();
+		}
+		return node;
+	}
+
+	public Vertex getOrCreateGistFile(String repoid, String filename) {
+		String gistFileId = repoid + "/" + filename;
+		Vertex node = null;
+		Iterable<Vertex> results = gistfileidx.get("id", gistFileId);
+		for (Vertex v : results) {
+			node = v;
+			break;
+		}
+		if (node == null) {
+			node = graph.addVertex(null);
+			node.setProperty("file_id", gistFileId);
+			node.setProperty("type", TYPE_GISTFILE);
+			node.setProperty("created_at", dateFormatter.format(new Date()));
+			gistfileidx.put("id", gistFileId, node);
+			typeidx.put("type", TYPE_GISTFILE, node);
+			manager.incrCounter();
+		}
+		return node;
+	}
+	
 	/**
 	 * Saves a repository to the graph database.
 	 * 
@@ -521,6 +597,42 @@ public class BlueprintsDriver {
 		// getRepoNames
 		return node;
 	}
+
+	public Vertex saveGistComment(Vertex gistnode, Comment comment) {
+		Vertex node = getOrCreateComment(comment.getId());
+		if (comment.getBody() != null) node.setProperty("comment", comment.getBody());
+		if (comment.getCreatedAt() != null) node.setProperty("createdAt", dateFormatter.format(comment.getCreatedAt()));
+		// FIXME: perhaps gravatarId should be another node?
+		if (comment.getGravatarId() != null) node.setProperty("gravatarId", comment.getGravatarId());
+		if (comment.getUpdatedAt() != null) node.setProperty("updatedAt", dateFormatter.format(comment.getUpdatedAt()));
+		if (comment.getUser() != null) {
+			Vertex user = getOrCreateUser(comment.getUser());
+			createEdgeIfNotExist(null, user, node, EDGE_GISTCOMMENTOWNER);
+		}
+		return node;
+	}
+	
+	public Vertex saveGistFile(String repoid, String filename) {
+		Vertex node = getOrCreateGistFile(repoid, filename);
+		return node;
+	}
+	
+	public Vertex saveGist(Gist gist) {
+		Vertex node = getOrCreateGist(gist.getRepo());
+		for (Comment comment : gist.getComments()) {
+			Vertex commentnode = saveGistComment(node, comment);
+			createEdgeIfNotExist(null, node, commentnode, EDGE_GISTCOMMENT);
+		}
+		if (gist.getCreatedAt() != null) node.setProperty("createdAt", dateFormatter.format(gist.getCreatedAt()));
+		if (gist.getDescription() != null) node.setProperty("description", gist.getDescription());
+		for (String file : gist.getFiles()) {
+			Vertex filenode = saveGistFile(gist.getRepo(), file);
+			createEdgeIfNotExist(null, node, filenode, EDGE_GISTFILE);
+		}
+		if (gist.getOwner() != null) node.setProperty("owner", gist.getOwner());
+		if (gist.getRepo() != null) node.setProperty("repo", gist.getRepo());
+		return node;
+	}
 	
 	protected Map<String, Vertex> saveOrganizationMembersHelper(String organization, List<User> owners, String edgetype) {
 		Vertex org = getOrCreateOrganization(organization);
@@ -590,6 +702,17 @@ public class BlueprintsDriver {
 			Vertex reponode = saveRepository(repo);
 			createEdgeIfNotExist(null, teamnode, reponode, EDGE_REPOOWNER);
 			mapper.put(projectFullName, reponode);
+		}
+		return mapper;
+	}
+	
+	public Map<String,Vertex> saveUserGists(String user, List<Gist> gists) {
+		Vertex usernode = getOrCreateUser(user);
+		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
+		for (Gist gist : gists) {
+			Vertex gistnode = saveGist(gist);
+			createEdgeIfNotExist(null, usernode, gistnode, EDGE_GISTOWNER);
+			mapper.put(gist.getRepo(),gistnode);
 		}
 		return mapper;
 	}

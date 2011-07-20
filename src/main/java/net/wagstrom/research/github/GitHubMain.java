@@ -89,16 +89,16 @@ public class GitHubMain {
 		}
 	
 		UserMiner um = new UserMiner(ThrottledGitHubInvocationHandler.createThrottledUserService(factory.createUserService(), throttle));
+		GistMiner gm = new GistMiner(ThrottledGitHubInvocationHandler.createThrottledGistService(factory.createGistService(), throttle));
 		for (String user : users) {
 			bp.saveUser(um.getUserInformation(user));
 			bp.saveUserFollowers(user, um.getUserFollowers(user));
 			bp.saveUserFollowing(user, um.getUserFollowing(user));
 			bp.saveUserWatchedRepositories(user, um.getWatchedRepositories(user));
 			bp.saveUserRepositories(user, rm.getUserRepositories(user));
+			bp.saveUserGists(user, gm.getUserGists(user));
 		}
 	
-		ThrottledGitHubInvocationHandler.createThrottledOrganizationService(factory.createOrganizationService(), throttle);
-		
 		OrganizationMiner om = new OrganizationMiner(ThrottledGitHubInvocationHandler.createThrottledOrganizationService(factory.createOrganizationService(), throttle));
 		for (String organization : organizations) {
 			bp.saveOrganization(om.getOrganizationInformation(organization));
@@ -122,6 +122,7 @@ public class GitHubMain {
 //				log.info("Unable to fetch teams: {}", GitHubErrorPrimative.createGitHubErrorPrimative(e).getError());
 //			}
 		}
+		
 		
 		log.info("Shutting down graph");
 		bp.shutdown();

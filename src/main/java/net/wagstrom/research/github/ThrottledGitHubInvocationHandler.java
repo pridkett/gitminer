@@ -11,6 +11,7 @@ import java.util.HashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.api.v2.services.GistService;
 import com.github.api.v2.services.GitHubService;
 import com.github.api.v2.services.OrganizationService;
 import com.github.api.v2.services.RepositoryService;
@@ -63,12 +64,16 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 	}
 
 	public static OrganizationService createThrottledOrganizationService(OrganizationService toWrap, ApiThrottle throttle) {
-		System.out.println(toWrap.getClass().toString());
         return (OrganizationService)(Proxy.newProxyInstance(OrganizationService.class.getClassLoader(),
                 new Class[] {OrganizationService.class},
                     new ThrottledGitHubInvocationHandler(toWrap, throttle)));				
 	}
 
+	public static GistService createThrottledGistService(GistService toWrap, ApiThrottle throttle) {
+        return (GistService)(Proxy.newProxyInstance(GistService.class.getClassLoader(),
+                new Class[] {GistService.class},
+                    new ThrottledGitHubInvocationHandler(toWrap, throttle)));						
+	}
 	/**
 	 * This works at compile time and not runtime
 	 * 
@@ -81,12 +86,5 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
         return (GitHubService)(Proxy.newProxyInstance(GitHubService.class.getClassLoader(),
                 new Class[] {GitHubService.class},
                     new ThrottledGitHubInvocationHandler(toWrap, throttle)));				
-	}
-	
-	/* public static <T> GitHubService createThrottledService(<? extends GitHubService> toWrap, ApiThrottle throttle) {
-		System.out.println(toWrap.getClass().toString());		
-		return (T)(Proxy.newProxyInstance(T.class.getClassLoader(), 
-				new Class[] {T.class},
-				    new ThrottledGitHubInvocationHandler(toWrap, throttle)));
-	} */
+	}	
 }
