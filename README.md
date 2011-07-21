@@ -18,6 +18,17 @@ and apitoken, that would be bad.
 Actually, right now it doesn't actually use those fields and it probably won't
 anytime in the future. So don't worry so much about that.
 
+## Additional important configuration parameters
+
+Various elements of the miner can be turned on and off by changing the values
+of their field to anything other than true. Those fields are:
+
+* net.wagstrom.research.github.miner.issues
+* net.wagstrom.research.github.miner.gists
+* net.wagstrom.research.github.miner.repositories
+* net.wagstrom.research.github.miner.organizations
+* net.wagstrom.research.github.miner.users
+
 # Explanation of fields
 Every Vertex in the database should have the following:
 * type: one of USER, REPOSITORY

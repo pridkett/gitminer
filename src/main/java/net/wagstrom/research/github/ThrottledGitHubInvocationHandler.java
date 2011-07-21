@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import com.github.api.v2.services.GistService;
 import com.github.api.v2.services.GitHubService;
+import com.github.api.v2.services.IssueService;
 import com.github.api.v2.services.OrganizationService;
 import com.github.api.v2.services.RepositoryService;
 import com.github.api.v2.services.UserService;
@@ -74,6 +75,13 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
                 new Class[] {GistService.class},
                     new ThrottledGitHubInvocationHandler(toWrap, throttle)));						
 	}
+	
+	public static IssueService createThrottledIssueService(IssueService toWrap, ApiThrottle throttle) {
+        return (IssueService)(Proxy.newProxyInstance(IssueService.class.getClassLoader(),
+                new Class[] {IssueService.class},
+                    new ThrottledGitHubInvocationHandler(toWrap, throttle)));
+	}
+	
 	/**
 	 * This works at compile time and not runtime
 	 * 
