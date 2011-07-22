@@ -31,12 +31,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.api.v2.schema.Comment;
+import com.github.api.v2.schema.Commit;
+import com.github.api.v2.schema.Discussion;
 import com.github.api.v2.schema.Gist;
+import com.github.api.v2.schema.Id;
 import com.github.api.v2.schema.Issue;
 import com.github.api.v2.schema.Organization;
+import com.github.api.v2.schema.PullRequest;
 import com.github.api.v2.schema.Repository;
 import com.github.api.v2.schema.Team;
 import com.github.api.v2.schema.User;
+import com.github.api.v2.schema.Discussion.Type;
 import com.tinkerpop.blueprints.pgm.Edge;
 import com.tinkerpop.blueprints.pgm.Element;
 import com.tinkerpop.blueprints.pgm.Index;
@@ -53,35 +58,77 @@ import com.tinkerpop.blueprints.pgm.util.TransactionalGraphHelper.CommitManager;
  *
  */
 public class BlueprintsDriver {
-	private static final String TYPE_USER = "USER";
-	private static final String TYPE_REPO = "REPOSITORY";
-	private static final String TYPE_ORGANIZATION = "ORGANIZATION";
-	private static final String TYPE_TEAM = "TEAM";
-	private static final String TYPE_GIST = "GIST";
-	private static final String TYPE_ISSUE = "ISSUE";
-	private static final String TYPE_ISSUELABEL = "ISSUELABEL";
-	private static final String TYPE_COMMENT = "COMMENT";
-	private static final String TYPE_GISTFILE = "GIST_FILE";
-	private static final String EDGE_FOLLOWER = "FOLLOWER";
-	private static final String EDGE_FOLLOWING = "FOLLOWING";
-	private static final String EDGE_GISTCOMMENT = "GIST_COMMENT";
-	private static final String EDGE_GISTCOMMENTOWNER = "GIST_COMMENT_OWNER";
-	private static final String EDGE_GISTFILE = "GIST_FILE";
-	private static final String EDGE_GISTOWNER = "GIST_OWNER";
-	private static final String EDGE_ISSUE = "ISSUE";
-	private static final String EDGE_ISSUELABEL = "ISSUE_LABEL";
-	private static final String EDGE_ISSUEOWNER = "ISSUE_OWNER";
-	private static final String EDGE_ISSUECOMMENT = "ISSUE_COMMENT";
-	private static final String EDGE_ISSUECOMMENTOWNER = "ISSUE_COMMENT_OWNER";
-	private static final String EDGE_ORGANIZATIONOWNER = "ORGANIZATION_OWNER";
-	private static final String EDGE_ORGANIZATIONMEMBER = "ORGANIZATION_MEMBER";
-	private static final String EDGE_ORGANIZATIONTEAM = "ORGANIZATION_TEAM";
-	private static final String EDGE_REPOWATCHED = "REPO_WATCHED";
-	private static final String EDGE_REPOOWNER = "REPO_OWNER";
-	private static final String EDGE_REPOCOLLABORATOR = "REPO_COLLABORATOR";
-	private static final String EDGE_REPOCONTRIBUTOR = "REPO_CONTRIBUTOR";
-	private static final String EDGE_REPOFORK = "REPO_FORK";
-	private static final String EDGE_TEAMMEMBER = "TEAM_MEMBER";
+
+	private enum VertexType {
+		COMMIT("COMMIT"),
+		USER("USER"),
+		REPOSITORY("REPOSITORY"),
+		ORGANIZATION("ORGANIZATION"),
+		TEAM("TEAM"),
+		GIST("GIST"),
+		ISSUE("ISSUE"),
+		LABEL("LABEL"),
+		COMMENT("COMMENT"),
+		GISTFILE("GISTFILE"),
+		PULLREQUEST("PULLREQUEST"),
+		DISCUSSION("DISCUSSION");
+		
+		private String text;
+		VertexType(String text) {
+			this.text = text;
+		}
+		public String toString() {
+			return this.text;
+		}
+	}
+	
+	private enum EdgeType {
+		COMMITAUTHOR("COMMIT_AUTHOR"),
+		COMMITPARENT("COMMIT_PARENT"),
+		COMMITTER("COMMITTER"),
+		DISCUSSIONAUTHOR("DISCUSSION_AUTHOR"),
+		DISCUSSIONCOMMIT("DISCUSSION_COMMIT"),
+		FOLLOWER("FOLLOWER"),
+		FOLLOWING("FOLLOWING"),
+		GISTCOMMENT("GIST_COMMENT"),
+		GISTCOMMENTOWNER("GIST_COMMENT_OWNER"),
+		GISTFILE("GIST_FILE"),
+		GISTOWNER("GIST_OWNER"),
+		ISSUE("ISSUE"),
+		ISSUELABEL("ISSUE_LABEL"),
+		ISSUEOWNER("ISSUE_OWNER"),
+		ISSUECOMMENT("ISSUE_COMMENT"),
+		ISSUECOMMENTOWNER("ISSUE_COMMENT_OWNER"),
+		ORGANIZATIONOWNER("ORGANIZATION_OWNER"),
+		ORGANIZATIONMEMBER("ORGANIZATION_MEMBER"),
+		ORGANIZATIONTEAM("ORGANIZATION_TEAM"),
+		PULLREQUEST("PULLREQUEST"),
+		PULLREQUESTDISCUSSION("PULLREQUEST_DISCUSSION"),
+		PULLREQUESTLABEL("PULLREQUEST_LABEL"),
+		PULLREQUESTOWNER("PULLREQUEST_OWNER"),
+		PULLREQUESTISSUEUSER("PULLREQUEST_ISSUE_USER"),
+		PULLREQUESTISSUECOMMENT("PULLREQUEST_ISSUE_COMMENT"),
+		PULLREQUESTCOMMIT("PULLREQUEST_COMMIT"),
+		PULLREQUESTREVIEWCOMMENT("PULLREQUEST_REVIEW_COMMENT"),
+		PULLREQUESTCOMMENTOWNER("PULLREQUEST_COMMENT_OWNER"),
+		REPOWATCHED("REPO_WATCHED"),
+		REPOOWNER("REPO_OWNER"),
+		REPOCOLLABORATOR("REPO_COLLABORATOR"),
+		REPOCONTRIBUTOR("REPO_CONTRIBUTOR"),
+		REPOFORK("REPO_FORK"),
+		TEAMMEMBER("TEAM_MEMBER");
+		
+		private String text;
+		
+		EdgeType(String text) {
+			this.text = text;
+		}
+		
+		public String toString() {
+			return this.text;
+		}
+	}
+
 	private static final String INDEX_USER = "user-idx";
 	private static final String INDEX_REPO = "repo-idx";
 	private static final String INDEX_TYPE = "type-idx";
@@ -92,6 +139,9 @@ public class BlueprintsDriver {
 	private static final String INDEX_ISSUE = "issue-idx";
 	private static final String INDEX_COMMENT = "comment-idx";
 	private static final String INDEX_ISSUELABEL = "issuelabel-idx";
+	private static final String INDEX_PULLREQUEST = "pullrequest-idx";
+	private static final String INDEX_DISCUSSION = "discussion-idx";
+	private static final String INDEX_COMMIT = "commit-idx";
 	private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
 	
 	private static final int COMMITMGR_COMMITS = 2000;
@@ -110,6 +160,9 @@ public class BlueprintsDriver {
 	private Index <Vertex> commentidx = null;
 	private Index <Vertex> issueidx = null;
 	private Index <Vertex> issuelabelidx = null;
+	private Index <Vertex> pullrequestidx = null;
+	private Index <Vertex> discussionidx = null;
+	private Index <Vertex> commitidx = null;
 	
 	private CommitManager manager = null;
 	/**
@@ -140,6 +193,9 @@ public class BlueprintsDriver {
 		gistfileidx = (Index <Vertex>)getOrCreateIndex(INDEX_GISTFILE);
 		issueidx = (Index <Vertex>)getOrCreateIndex(INDEX_ISSUE);
 		issuelabelidx = (Index <Vertex>)getOrCreateIndex(INDEX_ISSUELABEL);
+		pullrequestidx = (Index <Vertex>)getOrCreateIndex(INDEX_PULLREQUEST);
+		discussionidx = (Index <Vertex>)getOrCreateIndex(INDEX_DISCUSSION);
+		commitidx = (Index <Vertex>)getOrCreateIndex(INDEX_COMMIT);
 		manager = TransactionalGraphHelper.createCommitManager((TransactionalGraph) graph, COMMITMGR_COMMITS);
 	}
 	
@@ -235,51 +291,33 @@ public class BlueprintsDriver {
 		return node;
 	}
 	
-	private Vertex getOrCreateUser(String login) {
-		Vertex node = null;
-		for (Vertex v : useridx.get("login", login)) {
-			node = v;
-		}
-		if (node == null) {
-			node = graph.addVertex(null);
-			useridx.put("login", login, node);
-			typeidx.put("type", TYPE_USER, node);
-			node.setProperty("login", login);
-			node.setProperty("created_at", dateFormatter.format(new Date()));
-			node.setProperty("type", TYPE_USER);
-		}
-
-		manager.incrCounter();
-		return node;
-	}
-	
-	private Edge createEdgeIfNotExist(Object id, Vertex outVertex, Vertex inVertex, String label) {
-		for (Edge e : outVertex.getOutEdges(label)) {
+	private Edge createEdgeIfNotExist(Object id, Vertex outVertex, Vertex inVertex, EdgeType edgetype) {
+		for (Edge e : outVertex.getOutEdges(edgetype.toString())) {
 			if (e.getInVertex().equals(inVertex)) return e;
 		}
-		Edge re = graph.addEdge(id,  outVertex, inVertex, label);
+		Edge re = graph.addEdge(id,  outVertex, inVertex, edgetype.toString());
 		re.setProperty("created_at", dateFormatter.format(new Date()));
 		manager.incrCounter();
 		return re;
 	}
 	
-	public Map<String,Vertex> saveUserFollowersFollowing(String sourceuser, List<String> users, String edgelabel) {
+	public Map<String,Vertex> saveUserFollowersFollowing(String sourceuser, List<String> users, EdgeType edgetype) {
 		Vertex source = getOrCreateUser(sourceuser);
 		HashMap<String,Vertex> mapper= new HashMap<String,Vertex>();
 		for (String user : users) {
 			Vertex node = getOrCreateUser(user);
-			createEdgeIfNotExist(null, source, node, edgelabel);
+			createEdgeIfNotExist(null, source, node, edgetype);
 			mapper.put(user, node);
 		}
 		return mapper;
 	}
 	
 	public Map<String,Vertex> saveUserFollowers(String sourceuser, List<String> users) {
-		return saveUserFollowersFollowing(sourceuser, users, EDGE_FOLLOWER);
+		return saveUserFollowersFollowing(sourceuser, users, EdgeType.FOLLOWER);
 	}
 
 	public Map<String,Vertex> saveUserFollowing(String sourceuser, List<String> users) {
-		return saveUserFollowersFollowing(sourceuser, users, EDGE_FOLLOWING);
+		return saveUserFollowersFollowing(sourceuser, users, EdgeType.FOLLOWING);
 	}
 	
 	/**
@@ -294,7 +332,7 @@ public class BlueprintsDriver {
 		HashMap<String,Vertex> mapper= new HashMap<String,Vertex>();
 		for (String user : users) {
 			Vertex node = getOrCreateUser(user);
-			createEdgeIfNotExist(null, node, proj, EDGE_REPOWATCHED);
+			createEdgeIfNotExist(null, node, proj, EdgeType.REPOWATCHED);
 			mapper.put(user, node);
 		}
 		return mapper;
@@ -306,19 +344,19 @@ public class BlueprintsDriver {
 		for (Repository repo : forks) {
 			String projectFullName = repo.getUsername() + "/" + repo.getName();
 			Vertex repoVertex = saveRepository(repo);
-			createEdgeIfNotExist(null, proj, repoVertex, EDGE_REPOFORK);
+			createEdgeIfNotExist(null, proj, repoVertex, EdgeType.REPOFORK);
 			mapper.put(projectFullName, repoVertex);
 		}
 		return mapper;
 	}
 	
-	private Map<String, Vertex> saveUserRepositoriesHelper(String user, List<Repository> repositories, String edgelabel) {
+	private Map<String, Vertex> saveUserRepositoriesHelper(String user, List<Repository> repositories, EdgeType edgetype) {
 		Vertex source = getOrCreateUser(user);
 		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
 		for (Repository repo : repositories) {
 			String projectFullName = repo.getUsername() + "/" + repo.getName();
 			Vertex reponode = saveRepository(repo);
-			createEdgeIfNotExist(null, source, reponode, edgelabel);
+			createEdgeIfNotExist(null, source, reponode, edgetype);
 			mapper.put(projectFullName, reponode);
 		}
 		return mapper;
@@ -330,7 +368,7 @@ public class BlueprintsDriver {
 		for (Issue issue : issues) {
 			String issueId = project + ":" + issue.getNumber();
 			Vertex issuenode = saveIssue(project, issue);
-			createEdgeIfNotExist(null, proj, issuenode, EDGE_ISSUE);
+			createEdgeIfNotExist(null, proj, issuenode, EdgeType.ISSUE);
 			mapper.put(issueId, issuenode);
 		}
 		return mapper;
@@ -338,11 +376,11 @@ public class BlueprintsDriver {
 	
 	
 	public Map<String, Vertex> saveUserWatchedRepositories(String user, List<Repository> repos) {
-		return saveUserRepositoriesHelper(user, repos, EDGE_REPOWATCHED);
+		return saveUserRepositoriesHelper(user, repos, EdgeType.REPOWATCHED);
 	}
 	
 	public Map<String, Vertex> saveUserRepositories(String user, List<Repository> repos) {
-		return saveUserRepositoriesHelper(user, repos, EDGE_REPOOWNER);
+		return saveUserRepositoriesHelper(user, repos, EdgeType.REPOOWNER);
 	}
 	
 	/**
@@ -374,7 +412,7 @@ public class BlueprintsDriver {
 	 * @param namefield the name of the field to return in the set
 	 * @return
 	 */
-	public Set<String> getVertexHelper(double age, String idxname, String vtxtype, String fieldname) {
+	public Set<String> getVertexHelper(double age, String idxname, VertexType vtxtype, String fieldname) {
 		Set<String> s = new HashSet<String>();
 		// FIXME: How do we get all of the values from an index?
 		// Right now we iterate over all of the nodes, which is CRAPTASTIC
@@ -401,7 +439,7 @@ public class BlueprintsDriver {
 	 * @return a set of the users that have not been updated
 	 */
 	public Set<String> getUsers(double age) {
-		return getVertexHelper(age, INDEX_USER, TYPE_USER, "username");
+		return getVertexHelper(age, INDEX_USER, VertexType.USER, "username");
 	}
 	
 	/**
@@ -411,7 +449,7 @@ public class BlueprintsDriver {
 	 * @return 
 	 */
 	public Set<String> getRepos(double age) {
-		return getVertexHelper(age, INDEX_REPO, TYPE_REPO, "fullname");
+		return getVertexHelper(age, INDEX_REPO, VertexType.REPOSITORY, "fullname");
 	}
 
 	public Map<String,Vertex> saveRepositoryCollaborators(String reponame, List<String> collabs) {
@@ -419,7 +457,7 @@ public class BlueprintsDriver {
 		Vertex repo = getOrCreateRepository(reponame);
 		for (String username : collabs) {
 			Vertex user = getOrCreateUser(username);
-			createEdgeIfNotExist(null, repo, user, EDGE_REPOCOLLABORATOR);
+			createEdgeIfNotExist(null, repo, user, EdgeType.REPOCOLLABORATOR);
 			mapper.put(username, user);
 		}
 		return mapper;
@@ -430,166 +468,80 @@ public class BlueprintsDriver {
 		Vertex repo = getOrCreateRepository(reponame);
 		for (User user : contributors) {
 			Vertex usernode = saveUser(user);
-			createEdgeIfNotExist(null, repo, usernode, EDGE_REPOCONTRIBUTOR);
+			createEdgeIfNotExist(null, repo, usernode, EdgeType.REPOCONTRIBUTOR);
 			mapper.put(user.getLogin(), usernode);
 		}
 		return mapper;
 	}
-	
-	public Vertex getOrCreateRepository(String reponame) {
+		
+	protected Vertex getOrCreateVertexHelper(String idcol, Object idval, VertexType vertexType, Index <Vertex> index) {
 		Vertex node = null;
-		Iterable<Vertex> results = repoidx.get("fullname", reponame);
+		Iterable<Vertex> results = index.get(idcol, idval);
 		for (Vertex v : results) {
 			node = v;
 			break;
 		}
 		if (node == null) {
 			node = graph.addVertex(null);
-			node.setProperty("type", TYPE_REPO);
-			node.setProperty("fullname", reponame);
-			node.setProperty("created_at", dateFormatter.format(new Date()));
-			repoidx.put("fullname", reponame, node);
-			typeidx.put("type", TYPE_REPO, node);
+			node.setProperty(idcol, idval);
+			node.setProperty("type", vertexType.toString());
+			node.setProperty("created_ad", dateFormatter.format(new Date()));
+			index.put(idcol, idval, node);
+			typeidx.put("type", vertexType.toString(), node);
+			manager.incrCounter();
 		}
-		manager.incrCounter();
 		return node;
+	}
+	
+	public Vertex getOrCreateUser(String login) {
+		return getOrCreateVertexHelper("login", login, VertexType.USER, useridx);
+	}
+	
+	public Vertex getOrCreateRepository(String reponame) {
+		return getOrCreateVertexHelper("reponame", reponame, VertexType.REPOSITORY, repoidx);
 	}
 	
 	public Vertex getOrCreateOrganization(String login) {
-		Vertex node = null;
-		Iterable<Vertex> results = orgidx.get("login", login);
-		for (Vertex v : results) {
-			node = v;
-			break;
-		}
-		if (node == null) {
-			node = graph.addVertex(null);
-			node.setProperty("type", TYPE_ORGANIZATION);
-			node.setProperty("login", login);
-			node.setProperty("created_at", dateFormatter.format(new Date()));
-			orgidx.put("login", login, node);
-			typeidx.put("type", TYPE_ORGANIZATION, node);
-			manager.incrCounter();
-		}
-		return node;
+		return getOrCreateVertexHelper("login", login, VertexType.ORGANIZATION, orgidx);
 	}
-	
+
 	public Vertex getOrCreateTeam(String teamId) {
-		Vertex node = null;
-		Iterable<Vertex> resuls = teamidx.get("teamId", teamId);
-		for (Vertex v : resuls) {
-			node = v;
-			break;
-		}
-		if (node == null) {
-			node = graph.addVertex(null);
-			node.setProperty("type", TYPE_TEAM);
-			node.setProperty("teamId", teamId);
-			node.setProperty("created_at", dateFormatter.format(new Date()));
-			teamidx.put("teamId", teamId, node);
-			typeidx.put("type", TYPE_TEAM, node);
-			manager.incrCounter();
-		}
-		return node;
+		return getOrCreateVertexHelper("team_id", teamId, VertexType.TEAM, teamidx);
 	}
 	
 	public Vertex getOrCreateGist(String repoId) {
-		Vertex node = null;
-		Iterable<Vertex> results = repoidx.get("repoId", repoId);
-		for (Vertex v : results) {
-			node = v;
-			break;
-		}
-		if (node == null) {
-			node = graph.addVertex(null);
-			node.setProperty("repoId", repoId);
-			node.setProperty("type", TYPE_GIST);
-			node.setProperty("created_at", dateFormatter.format(new Date()));
-			gistidx.put("repoId", repoId, node);
-			typeidx.put("type", TYPE_GIST, node);
-			manager.incrCounter();
-		}
-		return node;
+		return getOrCreateVertexHelper("gist_id", repoId, VertexType.GIST, gistidx);
 	}
-
+	
 	public Vertex getOrCreateComment(long commentId) {
-		Vertex node = null;
-		Iterable<Vertex> results = commentidx.get("commentId", commentId);
-		for (Vertex v : results) {
-			node = v;
-			break;
-		}
-		if (node == null) {
-			node = graph.addVertex(null);
-			node.setProperty("commentId", commentId);
-			node.setProperty("type", TYPE_COMMENT);
-			node.setProperty("created_at", dateFormatter.format(new Date()));
-			commentidx.put("commentId", commentId, node);
-			typeidx.put("type", TYPE_COMMENT, node);
-			manager.incrCounter();
-		}
-		return node;
+		return getOrCreateVertexHelper("comment_id", commentId, VertexType.COMMENT, commentidx);
 	}
-
+	
 	public Vertex getOrCreateGistFile(String repoid, String filename) {
 		String gistFileId = repoid + "/" + filename;
-		Vertex node = null;
-		Iterable<Vertex> results = gistfileidx.get("id", gistFileId);
-		for (Vertex v : results) {
-			node = v;
-			break;
-		}
-		if (node == null) {
-			node = graph.addVertex(null);
-			node.setProperty("file_id", gistFileId);
-			node.setProperty("type", TYPE_GISTFILE);
-			node.setProperty("created_at", dateFormatter.format(new Date()));
-			gistfileidx.put("id", gistFileId, node);
-			typeidx.put("type", TYPE_GISTFILE, node);
-			manager.incrCounter();
-		}
-		return node;
+		return getOrCreateVertexHelper("gistfile_id",  gistFileId, VertexType.GISTFILE, gistfileidx);
 	}
 	
 	public Vertex getOrCreateIssue(String repoid, Issue issue) {
 		String issueId = repoid + ":" + issue.getNumber();
-		Vertex node = null;
-		Iterable<Vertex> results = issueidx.get("issue_id", issueId);
-		for (Vertex v : results) {
-			node = v;
-			break;
-		}
-		if (node == null) {
-			node = graph.addVertex(null);
-			node.setProperty("issue_id", issueId);
-			node.setProperty("type", TYPE_ISSUE);
-			node.setProperty("created_id", dateFormatter.format(new Date()));
-			issueidx.put("issue_id", repoid, node);
-			typeidx.put("type", TYPE_ISSUE, node);
-			manager.incrCounter();
-		}
-		return node;
+		return getOrCreateVertexHelper("issue_id", issueId, VertexType.ISSUE, issueidx);
 	}
 	
 	public Vertex getOrCreateIssueLabel(String label) {
-		Vertex node = null;
-		Iterable<Vertex> results = issuelabelidx.get("label", label);
-		for (Vertex v : results) {
-			node = v;
-			break;
-		}
-		if (node == null) {
-			node = graph.addVertex(null);
-			node.setProperty("label", label);
-			node.setProperty("type", TYPE_ISSUELABEL);
-			node.setProperty("created_ad", dateFormatter.format(new Date()));
-			issuelabelidx.put("label", label, node);
-			typeidx.put("type", TYPE_ISSUELABEL, node);
-			manager.incrCounter();
-		}
-		return node;
+		return getOrCreateVertexHelper("label", label, VertexType.LABEL, issuelabelidx);
 	}
 	
+	public Vertex getOrCreatePullRequest(String idval) {
+		return getOrCreateVertexHelper("pullrequest_id", idval, VertexType.PULLREQUEST, pullrequestidx);
+	}
+	
+	public Vertex getOrCreateDiscussion(String discussionId) {
+		return getOrCreateVertexHelper("discussion_id", discussionId, VertexType.DISCUSSION, discussionidx);
+	}
+	
+	public Vertex getOrCreateCommit(String commitId) {
+		return getOrCreateVertexHelper("commit_id", commitId, VertexType.COMMIT, commitidx);
+	}
 	
 	/**
 	 * Saves a repository to the graph database.
@@ -665,7 +617,7 @@ public class BlueprintsDriver {
 		return node;
 	}
 
-	protected Vertex saveCommentHelper(Vertex gistnode, Comment comment, String edgelabel) {
+	protected Vertex saveCommentHelper(Comment comment, EdgeType edgetype) {
 		Vertex node = getOrCreateComment(comment.getId());
 		if (comment.getBody() != null) node.setProperty("comment", comment.getBody());
 		if (comment.getCreatedAt() != null) node.setProperty("createdAt", dateFormatter.format(comment.getCreatedAt()));
@@ -674,17 +626,21 @@ public class BlueprintsDriver {
 		if (comment.getUpdatedAt() != null) node.setProperty("updatedAt", dateFormatter.format(comment.getUpdatedAt()));
 		if (comment.getUser() != null) {
 			Vertex user = getOrCreateUser(comment.getUser());
-			createEdgeIfNotExist(null, user, node, edgelabel);
+			createEdgeIfNotExist(null, user, node, edgetype);
 		}
 		return node;
 	}
 
-	public Vertex saveGistComment(Vertex gistnode, Comment comment) {
-		return saveCommentHelper(gistnode, comment, EDGE_GISTCOMMENTOWNER);
+	public Vertex saveGistComment(Comment comment) {
+		return saveCommentHelper(comment, EdgeType.GISTCOMMENTOWNER);
 	}
 	
-	public Vertex saveIssueComment(Vertex issuenode, Comment comment) {
-		return saveCommentHelper(issuenode, comment, EDGE_ISSUECOMMENTOWNER);
+	public Vertex saveIssueComment(Comment comment) {
+		return saveCommentHelper(comment, EdgeType.ISSUECOMMENTOWNER);
+	}
+	
+	public Vertex savePullRequestComment(Comment comment) {
+		return saveCommentHelper(comment, EdgeType.PULLREQUESTCOMMENTOWNER);
 	}
 	
 	public Vertex saveGistFile(String repoid, String filename) {
@@ -695,21 +651,21 @@ public class BlueprintsDriver {
 	public Vertex saveGist(Gist gist) {
 		Vertex node = getOrCreateGist(gist.getRepo());
 		for (Comment comment : gist.getComments()) {
-			Vertex commentnode = saveGistComment(node, comment);
-			createEdgeIfNotExist(null, node, commentnode, EDGE_GISTCOMMENT);
+			Vertex commentnode = saveGistComment(comment);
+			createEdgeIfNotExist(null, node, commentnode, EdgeType.GISTCOMMENT);
 		}
 		if (gist.getCreatedAt() != null) node.setProperty("createdAt", dateFormatter.format(gist.getCreatedAt()));
 		if (gist.getDescription() != null) node.setProperty("description", gist.getDescription());
 		for (String file : gist.getFiles()) {
 			Vertex filenode = saveGistFile(gist.getRepo(), file);
-			createEdgeIfNotExist(null, node, filenode, EDGE_GISTFILE);
+			createEdgeIfNotExist(null, node, filenode, EdgeType.GISTFILE);
 		}
 		if (gist.getOwner() != null) node.setProperty("owner", gist.getOwner());
 		if (gist.getRepo() != null) node.setProperty("repo", gist.getRepo());
 		return node;
 	}
 	
-	protected Map<String, Vertex> saveOrganizationMembersHelper(String organization, List<User> owners, String edgetype) {
+	protected Map<String, Vertex> saveOrganizationMembersHelper(String organization, List<User> owners, EdgeType edgetype) {
 		Vertex org = getOrCreateOrganization(organization);
 		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
 		for (User owner : owners) {
@@ -721,11 +677,11 @@ public class BlueprintsDriver {
 	}
 
 	public Map<String, Vertex> saveOrganizationOwners(String organization, List<User> owners) {
-		return saveOrganizationMembersHelper(organization, owners, EDGE_ORGANIZATIONOWNER);
+		return saveOrganizationMembersHelper(organization, owners, EdgeType.ORGANIZATIONOWNER);
 	}
 	
 	public Map<String, Vertex> saveOrganizationPublicMembers(String organization, List<User> members) {
-		return saveOrganizationMembersHelper(organization, members, EDGE_ORGANIZATIONMEMBER);
+		return saveOrganizationMembersHelper(organization, members, EdgeType.ORGANIZATIONMEMBER);
 	}
 	
 	/**
@@ -741,7 +697,7 @@ public class BlueprintsDriver {
 		for (Repository repo : repositories) {
 			String projectFullName = repo.getUsername() + "/" + repo.getName();
 			Vertex reponode = saveRepository(repo);
-			createEdgeIfNotExist(null, source, reponode, EDGE_REPOOWNER);
+			createEdgeIfNotExist(null, source, reponode, EdgeType.REPOOWNER);
 			mapper.put(projectFullName, reponode);
 		}
 		return mapper;
@@ -752,7 +708,7 @@ public class BlueprintsDriver {
 		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
 		for (Team team: teams) {
 			Vertex teamnode = saveTeam(team);
-			createEdgeIfNotExist(null, org, teamnode, EDGE_ORGANIZATIONTEAM);
+			createEdgeIfNotExist(null, org, teamnode, EdgeType.ORGANIZATIONTEAM);
 			mapper.put(team.getId(), teamnode);
 		}
 		return mapper;
@@ -763,7 +719,7 @@ public class BlueprintsDriver {
 		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
 		for (User user : users) {
 			Vertex usernode = saveUser(user);
-			createEdgeIfNotExist(null, usernode, teamnode, EDGE_TEAMMEMBER);
+			createEdgeIfNotExist(null, usernode, teamnode, EdgeType.TEAMMEMBER);
 			mapper.put(user.getLogin(), usernode);
 		}
 		return mapper;
@@ -775,7 +731,7 @@ public class BlueprintsDriver {
 		for (Repository repo : repos) {
 			String projectFullName = repo.getUsername() + "/" + repo.getName();
 			Vertex reponode = saveRepository(repo);
-			createEdgeIfNotExist(null, teamnode, reponode, EDGE_REPOOWNER);
+			createEdgeIfNotExist(null, teamnode, reponode, EdgeType.REPOOWNER);
 			mapper.put(projectFullName, reponode);
 		}
 		return mapper;
@@ -786,7 +742,7 @@ public class BlueprintsDriver {
 		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
 		for (Gist gist : gists) {
 			Vertex gistnode = saveGist(gist);
-			createEdgeIfNotExist(null, usernode, gistnode, EDGE_GISTOWNER);
+			createEdgeIfNotExist(null, usernode, gistnode, EdgeType.GISTOWNER);
 			mapper.put(gist.getRepo(),gistnode);
 		}
 		return mapper;
@@ -802,7 +758,7 @@ public class BlueprintsDriver {
 		// issue.getLabels()
 		for (String label : issue.getLabels()) {
 			Vertex labelnode = getOrCreateIssueLabel(label);
-			createEdgeIfNotExist(null, issuenode, labelnode, EDGE_ISSUELABEL);
+			createEdgeIfNotExist(null, issuenode, labelnode, EdgeType.ISSUELABEL);
 		}
 		issuenode.setProperty("number", issue.getNumber());
 		issuenode.setProperty("position", issue.getPosition());
@@ -812,7 +768,7 @@ public class BlueprintsDriver {
 		if (issue.getUser() != null) {
 			issuenode.setProperty("user", issue.getUser());
 			Vertex userNode = getOrCreateUser(issue.getUser());
-			createEdgeIfNotExist(null, userNode, issuenode, EDGE_ISSUEOWNER);
+			createEdgeIfNotExist(null, userNode, issuenode, EdgeType.ISSUEOWNER);
 		}
 		issuenode.setProperty("votes", issue.getVotes());
 		return issuenode;
@@ -822,11 +778,182 @@ public class BlueprintsDriver {
 		Vertex issuenode = getOrCreateIssue(project, issue);
 		HashMap<Long,Vertex> mapper = new HashMap<Long,Vertex>();
 		for (Comment comment : comments) {
-			Vertex commentnode = saveIssueComment(issuenode, comment);
-			createEdgeIfNotExist(null, issuenode, commentnode, EDGE_ISSUECOMMENT);
+			Vertex commentnode = saveIssueComment(comment);
+			createEdgeIfNotExist(null, issuenode, commentnode, EdgeType.ISSUECOMMENT);
 			mapper.put(new Long(comment.getId()), commentnode);
 		}
 		return mapper;
 	}
 	
+	public void saveRepositoryPullRequests(String project, Collection<PullRequest> requests) {
+		Vertex projectnode = getOrCreateRepository(project);
+		for (PullRequest request : requests) {
+			saveRepositoryPullRequest(project, request);
+		}
+	}
+	
+	public void setProperty(Element elem, String propname, String property) {
+		if (property != null) elem.setProperty(propname, property);
+	}
+	public void setProperty(Element elem, String propname, Date propdate) {
+		if (propdate != null) elem.setProperty(propname, dateFormatter.format(propdate));
+	}
+	public void setProperty(Element elem, String propname, int propvalue) {
+		elem.setProperty(propname, propvalue);
+	}
+	public void setProperty(Element elem, String propname, long propvalue) {
+		elem.setProperty(propname, propvalue);
+	}
+	
+	public Vertex saveCommit(Commit commit) {
+		// FIXME: this should probably have some debugging to see what is in
+		// the fields that we're not currently processing
+		Vertex node = getOrCreateCommit(commit.getId());
+		// commit.getAdded()
+		if (commit.getAuthor() != null) {
+			Vertex author = saveUser(commit.getAuthor());
+			createEdgeIfNotExist(null, author, node, EdgeType.COMMITAUTHOR);
+		}
+		setProperty(node, "authoredDate", commit.getAuthoredDate());
+		setProperty(node, "committedDate", commit.getCommittedDate());
+		if (commit.getCommitter() != null) {
+			Vertex committer = saveUser(commit.getCommitter());
+			createEdgeIfNotExist(null, committer, node, EdgeType.COMMITTER);
+		}
+		setProperty(node, "date", commit.getDate());
+		setProperty(node, "gravatar", commit.getGravatar());
+		setProperty(node, "commit_id", commit.getId());
+		setProperty(node, "login", commit.getLogin());
+		setProperty(node, "message", commit.getMessage());
+		// modified
+		for (Id id : commit.getParents()) {
+			Vertex parent = getOrCreateCommit(id.getId());
+			createEdgeIfNotExist(null, node, parent, EdgeType.COMMITPARENT);
+		}
+		// removed
+		setProperty(node, "space", commit.getSpace());
+		setProperty(node, "time", commit.getTime());
+		setProperty(node, "tree", commit.getTree());
+		setProperty(node, "url", commit.getUrl());
+
+		return node;
+	}
+	
+	public Vertex savePullRequestReviewComment(PullRequestReviewComment comment) {
+		// Vertex node = getOrCreatePullRequestReviewComment()
+		log.warn("Attempt to save PullRequestReviewComment but I don't know how to create one!");
+		return null;
+	}
+	
+	public Vertex createCommitFromDiscussion(Discussion disc) {
+		Commit commit = new Commit();
+		commit.setCommittedDate(disc.getCommittedDate());
+		commit.setAuthoredDate(disc.getAuthoredDate());
+		commit.setId(disc.getCommitId());
+		commit.setAuthor(disc.getAuthor());
+		commit.setCommitter(disc.getCommitter());
+		commit.setMessage(disc.getBody()); // FIXME: check to make sure this correct
+		// commit.setUser(disc.getUser());
+		commit.setTree(disc.getTree());
+		commit.setParents(disc.getParents());
+		Vertex node = saveCommit(commit);
+		return node;
+	}
+	
+	public Vertex createCommentFromDiscussion(Discussion disc) {
+		Comment comment = new Comment();
+		comment.setBody(disc.getBody());
+		comment.setCreatedAt(disc.getCreatedAt());
+		comment.setGravatarId(disc.getGravatarId());
+		comment.setId(Long.parseLong(disc.getCommitId()));
+		comment.setUpdatedAt(disc.getUpdatedAt());		
+		comment.setUser(disc.getUser().getLogin());
+		Vertex node = savePullRequestComment(comment);
+		return node;
+	}
+
+	public Vertex createPullRequestReviewCommentFromDiscussion(Discussion disc) {
+		PullRequestReviewComment comment = new PullRequestReviewComment();
+		comment.setDiffHunk(disc.getDiffHunk());
+		comment.setBody(disc.getBody());
+		comment.setPath(disc.getPath());
+		comment.setPosition(disc.getPosition());
+		comment.setCommitId(disc.getCommitId());
+		comment.setOriginalCommitId(disc.getOriginalCommitId());
+		comment.setUser(disc.getUser());
+		comment.setCreatedAt(disc.getCreatedAt());
+		comment.setUpdatedAt(disc.getUpdatedAt());
+		Vertex node = savePullRequestReviewComment(comment);
+		return node;
+	}
+	
+	public Vertex saveDiscussion(Discussion discussion) {
+		Vertex node = getOrCreateDiscussion(discussion.getId());
+		node.setProperty("discussion_type", discussion.getType().toString());
+		if (discussion.getAuthor() != null) {
+			Vertex author = saveUser(discussion.getAuthor());
+			createEdgeIfNotExist(null, author, node, EdgeType.DISCUSSIONAUTHOR);
+		}
+		if (discussion.getAuthoredDate() != null) node.setProperty("authoredDate", dateFormatter.format(discussion.getAuthoredDate()));
+		if (discussion.getBody() != null) node.setProperty("body", discussion.getBody());
+		if (discussion.getCommitId() != null) {
+			node.setProperty("commitId", discussion.getCommitId());
+			Vertex commit = getOrCreateCommit(discussion.getCommitId());
+			createEdgeIfNotExist(null, node, commit, EdgeType.DISCUSSIONCOMMIT);
+		}
+
+		if (discussion.getType().equals(Discussion.Type.COMMIT)) {
+			Vertex commitnode = createCommitFromDiscussion(discussion);
+			if (commitnode != null)
+				createEdgeIfNotExist(null, node, commitnode, EdgeType.PULLREQUESTCOMMIT);
+		} else if (discussion.getType().equals(Discussion.Type.ISSUE_COMMENT)) {
+			Vertex issuenode = createCommentFromDiscussion(discussion);
+			if (issuenode != null)
+				createEdgeIfNotExist(null, node, issuenode, EdgeType.PULLREQUESTISSUECOMMENT);
+		} else if (discussion.getType().equals(Discussion.Type.PULL_REQUEST_REVIEW_COMMENT)) {
+			Vertex reviewnode = createPullRequestReviewCommentFromDiscussion(discussion);
+			if (reviewnode != null)
+				createEdgeIfNotExist(null, node, reviewnode, EdgeType.PULLREQUESTREVIEWCOMMENT);
+		}
+		return node;
+	}
+	
+	public Vertex saveRepositoryPullRequest(String reponame, PullRequest request) {
+		Vertex reponode = getOrCreateRepository(reponame);
+		Vertex pullnode = getOrCreatePullRequest(reponame + ":" + request.getNumber());
+		// getBase()
+		if (request.getBody() != null) pullnode.setProperty("body", request.getBody());
+		pullnode.setProperty("comments", request.getComments());
+		if (request.getCreatedAt() != null) pullnode.setProperty("createdAt", dateFormatter.format(request.getCreatedAt()));
+		if (request.getDiffUrl() != null) pullnode.setProperty("diffUrl", request.getDiffUrl());
+		for (Discussion discussion : request.getDiscussion()) {
+			Vertex discussionnode = saveDiscussion(discussion);
+			createEdgeIfNotExist(null, pullnode, discussionnode, EdgeType.PULLREQUESTDISCUSSION);
+		}
+		setProperty(pullnode, "gravatarId", request.getGravatarId());
+		// request.getHead()
+		setProperty(pullnode, "htmlUrl", request.getHtmlUrl());
+		setProperty(pullnode, "issueCreatedAt", request.getIssueCreatedAt());
+		setProperty(pullnode, "issueUpdatedAt", request.getIssueUpdatedAt());
+		if (request.getIssueUser() != null) {
+			Vertex usernode = saveUser(request.getIssueUser());
+			createEdgeIfNotExist(null, usernode, pullnode, EdgeType.PULLREQUESTISSUEUSER);
+		}
+		for (String label : request.getLabels()) {
+			Vertex labelnode = getOrCreateIssueLabel(label);
+			createEdgeIfNotExist(null, pullnode, labelnode, EdgeType.PULLREQUESTLABEL);
+		}
+		pullnode.setProperty("number", request.getNumber());
+		if (request.getPatchUrl() != null) pullnode.setProperty("patchUrl", request.getPatchUrl());
+		pullnode.setProperty("position", request.getPosition());
+		if (request.getState() != null) pullnode.setProperty("state", request.getState().toString());
+		if (request.getTitle() != null) pullnode.setProperty("title", request.getTitle());
+		if (request.getUser() != null) {
+			Vertex usernode = saveUser(request.getUser());
+			createEdgeIfNotExist(null, usernode, pullnode, EdgeType.PULLREQUESTOWNER);
+		}
+		pullnode.setProperty("votes", request.getVotes());
+		createEdgeIfNotExist(null, reponode, pullnode, EdgeType.PULLREQUEST);
+		return pullnode;
+	}
 }

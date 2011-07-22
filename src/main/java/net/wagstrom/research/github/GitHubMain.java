@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.api.v2.schema.Issue;
+import com.github.api.v2.schema.PullRequest;
 import com.github.api.v2.schema.Team;
 import com.github.api.v2.services.FeedService;
 import com.github.api.v2.services.GitHubException;
@@ -82,6 +83,8 @@ public class GitHubMain {
 
 		RepositoryMiner rm = new RepositoryMiner(ThrottledGitHubInvocationHandler.createThrottledRepositoryService(factory.createRepositoryService(), throttle));
 		IssueMiner im = new IssueMiner(ThrottledGitHubInvocationHandler.createThrottledIssueService(factory.createIssueService(), throttle));
+		PullMiner pm = new PullMiner(ThrottledGitHubInvocationHandler.createThrottledPullRequestService(factory.createPullRequestService(), throttle));
+		
 		if (p.getProperty("net.wagstrom.research.github.miner.repositories","true").equals("true")) {
 			for (String proj : projects) {
 				String [] projsplit = proj.split("/");
@@ -95,6 +98,13 @@ public class GitHubMain {
 					bp.saveRepositoryIssues(proj, issues);
 					for (Issue issue : issues) {
 						bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(projsplit[0], projsplit[1], issue.getNumber()));
+					}
+				}
+				if (p.getProperty("net.wagstrom.research.github.miner.pullrequests", "true").equals("true")) {
+					Collection<PullRequest> requests = pm.getPullRequests(projsplit[0], projsplit[1]);
+					bp.saveRepositoryPullRequests(proj, requests);
+					for (PullRequest request : requests) {
+						bp.saveRepositoryPullRequest(proj, request);
 					}
 				}
 			}

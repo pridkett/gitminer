@@ -15,6 +15,7 @@ import com.github.api.v2.services.GistService;
 import com.github.api.v2.services.GitHubService;
 import com.github.api.v2.services.IssueService;
 import com.github.api.v2.services.OrganizationService;
+import com.github.api.v2.services.PullRequestService;
 import com.github.api.v2.services.RepositoryService;
 import com.github.api.v2.services.UserService;
 
@@ -79,6 +80,12 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 	public static IssueService createThrottledIssueService(IssueService toWrap, ApiThrottle throttle) {
         return (IssueService)(Proxy.newProxyInstance(IssueService.class.getClassLoader(),
                 new Class[] {IssueService.class},
+                    new ThrottledGitHubInvocationHandler(toWrap, throttle)));
+	}
+
+	public static PullRequestService createThrottledPullRequestService(PullRequestService toWrap, ApiThrottle throttle) {
+        return (PullRequestService)(Proxy.newProxyInstance(PullRequestService.class.getClassLoader(),
+                new Class[] {PullRequestService.class},
                     new ThrottledGitHubInvocationHandler(toWrap, throttle)));
 	}
 	
