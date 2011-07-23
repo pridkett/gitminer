@@ -89,10 +89,14 @@ public class GitHubMain {
 			for (String proj : projects) {
 				String [] projsplit = proj.split("/");
 				bp.saveRepository(rm.getRepositoryInformation(projsplit[0], projsplit[1]));
-				bp.saveRepositoryCollaborators(proj, rm.getRepositoryCollaborators(projsplit[0], projsplit[1]));
-				bp.saveRepositoryContributors(proj, rm.getRepositoryContributors(projsplit[0], projsplit[1]));
-				bp.saveRepositoryWatchers(proj, rm.getWatchers(projsplit[0], projsplit[1]));
-				bp.saveRepositoryForks(proj, rm.getForks(projsplit[0], projsplit[1]));
+				if (p.getProperty("net.wagstrom.research.github.miner.repositories.collaborators", "true").equals("true"))
+					bp.saveRepositoryCollaborators(proj, rm.getRepositoryCollaborators(projsplit[0], projsplit[1]));
+				if (p.getProperty("net.wagstrom.research.github.miner.repositories.contributors", "true").equals("true"))
+					bp.saveRepositoryContributors(proj, rm.getRepositoryContributors(projsplit[0], projsplit[1]));
+				if (p.getProperty("net.wagstrom.research.github.miner.repositories.watchers", "true").equals("true"))
+					bp.saveRepositoryWatchers(proj, rm.getWatchers(projsplit[0], projsplit[1]));
+				if (p.getProperty("net.wagstrom.research.github.miner.repositories.forks", "true").equals("true"))
+					bp.saveRepositoryForks(proj, rm.getForks(projsplit[0], projsplit[1]));
 				if (p.getProperty("net.wagstrom.research.github.miner.issues","true").equals("true")) {
 					Collection<Issue> issues = im.getAllIssues(projsplit[0], projsplit[1]);
 					bp.saveRepositoryIssues(proj, issues);
@@ -102,9 +106,12 @@ public class GitHubMain {
 				}
 				if (p.getProperty("net.wagstrom.research.github.miner.pullrequests", "true").equals("true")) {
 					Collection<PullRequest> requests = pm.getPullRequests(projsplit[0], projsplit[1]);
-					bp.saveRepositoryPullRequests(proj, requests);
+					// bp.saveRepositoryPullRequests(proj, requests);
 					for (PullRequest request : requests) {
-						bp.saveRepositoryPullRequest(proj, request);
+						if (request.getNumber() == 408) {
+							log.info("Fetching pull request 408");
+							bp.saveRepositoryPullRequest(proj, pm.getPullRequest(projsplit[0], projsplit[1], request.getNumber()));
+						}
 					}
 				}
 			}

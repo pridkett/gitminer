@@ -262,7 +262,7 @@ public class BlueprintsDriver {
 	 */
 	public Vertex saveUser(User user) {
 		Vertex node = getOrCreateUser(user.getLogin());
-		log.info(user.toString());
+		log.debug(user.toString());
 
 		if (user.getBlog() != null) node.setProperty("blog", user.getBlog());
 		node.setProperty("collaborators", user.getCollaborators());
@@ -485,7 +485,7 @@ public class BlueprintsDriver {
 			node = graph.addVertex(null);
 			node.setProperty(idcol, idval);
 			node.setProperty("type", vertexType.toString());
-			node.setProperty("created_ad", dateFormatter.format(new Date()));
+			node.setProperty("created_at", dateFormatter.format(new Date()));
 			index.put(idcol, idval, node);
 			typeidx.put("type", vertexType.toString(), node);
 			manager.incrCounter();
@@ -540,6 +540,7 @@ public class BlueprintsDriver {
 	}
 	
 	public Vertex getOrCreateCommit(String commitId) {
+		log.debug("Fetching or creating commit: {}", commitId);
 		return getOrCreateVertexHelper("commit_id", commitId, VertexType.COMMIT, commitidx);
 	}
 	
@@ -794,15 +795,23 @@ public class BlueprintsDriver {
 	
 	public void setProperty(Element elem, String propname, String property) {
 		if (property != null) elem.setProperty(propname, property);
+		log.debug("{} = {}", propname, property);
 	}
 	public void setProperty(Element elem, String propname, Date propdate) {
-		if (propdate != null) elem.setProperty(propname, dateFormatter.format(propdate));
+		if (propdate != null) {
+			elem.setProperty(propname, dateFormatter.format(propdate));
+			log.debug("{} = {}", propname, dateFormatter.format(propdate));
+		} else {
+			log.debug("{} = null", propname);
+		}
 	}
 	public void setProperty(Element elem, String propname, int propvalue) {
 		elem.setProperty(propname, propvalue);
+		log.debug("{} = {}", propname, propvalue);
 	}
 	public void setProperty(Element elem, String propname, long propvalue) {
 		elem.setProperty(propname, propvalue);
+		log.debug("{} = {}", propname, propvalue);
 	}
 	
 	public Vertex saveCommit(Commit commit) {
@@ -846,16 +855,25 @@ public class BlueprintsDriver {
 	}
 	
 	public Vertex createCommitFromDiscussion(Discussion disc) {
+		log.debug("Building commit from Discussion: {}", disc);
 		Commit commit = new Commit();
 		commit.setCommittedDate(disc.getCommittedDate());
+		log.debug("commited date: {}", disc.getCommittedDate());
 		commit.setAuthoredDate(disc.getAuthoredDate());
-		commit.setId(disc.getCommitId());
+		log.debug("authored date: {}", disc.getAuthoredDate());
+		commit.setId(disc.getId());
+		log.debug("commit id: {}", disc.getId());
 		commit.setAuthor(disc.getAuthor());
+		log.debug("author: {}", disc.getAuthor());
 		commit.setCommitter(disc.getCommitter());
+		log.debug("committer: {}", disc.getCommitter());
 		commit.setMessage(disc.getBody()); // FIXME: check to make sure this correct
+		log.debug("body: {}", disc.getSubject());
 		// commit.setUser(disc.getUser());
 		commit.setTree(disc.getTree());
+		log.debug("tree: {}", disc.getTree());
 		commit.setParents(disc.getParents());
+		log.debug("parents: {}", disc.getParents());
 		Vertex node = saveCommit(commit);
 		return node;
 	}
@@ -865,7 +883,7 @@ public class BlueprintsDriver {
 		comment.setBody(disc.getBody());
 		comment.setCreatedAt(disc.getCreatedAt());
 		comment.setGravatarId(disc.getGravatarId());
-		comment.setId(Long.parseLong(disc.getCommitId()));
+		comment.setId(Long.parseLong(disc.getId()));
 		comment.setUpdatedAt(disc.getUpdatedAt());		
 		comment.setUser(disc.getUser().getLogin());
 		Vertex node = savePullRequestComment(comment);
@@ -902,6 +920,7 @@ public class BlueprintsDriver {
 			createEdgeIfNotExist(null, node, commit, EdgeType.DISCUSSIONCOMMIT);
 		}
 
+		log.debug("Discussion type: {}", discussion.getType().toString());
 		if (discussion.getType().equals(Discussion.Type.COMMIT)) {
 			Vertex commitnode = createCommitFromDiscussion(discussion);
 			if (commitnode != null)
@@ -919,6 +938,8 @@ public class BlueprintsDriver {
 	}
 	
 	public Vertex saveRepositoryPullRequest(String reponame, PullRequest request) {
+		log.info("Saving pull request {}", request.getNumber());
+		log.info(request.toString());
 		Vertex reponode = getOrCreateRepository(reponame);
 		Vertex pullnode = getOrCreatePullRequest(reponame + ":" + request.getNumber());
 		// getBase()
@@ -926,8 +947,10 @@ public class BlueprintsDriver {
 		pullnode.setProperty("comments", request.getComments());
 		if (request.getCreatedAt() != null) pullnode.setProperty("createdAt", dateFormatter.format(request.getCreatedAt()));
 		if (request.getDiffUrl() != null) pullnode.setProperty("diffUrl", request.getDiffUrl());
+		log.info("Getting discussion");
 		for (Discussion discussion : request.getDiscussion()) {
 			Vertex discussionnode = saveDiscussion(discussion);
+			log.info("Created discussion node");
 			createEdgeIfNotExist(null, pullnode, discussionnode, EdgeType.PULLREQUESTDISCUSSION);
 		}
 		setProperty(pullnode, "gravatarId", request.getGravatarId());
