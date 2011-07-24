@@ -1,0 +1,241 @@
+g = new Neo4jGraph("/tmp/graph.db")
+
+def printHash(hashmap) {
+	for (k in hashmap.keySet().sort()) {
+		println(k + " " + m[k])
+	}
+}
+
+def checkVertexProperties(vertex, expected) {
+	num_points = expected.keySet().size()
+	num_match = 0;
+	for (key in expected.keySet().sort()) {
+		if (vertex[key] != expected[key]) {
+			println("field: " + key + " expected: [" + expected[key] + "] found: [" + vertex[key] + "]")
+		} else {
+			num_match = num_match + 1
+		}
+	}
+	println("Matched " + num_match + "/" + num_points)
+}
+
+println("Number of Nodes: " + g.V.count())
+println("Number of Edges: " + g.E.count())
+
+println("\nSummary Vertex Types:")
+m = [:]
+g.V.type.groupCount(m) >> -1
+printHash(m)
+
+println("\nSummary Edge Labels:")
+m = [:]
+g.E.label.groupCount(m) >> -1
+printHash(m)
+
+println("\nShowing Information for PullRequest 408")
+pullrequest = g.V{it.type=="PULLREQUEST" && it.number==408}.next()
+println(pullrequest.map())
+println("Number of outgoing PULLREQUEST_DICUSSION edges: " + pullrequest.out('PULLREQUEST_DISCUSSION').count())
+
+for (disc in pullrequest.out('PULLREQUEST_DISCUSSION')) { 
+	println("\nDiscussion Type: " + disc.type)
+	println("Outedges:")
+	m = [:]
+	disc.outE.label.groupCount(m) >> -1
+	printHash(m)
+	println("Inedges:")
+	m = [:]
+	disc.inE.label.groupCount(m) >> -1
+	printHash(m)
+	
+	println("Properties:")
+	for (es in disc.map().entrySet()) {
+		println(" " + es.key.toString() + "=" + es.value.toString())
+	}
+	
+	if (disc.type == "COMMIT" && disc.commit_id == "abe142ac66d51a8d87e6f079ee04125a0eff6b7e") {
+		println("Checking Discussion User")
+		user = disc.in("DISCUSSION_USER").next()
+		expected = ["type": "USER",
+			        "login": "3rd-Eden",
+					"name": "Arnout Kazemier",
+					"blog": "http://blog.3rd-Eden.com",
+					"company": "blog.3rd-Eden.com",
+					"gravatarId": "21f4971707a00270b92e2ae791d5633d",
+					"location": "The Netherlands"]
+		checkVertexProperties(user, expected)
+		
+		println("Checking Discussion Commit")
+		expected = ["type": "COMMIT",
+			        "authoredDate": "2011-07-22T19:42:09+0000",
+			        "committedDate": "2011-07-22T19:42:09+0000",
+					"commit_id": "abe142ac66d51a8d87e6f079ee04125a0eff6b7e",
+					"tree": "031bd71b521b270e593ff91a0690974e9897bc68",
+					"message": "Merge branch 'master' of github.com:LearnBoost/socket.io into gc"]
+		checkVertexProperties(disc, expected)
+		println("Checking Discussion Commit Author")
+		author = disc.in("COMMIT_AUTHOR").next()
+		expected = ["email": "info@3rd-Eden.com",
+			        "login": "3rd-Eden",
+					"name": "Arnout Kazemier",
+					"type": "USER"]
+		checkVertexProperties(author, expected)
+		println("Checking Discussion Commit Committer")
+		committer = disc.in("COMMITTER").next()
+		checkVertexProperties(committer, expected)
+	
+		parent_ids = ["5eff0e5ca77057550bbe4484f8980b83da69ae73", "c06242efd3c40e4e5729bceab752e28256c278c8"]	
+		def foundids = []
+		disc.out("COMMIT_PARENT").commit_id >> foundids
+		for (pid in foundids) {
+			if (!(pid in parent_ids))
+				println("founding unknown parent_id: " + pid);
+		}
+		
+		/* "author": {
+			"email": "info@3rd-Eden.com",
+			"login": "3rd-Eden",
+			"name": "Arnout Kazemier"
+		},
+		"authored_date": "2011-07-22T12:42:09-07:00",
+		"committed_date": "2011-07-22T12:42:09-07:00",
+		"committer": {
+			"email": "info@3rd-Eden.com",
+			"login": "3rd-Eden",
+			"name": "Arnout Kazemier"
+		},
+		"id": "abe142ac66d51a8d87e6f079ee04125a0eff6b7e",
+		"message": "Merge branch 'master' of github.com:LearnBoost/socket.io into gc",
+		"parents": [
+			{
+				"id": "5eff0e5ca77057550bbe4484f8980b83da69ae73"
+			},
+			{
+				"id": "c06242efd3c40e4e5729bceab752e28256c278c8"
+			}
+		],
+		"tree": "031bd71b521b270e593ff91a0690974e9897bc68",
+		"type": "Commit",
+		"user": {
+			"blog": "http://blog.3rd-Eden.com",
+			"company": "blog.3rd-Eden.com",
+			"email": "",
+			"gravatar_id": "21f4971707a00270b92e2ae791d5633d",
+			"location": "The Netherlands",
+			"login": "3rd-Eden",
+			"name": "Arnout Kazemier",
+			"type": "User"
+		} */
+	} else if (disc.type=="COMMIT" && disc.commit_id == "5eff0e5ca77057550bbe4484f8980b83da69ae73") {
+		println("Checking Discussion User")
+		user = disc.in("DISCUSSION_USER").next()
+		expected = ["type": "USER",
+			"login": "3rd-Eden",
+			"name": "Arnout Kazemier",
+			"blog": "http://blog.3rd-Eden.com",
+			"company": "blog.3rd-Eden.com",
+			"gravatarId": "21f4971707a00270b92e2ae791d5633d",
+			"location": "The Netherlands"]
+		checkVertexProperties(user, expected)
+
+		println("Checking Discussion Commit")
+		expected = ["type": "COMMIT",
+			"authoredDate": "2011-07-22T19:37:13+0000",
+			"committedDate": "2011-07-22T19:37:13+0000",
+			"commit_id": "5eff0e5ca77057550bbe4484f8980b83da69ae73",
+			"tree": "3a4e7cc756b10831ab4b3d2ae7a4a2de89ff4d27",
+			"message": "Small clean up, so the the code makes a bit more sense"]
+		checkVertexProperties(disc, expected)
+		println("Checking Discussion Commit Author")
+		author = disc.in("COMMIT_AUTHOR").next()
+		expected = ["email": "info@3rd-Eden.com",
+				    "login": "3rd-Eden",
+					"name": "Arnout Kazemier",
+					"type": "USER"]
+		checkVertexProperties(author, expected)
+		println("Checking Discussion Commit Committer")
+		committer = disc.in("COMMITTER").next()
+		checkVertexProperties(committer, expected)
+
+		parent_ids = ["34bd9d9092246238bccc542b27e7888ba78f9597"]
+		def foundids = []
+		disc.out("COMMIT_PARENT").commit_id >> foundids
+		for (pid in foundids) {
+			if (!(pid in parent_ids))
+				println("founding unknown parent_id: " + pid);
+		}
+		
+		/*    "author": {
+                    "email": "info@3rd-Eden.com", 
+                    "login": "3rd-Eden", 
+                    "name": "Arnout Kazemier"
+                }, 
+                "authored_date": "2011-07-22T12:37:13-07:00", 
+                "committed_date": "2011-07-22T12:37:13-07:00", 
+                "committer": {
+                    "email": "info@3rd-Eden.com", 
+                    "login": "3rd-Eden", 
+                    "name": "Arnout Kazemier"
+                }, 
+                "id": "5eff0e5ca77057550bbe4484f8980b83da69ae73", 
+                "message": "Small clean up, so the the code makes a bit more sense", 
+                "parents": [
+                    {
+                        "id": "34bd9d9092246238bccc542b27e7888ba78f9597"
+                    }
+                ], 
+                "tree": "3a4e7cc756b10831ab4b3d2ae7a4a2de89ff4d27", 
+                "type": "Commit", 
+                "user": {
+                    "blog": "http://blog.3rd-Eden.com", 
+                    "company": "blog.3rd-Eden.com", 
+                    "email": "", 
+                    "gravatar_id": "21f4971707a00270b92e2ae791d5633d", 
+                    "location": "The Netherlands", 
+                    "login": "3rd-Eden", 
+                    "name": "Arnout Kazemier", 
+                    "type": "User"
+                } */
+           
+	
+	} else if (disc.type=="COMMENT" && disc.comment_id==1634489) {
+		println("Checking Discussion Comment")
+		expected = ["createdAt": "2011-07-22T19:41:34+0000",
+			        "updatedAt": "2011-07-22T19:41:34+0000",
+					"comment_id": 1634489,
+					"gravatarId": "21f4971707a00270b92e2ae791d5633d",
+					"body": "https://gist.github.com/1100205\r\n\r\nBenchmark test, I didn't think something like would be suitable for our unit tests, so we might needs need have some sort of performance benchmark suite where these kind of tests can run. "]
+		checkVertexProperties(disc, expected)
+
+		println("Checking Discussion User")
+		user = disc.in("DISCUSSION_USER").next()
+		expected = ["type": "USER",
+		            "login": "3rd-Eden",
+					"name": "Arnout Kazemier",
+					"blog": "http://blog.3rd-Eden.com",
+					"company": "blog.3rd-Eden.com",
+					"gravatarId": "21f4971707a00270b92e2ae791d5633d",
+					"location": "The Netherlands"]
+		checkVertexProperties(user, expected)
+	/* "body": "https://gist.github.com/1100205\r\n\r\nBenchmark test, I didn't think something like would be suitable for our unit tests, so we might needs need have some sort of performance benchmark suite where these kind of tests can run. ",
+	"created_at": "2011/07/22 12:41:34 -0700",
+	"gravatar_id": "21f4971707a00270b92e2ae791d5633d",
+	"id": 1634489,
+	"type": "IssueComment",
+	"updated_at": "2011/07/22 12:41:34 -0700",
+	"user": {
+		"blog": "http://blog.3rd-Eden.com",
+		"company": "blog.3rd-Eden.com",
+		"email": "",
+		"gravatar_id": "21f4971707a00270b92e2ae791d5633d",
+		"location": "The Netherlands",
+		"login": "3rd-Eden",
+		"name": "Arnout Kazemier",
+		"type": "User"
+	} */
+	} else {
+		println("WARNING: Unknown discussion_id " + disc.discussion_id)
+	}
+}
+
+g.shutdown()
