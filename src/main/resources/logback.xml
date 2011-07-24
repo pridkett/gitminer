@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
- 
+  <conversionRule conversionWord="colorlvl" 
+                  converterClass="net.wagstrom.logging.logbackAddOns.AnsiColorConverter" /> 
+
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-    <layout class="ch.qos.logback.classic.PatternLayout">
-      <Pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} %file:%line - %msg%n</Pattern>
-    </layout>
+    <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+      <layout class="ch.qos.logback.classic.PatternLayout">
+        <pattern>%d{HH:mm:ss.SSS} [%thread] %-5colorlvl %logger{36} %file:%line - %msg%n</pattern>
+      </layout>
+    </encoder>
   </appender>
    
-  <logger name="net.wagstrom.research.github.BlueprintsDriver" level="TRACE"/>
+  <logger name="net.wagstrom.research.github.BlueprintsDriver" level="INFO"/>
  
-  <root level="info">
+  <root level="INFO">
     <appender-ref ref="STDOUT" />
   </root>
 </configuration>

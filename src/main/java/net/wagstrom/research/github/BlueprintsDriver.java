@@ -86,8 +86,8 @@ public class BlueprintsDriver {
 		COMMITAUTHOR("COMMIT_AUTHOR"),
 		COMMITPARENT("COMMIT_PARENT"),
 		COMMITTER("COMMITTER"),
-		DISCUSSIONAUTHOR("DISCUSSION_AUTHOR"),
 		DISCUSSIONCOMMIT("DISCUSSION_COMMIT"),
+		DISCUSSIONUSER("DISCUSSION_USER"),
 		FOLLOWER("FOLLOWER"),
 		FOLLOWING("FOLLOWING"),
 		GISTCOMMENT("GIST_COMMENT"),
@@ -211,14 +211,13 @@ public class BlueprintsDriver {
 	public Index<? extends Element> getOrCreateIndex(String idxname, Class indexClass) {
 		Index<? extends Element> repoidx = null;
 		for (Index<? extends Element> idx : graph.getIndices()) {
-			log.debug("Found index name: " + idx.getIndexName() + " class: " + idx.getIndexClass().toString());
 			if (idx.getIndexName().equals(idxname) && indexClass.isAssignableFrom(idx.getIndexClass())) {
-				log.debug("Found matching index in database");
 				repoidx =  idx;
 				break;
 			}
 		}
 		if (repoidx == null) {
+			log.debug("Creating index {} for class {}", idxname, indexClass.toString());
 			repoidx = graph.createManualIndex(idxname, indexClass);
 		}
 		return repoidx;
@@ -264,30 +263,30 @@ public class BlueprintsDriver {
 		Vertex node = getOrCreateUser(user.getLogin());
 		log.debug(user.toString());
 
-		if (user.getBlog() != null) node.setProperty("blog", user.getBlog());
-		node.setProperty("collaborators", user.getCollaborators());
-		if (user.getCompany() != null) node.setProperty("company", user.getCompany());
-		if (user.getCreatedAt() != null) node.setProperty("createdAt", dateFormatter.format(user.getCreatedAt()));
-		node.setProperty("diskUsage", user.getDiskUsage());
-		if (user.getEmail() != null) node.setProperty("email", user.getEmail());
-		node.setProperty("followersCount", user.getFollowersCount());
-		node.setProperty("followingCount", user.getFollowingCount());
-		if (user.getFullname() != null) node.setProperty("fullname", user.getFullname());
-		if (user.getGravatarId() != null) node.setProperty("gravatarId", user.getGravatarId());
-		if (user.getId() != null) node.setProperty("gitHubId", user.getId()); // note name change
-		if (user.getLocation() != null) node.setProperty("location", user.getLocation());
-		if (user.getLogin() != null) node.setProperty("login", user.getLogin());
-		if (user.getName() != null) node.setProperty("name", user.getName());
-		node.setProperty("ownedPrivateRepoCount", user.getOwnedPrivateRepoCount());
+		setProperty(node, "blog", user.getBlog());
+		setProperty(node, "collaborators", user.getCollaborators());
+		setProperty(node, "company", user.getCompany());
+		setProperty(node, "createdAt", user.getCreatedAt());
+		setProperty(node, "diskUsage", user.getDiskUsage());
+		setProperty(node, "email", user.getEmail());
+		setProperty(node, "followersCount", user.getFollowersCount());
+		setProperty(node, "followingCount", user.getFollowingCount());
+		setProperty(node, "fullname", user.getFullname());
+		setProperty(node, "gravatarId", user.getGravatarId());
+		setProperty(node, "gitHubId", user.getId()); // note name change
+		setProperty(node, "location", user.getLocation());
+		setProperty(node, "login", user.getLogin());
+		setProperty(node, "name", user.getName());
+		setProperty(node, "ownedPrivateRepoCount", user.getOwnedPrivateRepoCount());
 		// getPermission
 		// getPlan
-		node.setProperty("privateGistCount", user.getPrivateGistCount());
-		node.setProperty("publicGistCount", user.getPublicGistCount());
-		node.setProperty("publicRepoCount", user.getPublicRepoCount());
-		node.setProperty("score", user.getScore());
-		node.setProperty("totalPrivateRepoCount", user.getTotalPrivateRepoCount());
-		if (user.getUsername() != null) node.setProperty("username", user.getUsername());
-		node.setProperty("last_updated", dateFormatter.format(new Date())); // save the date of update
+		setProperty(node, "privateGistCount", user.getPrivateGistCount());
+		setProperty(node, "publicGistCount", user.getPublicGistCount());
+		setProperty(node, "publicRepoCount", user.getPublicRepoCount());
+		setProperty(node, "score", user.getScore());
+		setProperty(node, "totalPrivateRepoCount", user.getTotalPrivateRepoCount());
+		setProperty(node, "username", user.getUsername());
+		setProperty(node, "last_updated", new Date()); // save the date of update
 		return node;
 	}
 	
@@ -620,11 +619,11 @@ public class BlueprintsDriver {
 
 	protected Vertex saveCommentHelper(Comment comment, EdgeType edgetype) {
 		Vertex node = getOrCreateComment(comment.getId());
-		if (comment.getBody() != null) node.setProperty("comment", comment.getBody());
-		if (comment.getCreatedAt() != null) node.setProperty("createdAt", dateFormatter.format(comment.getCreatedAt()));
+		setProperty(node, "body", comment.getBody());
+		setProperty(node, "createdAt", dateFormatter.format(comment.getCreatedAt()));
 		// FIXME: perhaps gravatarId should be another node?
-		if (comment.getGravatarId() != null) node.setProperty("gravatarId", comment.getGravatarId());
-		if (comment.getUpdatedAt() != null) node.setProperty("updatedAt", dateFormatter.format(comment.getUpdatedAt()));
+		setProperty(node, "gravatarId", comment.getGravatarId());
+		setProperty(node, "updatedAt", dateFormatter.format(comment.getUpdatedAt()));
 		if (comment.getUser() != null) {
 			Vertex user = getOrCreateUser(comment.getUser());
 			createEdgeIfNotExist(null, user, node, edgetype);
@@ -794,29 +793,35 @@ public class BlueprintsDriver {
 	}
 	
 	public void setProperty(Element elem, String propname, String property) {
-		if (property != null) elem.setProperty(propname, property);
-		log.debug("{} = {}", propname, property);
+		// don't save null or empty strings
+		if (property != null && !property.trim().equals("")) elem.setProperty(propname, property);
+		log.trace("{} = {}", propname, property);
 	}
 	public void setProperty(Element elem, String propname, Date propdate) {
 		if (propdate != null) {
 			elem.setProperty(propname, dateFormatter.format(propdate));
-			log.debug("{} = {}", propname, dateFormatter.format(propdate));
+			log.trace("{} = {}", propname, dateFormatter.format(propdate));
 		} else {
-			log.debug("{} = null", propname);
+			log.trace("{} = null", propname);
 		}
 	}
 	public void setProperty(Element elem, String propname, int propvalue) {
 		elem.setProperty(propname, propvalue);
-		log.debug("{} = {}", propname, propvalue);
+		log.trace("{} = {}", propname, propvalue);
 	}
 	public void setProperty(Element elem, String propname, long propvalue) {
 		elem.setProperty(propname, propvalue);
-		log.debug("{} = {}", propname, propvalue);
+		log.trace("{} = {}", propname, propvalue);
+	}	
+	public void setProperty(Element elem, String propname, double propvalue) {
+		elem.setProperty(propname, propvalue);
+		log.trace("{} = {}", propname, propvalue);
 	}
 	
 	public Vertex saveCommit(Commit commit) {
 		// FIXME: this should probably have some debugging to see what is in
 		// the fields that we're not currently processing
+		log.trace("saveCommit: enter");
 		Vertex node = getOrCreateCommit(commit.getId());
 		// commit.getAdded()
 		if (commit.getAuthor() != null) {
@@ -844,53 +849,48 @@ public class BlueprintsDriver {
 		setProperty(node, "time", commit.getTime());
 		setProperty(node, "tree", commit.getTree());
 		setProperty(node, "url", commit.getUrl());
-
+		log.trace("saveCommit: exit");
 		return node;
 	}
 	
 	public Vertex savePullRequestReviewComment(PullRequestReviewComment comment) {
 		// Vertex node = getOrCreatePullRequestReviewComment()
-		log.warn("Attempt to save PullRequestReviewComment but I don't know how to create one!");
+		log.error("Attempt to save PullRequestReviewComment but I don't know how to create one!");
 		return null;
 	}
 	
 	public Vertex createCommitFromDiscussion(Discussion disc) {
-		log.debug("Building commit from Discussion: {}", disc);
+		log.trace("createCommitFromDiscusion: enter");
 		Commit commit = new Commit();
 		commit.setCommittedDate(disc.getCommittedDate());
-		log.debug("commited date: {}", disc.getCommittedDate());
 		commit.setAuthoredDate(disc.getAuthoredDate());
-		log.debug("authored date: {}", disc.getAuthoredDate());
 		commit.setId(disc.getId());
-		log.debug("commit id: {}", disc.getId());
 		commit.setAuthor(disc.getAuthor());
-		log.debug("author: {}", disc.getAuthor());
 		commit.setCommitter(disc.getCommitter());
-		log.debug("committer: {}", disc.getCommitter());
-		commit.setMessage(disc.getBody()); // FIXME: check to make sure this correct
-		log.debug("body: {}", disc.getSubject());
-		// commit.setUser(disc.getUser());
+		commit.setMessage(disc.getMessage());
 		commit.setTree(disc.getTree());
-		log.debug("tree: {}", disc.getTree());
 		commit.setParents(disc.getParents());
-		log.debug("parents: {}", disc.getParents());
 		Vertex node = saveCommit(commit);
+		log.trace("createCommitFromDiscussion: exit");
 		return node;
 	}
 	
 	public Vertex createCommentFromDiscussion(Discussion disc) {
+		log.trace("createCommentFromDiscussion: enter");
 		Comment comment = new Comment();
 		comment.setBody(disc.getBody());
 		comment.setCreatedAt(disc.getCreatedAt());
 		comment.setGravatarId(disc.getGravatarId());
 		comment.setId(Long.parseLong(disc.getId()));
-		comment.setUpdatedAt(disc.getUpdatedAt());		
+		comment.setUpdatedAt(disc.getUpdatedAt());
 		comment.setUser(disc.getUser().getLogin());
 		Vertex node = savePullRequestComment(comment);
+		log.trace("createCommentFromDiscussion: exit");
 		return node;
 	}
 
 	public Vertex createPullRequestReviewCommentFromDiscussion(Discussion disc) {
+		log.trace("createPullRequestReviewCommentFromDiscussion: enter");
 		PullRequestReviewComment comment = new PullRequestReviewComment();
 		comment.setDiffHunk(disc.getDiffHunk());
 		comment.setBody(disc.getBody());
@@ -902,55 +902,46 @@ public class BlueprintsDriver {
 		comment.setCreatedAt(disc.getCreatedAt());
 		comment.setUpdatedAt(disc.getUpdatedAt());
 		Vertex node = savePullRequestReviewComment(comment);
+		log.trace("createPullRequestReviewCommentFromDiscussion: exit");
 		return node;
 	}
 	
 	public Vertex saveDiscussion(Discussion discussion) {
-		Vertex node = getOrCreateDiscussion(discussion.getId());
-		node.setProperty("discussion_type", discussion.getType().toString());
-		if (discussion.getAuthor() != null) {
-			Vertex author = saveUser(discussion.getAuthor());
-			createEdgeIfNotExist(null, author, node, EdgeType.DISCUSSIONAUTHOR);
-		}
-		if (discussion.getAuthoredDate() != null) node.setProperty("authoredDate", dateFormatter.format(discussion.getAuthoredDate()));
-		if (discussion.getBody() != null) node.setProperty("body", discussion.getBody());
-		if (discussion.getCommitId() != null) {
-			node.setProperty("commitId", discussion.getCommitId());
-			Vertex commit = getOrCreateCommit(discussion.getCommitId());
-			createEdgeIfNotExist(null, node, commit, EdgeType.DISCUSSIONCOMMIT);
-		}
-
-		log.debug("Discussion type: {}", discussion.getType().toString());
+		log.trace("saveDiscussion: enter");
+		Vertex node = null;
+		log.trace("Discussion type: {}", discussion.getType().toString());
 		if (discussion.getType().equals(Discussion.Type.COMMIT)) {
-			Vertex commitnode = createCommitFromDiscussion(discussion);
-			if (commitnode != null)
-				createEdgeIfNotExist(null, node, commitnode, EdgeType.PULLREQUESTCOMMIT);
+			node = createCommitFromDiscussion(discussion);
 		} else if (discussion.getType().equals(Discussion.Type.ISSUE_COMMENT)) {
-			Vertex issuenode = createCommentFromDiscussion(discussion);
-			if (issuenode != null)
-				createEdgeIfNotExist(null, node, issuenode, EdgeType.PULLREQUESTISSUECOMMENT);
+			node = createCommentFromDiscussion(discussion);
 		} else if (discussion.getType().equals(Discussion.Type.PULL_REQUEST_REVIEW_COMMENT)) {
-			Vertex reviewnode = createPullRequestReviewCommentFromDiscussion(discussion);
-			if (reviewnode != null)
-				createEdgeIfNotExist(null, node, reviewnode, EdgeType.PULLREQUESTREVIEWCOMMENT);
+			node = createPullRequestReviewCommentFromDiscussion(discussion);
+		} else {
+			log.error("Undefined discussion type : {}", discussion.getType().toString());
 		}
+		if (node != null && discussion.getUser() != null) {
+			Vertex user = saveUser(discussion.getUser());
+			createEdgeIfNotExist(null, user, node, EdgeType.DISCUSSIONUSER);
+		}
+		log.trace("saveDiscussion: exit");
 		return node;
 	}
 	
 	public Vertex saveRepositoryPullRequest(String reponame, PullRequest request) {
-		log.info("Saving pull request {}", request.getNumber());
-		log.info(request.toString());
+		log.trace("saveRepositoryPullRequest: enter");
+		log.trace("Saving pull request {}", request.getNumber());
+		log.trace(request.toString());
 		Vertex reponode = getOrCreateRepository(reponame);
 		Vertex pullnode = getOrCreatePullRequest(reponame + ":" + request.getNumber());
 		// getBase()
-		if (request.getBody() != null) pullnode.setProperty("body", request.getBody());
-		pullnode.setProperty("comments", request.getComments());
-		if (request.getCreatedAt() != null) pullnode.setProperty("createdAt", dateFormatter.format(request.getCreatedAt()));
-		if (request.getDiffUrl() != null) pullnode.setProperty("diffUrl", request.getDiffUrl());
+		setProperty(pullnode, "body", request.getBody());
+		setProperty(pullnode, "comments", request.getComments());
+		setProperty(pullnode, "createdAt", request.getCreatedAt());
+		setProperty(pullnode, "diffUrl", request.getDiffUrl());
 		log.info("Getting discussion");
 		for (Discussion discussion : request.getDiscussion()) {
 			Vertex discussionnode = saveDiscussion(discussion);
-			log.info("Created discussion node");
+			log.trace("Created discussion node");
 			createEdgeIfNotExist(null, pullnode, discussionnode, EdgeType.PULLREQUESTDISCUSSION);
 		}
 		setProperty(pullnode, "gravatarId", request.getGravatarId());
@@ -966,17 +957,18 @@ public class BlueprintsDriver {
 			Vertex labelnode = getOrCreateIssueLabel(label);
 			createEdgeIfNotExist(null, pullnode, labelnode, EdgeType.PULLREQUESTLABEL);
 		}
-		pullnode.setProperty("number", request.getNumber());
-		if (request.getPatchUrl() != null) pullnode.setProperty("patchUrl", request.getPatchUrl());
-		pullnode.setProperty("position", request.getPosition());
-		if (request.getState() != null) pullnode.setProperty("state", request.getState().toString());
-		if (request.getTitle() != null) pullnode.setProperty("title", request.getTitle());
+		setProperty(pullnode, "number", request.getNumber());
+		setProperty(pullnode, "patchUrl", request.getPatchUrl());
+		setProperty(pullnode, "position", request.getPosition());
+		setProperty(pullnode, "state", request.getState().toString());
+		setProperty(pullnode, "title", request.getTitle());
 		if (request.getUser() != null) {
 			Vertex usernode = saveUser(request.getUser());
 			createEdgeIfNotExist(null, usernode, pullnode, EdgeType.PULLREQUESTOWNER);
 		}
-		pullnode.setProperty("votes", request.getVotes());
+		setProperty(pullnode, "votes", request.getVotes());
 		createEdgeIfNotExist(null, reponode, pullnode, EdgeType.PULLREQUEST);
+		log.trace("saveRepositoryPullRequest: exit");
 		return pullnode;
 	}
 }

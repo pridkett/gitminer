@@ -49,14 +49,13 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <github-java-sdk-version>0.1</github-java-sdk-version>
-    <slf4j-version>1.5.8</slf4j-version>
-    <!-- using logback requires that we bounce back a few versions -->
-    <!-- <slf4j-version>1.6.1</slf4j-version> -->
+    <github-java-sdk-version>0.1.wagstrom1</github-java-sdk-version>
+    <slf4j-version>1.6.1</slf4j-version>
     <blueprints-version>0.8</blueprints-version>
     <junit-version>3.8.1</junit-version>
     <gson-version>1.7.1</gson-version>
-    <logback-version>0.9.18</logback-version>
+    <logback-version>0.9.29</logback-version>
+    <logbackAddOns-version>0.1-SNAPSHOT</logbackAddOns-version>
   </properties>
 
   <dependencies>
@@ -76,11 +75,6 @@
       <artifactId>slf4j-api</artifactId>
       <version>${slf4j-version}</version>
     </dependency>
-    <!-- <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-simple</artifactId>
-      <version>${slf4j-version}</version>
-    </dependency> -->
     <dependency>
       <groupId>com.tinkerpop.blueprints</groupId>
       <artifactId>blueprints-neo4j-graph</artifactId>
@@ -94,7 +88,12 @@
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>0.9.18</version>
+      <version>${logback-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>net.wagstrom.logging.logbackAddOns</groupId>
+      <artifactId>logbackAddOns</artifactId>
+      <version>0.1-SNAPSHOT</version>
     </dependency>
   </dependencies>
 
