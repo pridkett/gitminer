@@ -49,51 +49,51 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <github-java-sdk-version>0.1.wagstrom1</github-java-sdk-version>
-    <slf4j-version>1.6.1</slf4j-version>
-    <blueprints-version>0.8</blueprints-version>
-    <junit-version>3.8.1</junit-version>
-    <gson-version>1.7.1</gson-version>
-    <logback-version>0.9.29</logback-version>
-    <logbackAddOns-version>0.1-SNAPSHOT</logbackAddOns-version>
+    <github-java-sdk.version>0.1.wagstrom1</github-java-sdk.version>
+    <slf4j.version>1.6.1</slf4j.version>
+    <blueprints.version>0.8</blueprints.version>
+    <junit.version>3.8.1</junit.version>
+    <gson.version>1.7.1</gson.version>
+    <logback.version>0.9.29</logback.version>
+    <logbackAddOns.version>0.1-SNAPSHOT</logbackAddOns.version>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>${junit-version}</version>
+      <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.github.api.v2</groupId>
       <artifactId>github-java-sdk</artifactId>
-      <version>${github-java-sdk-version}</version>
+      <version>${github-java-sdk.version}</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>${slf4j-version}</version>
+      <version>${slf4j.version}</version>
     </dependency>
     <dependency>
       <groupId>com.tinkerpop.blueprints</groupId>
       <artifactId>blueprints-neo4j-graph</artifactId>
-      <version>${blueprints-version}</version>
+      <version>${blueprints.version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
-      <version>${gson-version}</version>
+      <version>${gson.version}</version>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>${logback-version}</version>
+      <version>${logback.version}</version>
     </dependency>
     <dependency>
       <groupId>net.wagstrom.logging.logbackAddOns</groupId>
       <artifactId>logbackAddOns</artifactId>
-      <version>0.1-SNAPSHOT</version>
+      <version>${logbackAddOns.version}</version>
     </dependency>
   </dependencies>
 

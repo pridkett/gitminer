@@ -183,19 +183,19 @@ public class BlueprintsDriver {
 			System.exit(-1);
 			// throw new Exception();
 		}
-		useridx = (Index <Vertex>)getOrCreateIndex(INDEX_USER);
-		repoidx = (Index <Vertex>)getOrCreateIndex(INDEX_REPO);
-		typeidx = (Index <Vertex>)getOrCreateIndex(INDEX_TYPE);
-		orgidx = (Index <Vertex>)getOrCreateIndex(INDEX_ORGANIZATION);
-		teamidx = (Index <Vertex>)getOrCreateIndex(INDEX_TEAM);
-		gistidx = (Index <Vertex>)getOrCreateIndex(INDEX_GIST);
-		commentidx = (Index <Vertex>)getOrCreateIndex(INDEX_COMMENT);
-		gistfileidx = (Index <Vertex>)getOrCreateIndex(INDEX_GISTFILE);
-		issueidx = (Index <Vertex>)getOrCreateIndex(INDEX_ISSUE);
-		issuelabelidx = (Index <Vertex>)getOrCreateIndex(INDEX_ISSUELABEL);
-		pullrequestidx = (Index <Vertex>)getOrCreateIndex(INDEX_PULLREQUEST);
-		discussionidx = (Index <Vertex>)getOrCreateIndex(INDEX_DISCUSSION);
-		commitidx = (Index <Vertex>)getOrCreateIndex(INDEX_COMMIT);
+		useridx = getOrCreateIndex(INDEX_USER);
+		repoidx = getOrCreateIndex(INDEX_REPO);
+		typeidx = getOrCreateIndex(INDEX_TYPE);
+		orgidx = getOrCreateIndex(INDEX_ORGANIZATION);
+		teamidx = getOrCreateIndex(INDEX_TEAM);
+		gistidx = getOrCreateIndex(INDEX_GIST);
+		commentidx = getOrCreateIndex(INDEX_COMMENT);
+		gistfileidx = getOrCreateIndex(INDEX_GISTFILE);
+		issueidx = getOrCreateIndex(INDEX_ISSUE);
+		issuelabelidx = getOrCreateIndex(INDEX_ISSUELABEL);
+		pullrequestidx = getOrCreateIndex(INDEX_PULLREQUEST);
+		discussionidx = getOrCreateIndex(INDEX_DISCUSSION);
+		commitidx = getOrCreateIndex(INDEX_COMMIT);
 		manager = TransactionalGraphHelper.createCommitManager((TransactionalGraph) graph, COMMITMGR_COMMITS);
 	}
 	
@@ -208,19 +208,18 @@ public class BlueprintsDriver {
 	 * @param indexClass the class the index should use, either Vertex or Edge
 	 * @return a reference to the loaded/created index
 	 */
-	public Index<? extends Element> getOrCreateIndex(String idxname, Class indexClass) {
-		Index<? extends Element> repoidx = null;
-		for (Index<? extends Element> idx : graph.getIndices()) {
-			if (idx.getIndexName().equals(idxname) && indexClass.isAssignableFrom(idx.getIndexClass())) {
-				repoidx =  idx;
-				break;
-			}
+	public <T extends Element> Index<T> getOrCreateIndex(String idxname, Class<T> idxClass) {
+		Index<T> idx = null;
+		try {
+			idx = graph.getIndex(idxname, idxClass);
+		} catch (RuntimeException e) {
+			log.debug("Runtime exception encountered getting index {}. Upgrade to newer version of blueprints.", idxname);
 		}
-		if (repoidx == null) {
-			log.debug("Creating index {} for class {}", idxname, indexClass.toString());
-			repoidx = graph.createManualIndex(idxname, indexClass);
+		if (idx == null) {
+			log.warn("Creating index {} for class {}", idxname, idxClass.toString());
+			idx = graph.createManualIndex(idxname, idxClass);
 		}
-		return repoidx;
+		return idx;
 	}
 	
 	/**
@@ -230,7 +229,7 @@ public class BlueprintsDriver {
 	 * @return the index if it exists, or a new index if it does not
 	 */
 	public Index<Vertex> getOrCreateIndex(String idxname) {
-		return (Index<Vertex>)getOrCreateIndex(idxname, Vertex.class);
+		return getOrCreateIndex(idxname, Vertex.class);
 	}
 	
 	
