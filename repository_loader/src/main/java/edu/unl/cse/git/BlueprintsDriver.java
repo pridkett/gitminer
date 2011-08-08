@@ -2,10 +2,14 @@ package edu.unl.cse.git;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.errors.JGitInternalException;
+import org.eclipse.jgit.api.errors.NoHeadException;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
@@ -34,6 +38,25 @@ public class BlueprintsDriver {
 		VertexType(String text) {
 			this.text = text;
 		}
+		public String toString() {
+			return this.text;
+		}
+	}
+	
+	private enum EdgeType {
+		REPOSITORY( "REPOSITORY" ),
+		PARENT( "PARENT" ),
+		AUTHOR( "AUTHOR" ),
+		COMMITTER( "COMMITTER" ),
+		TREE( "TREE" );
+		
+		
+		private String text;
+		
+		EdgeType(String text) {
+			this.text = text;
+		}
+		
 		public String toString() {
 			return this.text;
 		}
@@ -152,9 +175,8 @@ public class BlueprintsDriver {
 		return node;
 	}
 	
-	public Vertex saveRepository( Git repo ) {
-		//TODO: implement me
-		Vertex node = getOrCreateRepository( "user/reponame" );
+	public Vertex saveRepository( String name ) {
+		Vertex node = getOrCreateRepository( name );
 		//setProperty( node, "isMerge", cmt.getParentCount() > 1 );
 		return node;
 	}
@@ -175,35 +197,66 @@ public class BlueprintsDriver {
 	 * Edges
 	 */
 	
-	public List<Vertex> saveRepositoryCommits( Git repo ) {
+	private Edge createEdgeIfNotExist(Object id, Vertex outVertex, Vertex inVertex, EdgeType edgetype) {
+		for (Edge e : outVertex.getOutEdges(edgetype.toString())) {
+			if (e.getInVertex().equals(inVertex)) return e;
+		}
+		Edge re = graph.addEdge(id,  outVertex, inVertex, edgetype.toString());
+		re.setProperty("created_at", dateFormatter.format(new Date()));
+		manager.incrCounter();
+		return re;
+	}
+		
+	public Map<String, Vertex> saveRepositoryCommits( String name ) throws NoHeadException, JGitInternalException {
+		HashMap<String, Vertex> mapper = new HashMap<String, Vertex>();
+		Git repo = RepositoryLoader.getRepository(name);
+		Vertex repo_node = getOrCreateRepository( name );
 		Iterable<RevCommit> cmts = repo.log().call();
 		for ( RevCommit cmt : cmts ) {
-			
+			Vertex cmt_node = saveCommit( cmt );
+			createEdgeIfNotExist( null, cmt_node, repo_node, EdgeType.REPOSITORY );
+			mapper.put( cmt.getId().toString(), cmt_node );
 		}
-		return null;
+		return mapper;
 	}
 	
-	public List<Vertex> saveCommitParents( RevCommit cmt ) {
+	public Map<String, Vertex> saveCommitParents( RevCommit cmt ) {
+		HashMap<String, Vertex> mapper = new HashMap<String, Vertex>();
+		Vertex child = getOrCreateCommit( cmt.getId().toString() );
 		RevCommit[] parents = cmt.getParents();
 		for ( RevCommit parent : parents ) {
-			
+			Vertex node = getOrCreateCommit( parent.getId().toString() );
+			//TODO create edge here
+			createEdgeIfNotExist( null, child, node, EdgeType.PARENT );
+			mapper.put( cmt.getId().toString(), node );
 		}
-		return null;
+		return mapper;
 	}
 	
 	public Vertex saveCommitTree( RevCommit cmt ) {
-		return saveTree( cmt.getTree() );
+		Vertex cmt_node = getOrCreateCommit( cmt.getId().toString() );
+		Vertex tree_node = saveTree( cmt.getTree() );
+		createEdgeIfNotExist( null, cmt_node, tree_node, EdgeType.TREE );
+		return tree_node;
 	}
 	
 	public Vertex saveCommitAuthor( RevCommit cmt ) {
 		PersonIdent author = cmt.getAuthorIdent();
 		if ( author == null ) { return null; }
-		return saveUser( author );
+		Vertex cmt_node = getOrCreateCommit( cmt.getId().toString() );
+		Vertex author_node = saveUser( author );
+		Edge edge = createEdgeIfNotExist( null, cmt_node, author_node, EdgeType.AUTHOR );
+		edge.setProperty( "when", author.getWhen() );
+		return author_node;
 	}
 	
 	public Vertex saveCommitCommitter( RevCommit cmt ) {
 		PersonIdent committer = cmt.getAuthorIdent();
-		return saveUser( committer );
+		Vertex cmt_node = getOrCreateCommit( cmt.getId().toString() );
+		Vertex committer_node = saveUser( committer );
+		Edge edge = createEdgeIfNotExist( null, cmt_node, committer_node, EdgeType.COMMITTER );
+		edge.setProperty( "when", committer.getWhen() );
+		return committer_node;
 	}
 	
 	/*
