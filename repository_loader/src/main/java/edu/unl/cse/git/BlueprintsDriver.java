@@ -3,7 +3,6 @@ package edu.unl.cse.git;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
@@ -25,7 +24,6 @@ import com.tinkerpop.blueprints.pgm.Vertex;
 import com.tinkerpop.blueprints.pgm.impls.neo4j.Neo4jGraph;
 import com.tinkerpop.blueprints.pgm.util.TransactionalGraphHelper;
 import com.tinkerpop.blueprints.pgm.util.TransactionalGraphHelper.CommitManager;
-
 
 public class BlueprintsDriver {
 	private enum VertexType {
@@ -207,17 +205,26 @@ public class BlueprintsDriver {
 		return re;
 	}
 		
-	public Map<String, Vertex> saveRepositoryCommits( String name ) throws NoHeadException, JGitInternalException {
-		HashMap<String, Vertex> mapper = new HashMap<String, Vertex>();
-		Git repo = RepositoryLoader.getRepository(name);
-		Vertex repo_node = getOrCreateRepository( name );
-		Iterable<RevCommit> cmts = repo.log().call();
-		for ( RevCommit cmt : cmts ) {
-			Vertex cmt_node = saveCommit( cmt );
-			createEdgeIfNotExist( null, cmt_node, repo_node, EdgeType.REPOSITORY );
-			mapper.put( cmt.getId().toString(), cmt_node );
+	public Map<String, Vertex> saveRepositoryCommits( String name ) {
+		try {
+			HashMap<String, Vertex> mapper = new HashMap<String, Vertex>();
+			Git repo = RepositoryLoader.getRepository(name);
+			Vertex repo_node = getOrCreateRepository( name );
+			Iterable<RevCommit> cmts = repo.log().call();
+			for ( RevCommit cmt : cmts ) {
+				Vertex cmt_node = saveCommit( cmt );
+				createEdgeIfNotExist( null, cmt_node, repo_node, EdgeType.REPOSITORY );
+				mapper.put( cmt.getId().toString(), cmt_node );
+			}
+			return mapper;
+		} catch (NoHeadException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (JGitInternalException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-		return mapper;
+		return null;
 	}
 	
 	public Map<String, Vertex> saveCommitParents( RevCommit cmt ) {
@@ -226,7 +233,6 @@ public class BlueprintsDriver {
 		RevCommit[] parents = cmt.getParents();
 		for ( RevCommit parent : parents ) {
 			Vertex node = getOrCreateCommit( parent.getId().toString() );
-			//TODO create edge here
 			createEdgeIfNotExist( null, child, node, EdgeType.PARENT );
 			mapper.put( cmt.getId().toString(), node );
 		}

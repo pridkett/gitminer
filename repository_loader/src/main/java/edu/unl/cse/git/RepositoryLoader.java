@@ -49,9 +49,4 @@ public class RepositoryLoader {
 		}
 		return null;
 	}
-
-	public void main() {
-		getRepository( "eclipse/jgit" );
-	}
-
 }
