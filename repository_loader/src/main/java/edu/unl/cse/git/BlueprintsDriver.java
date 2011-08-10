@@ -6,9 +6,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
 
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.errors.JGitInternalException;
-import org.eclipse.jgit.api.errors.NoHeadException;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
@@ -101,14 +98,15 @@ public class BlueprintsDriver {
 			// throw new Exception();
 		}
 		
-		typeidx = (Index <Vertex>)getOrCreateIndex(INDEX_TYPE);
-		commitidx = (Index <Vertex>)getOrCreateIndex(INDEX_COMMIT);
-		repoidx = (Index <Vertex>)getOrCreateIndex(INDEX_REPO);
-		treeidx = (Index <Vertex>)getOrCreateIndex(INDEX_TREE);
-		useridx = (Index <Vertex>)getOrCreateIndex(INDEX_USER);
+		typeidx = getOrCreateIndex(INDEX_TYPE);
+		commitidx = getOrCreateIndex(INDEX_COMMIT);
+		repoidx = getOrCreateIndex(INDEX_REPO);
+		treeidx = getOrCreateIndex(INDEX_TREE);
+		useridx = getOrCreateIndex(INDEX_USER);
 
 		manager = TransactionalGraphHelper.createCommitManager((TransactionalGraph) graph, COMMITMGR_COMMITS);
 	}
+	
 	/**
 	 * Gets a reference to the specified index, creating it if it doesn't exist.
 	 * 
@@ -118,20 +116,18 @@ public class BlueprintsDriver {
 	 * @param indexClass the class the index should use, either Vertex or Edge
 	 * @return a reference to the loaded/created index
 	 */
-	public Index<? extends Element> getOrCreateIndex(String idxname, Class indexClass) {
-		Index<? extends Element> repoidx = null;
-		for (Index<? extends Element> idx : graph.getIndices()) {
-			log.debug("Found index name: " + idx.getIndexName() + " class: " + idx.getIndexClass().toString());
-			if (idx.getIndexName().equals(idxname) && indexClass.isAssignableFrom(idx.getIndexClass())) {
-				log.debug("Found matching index in database");
-				repoidx =  idx;
-				break;
-			}
+	public <T extends Element> Index<T> getOrCreateIndex(String idxname, Class<T> idxClass) {
+		Index<T> idx = null;
+		try {
+			idx = graph.getIndex(idxname, idxClass);
+		} catch (RuntimeException e) {
+			log.debug("Runtime exception encountered getting index {}. Upgrade to newer version of blueprints.", idxname);
 		}
-		if (repoidx == null) {
-			repoidx = graph.createManualIndex(idxname, indexClass);
+		if (idx == null) {
+			log.warn("Creating index {} for class {}", idxname, idxClass.toString());
+			idx = graph.createManualIndex(idxname, idxClass);
 		}
-		return repoidx;
+		return idx;
 	}
 	
 	/**
@@ -141,7 +137,7 @@ public class BlueprintsDriver {
 	 * @return the index if it exists, or a new index if it does not
 	 */
 	public Index<Vertex> getOrCreateIndex(String idxname) {
-		return (Index<Vertex>)getOrCreateIndex(idxname, Vertex.class);
+		return getOrCreateIndex(idxname, Vertex.class);
 	}
 	
 	
@@ -167,6 +163,7 @@ public class BlueprintsDriver {
 	 */
 	
 	public Vertex saveCommit( RevCommit cmt ) {
+		log.info( "Save Commit: " + cmt.getId().toString() );
 		Vertex node = getOrCreateCommit( cmt.getId().toString() );
 		setProperty( node, "message", cmt.getFullMessage() );
 		setProperty( node, "isMerge", cmt.getParentCount() > 1 );
@@ -174,19 +171,22 @@ public class BlueprintsDriver {
 	}
 	
 	public Vertex saveRepository( String name ) {
+		log.info( "Save Repository: " + name );
 		Vertex node = getOrCreateRepository( name );
 		//setProperty( node, "isMerge", cmt.getParentCount() > 1 );
 		return node;
 	}
 	
 	public Vertex saveTree( RevTree tree ) {
+		log.info( "Save Tree: " + tree.getId().toString() );
 		Vertex node = getOrCreateTree( tree.getId().toString() );
 		//setProperty( node, "message", cmt.getFullMessage() );
 		return node;
 	}
 	
 	public Vertex saveUser( PersonIdent person ) {
-		Vertex node = getOrCreateUser( person.getEmailAddress() );
+		log.info( "Save User: " + person.getEmailAddress() );
+		Vertex node = getOrCreateUser( person.getName(), person.getEmailAddress() );
 		setProperty( node, "name", person.getName() );
 		return node;
 	}
@@ -205,36 +205,24 @@ public class BlueprintsDriver {
 		return re;
 	}
 		
-	public Map<String, Vertex> saveRepositoryCommits( String name ) {
-		try {
-			HashMap<String, Vertex> mapper = new HashMap<String, Vertex>();
-			Git repo = RepositoryLoader.getRepository(name);
-			Vertex repo_node = getOrCreateRepository( name );
-			Iterable<RevCommit> cmts = repo.log().call();
-			for ( RevCommit cmt : cmts ) {
-				Vertex cmt_node = saveCommit( cmt );
-				createEdgeIfNotExist( null, cmt_node, repo_node, EdgeType.REPOSITORY );
-				mapper.put( cmt.getId().toString(), cmt_node );
-			}
-			return mapper;
-		} catch (NoHeadException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (JGitInternalException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+	public Map<RevCommit, Vertex> saveRepositoryCommits( String reponame, Iterable<RevCommit> cmts ) {
+		HashMap<RevCommit, Vertex> mapper = new HashMap<RevCommit, Vertex>();
+		Vertex repo_node = getOrCreateRepository( reponame );
+		for ( RevCommit cmt : cmts ) {
+			Vertex cmt_node = getOrCreateCommit( cmt.getId().toString() );
+			createEdgeIfNotExist( null, cmt_node, repo_node, EdgeType.REPOSITORY );
+			mapper.put( cmt, cmt_node );
 		}
-		return null;
+		return mapper;
 	}
 	
-	public Map<String, Vertex> saveCommitParents( RevCommit cmt ) {
-		HashMap<String, Vertex> mapper = new HashMap<String, Vertex>();
+	public Map<RevCommit, Vertex> saveCommitParents( RevCommit cmt, RevCommit[] parents ) {
+		HashMap<RevCommit, Vertex> mapper = new HashMap<RevCommit, Vertex>();
 		Vertex child = getOrCreateCommit( cmt.getId().toString() );
-		RevCommit[] parents = cmt.getParents();
 		for ( RevCommit parent : parents ) {
 			Vertex node = getOrCreateCommit( parent.getId().toString() );
 			createEdgeIfNotExist( null, child, node, EdgeType.PARENT );
-			mapper.put( cmt.getId().toString(), node );
+			mapper.put( cmt, node );
 		}
 		return mapper;
 	}
@@ -246,22 +234,20 @@ public class BlueprintsDriver {
 		return tree_node;
 	}
 	
-	public Vertex saveCommitAuthor( RevCommit cmt ) {
-		PersonIdent author = cmt.getAuthorIdent();
+	public Vertex saveCommitAuthor( RevCommit cmt, PersonIdent author ) {
 		if ( author == null ) { return null; }
 		Vertex cmt_node = getOrCreateCommit( cmt.getId().toString() );
 		Vertex author_node = saveUser( author );
 		Edge edge = createEdgeIfNotExist( null, cmt_node, author_node, EdgeType.AUTHOR );
-		edge.setProperty( "when", author.getWhen() );
+		setProperty( edge, "when", author.getWhen() );
 		return author_node;
 	}
 	
-	public Vertex saveCommitCommitter( RevCommit cmt ) {
-		PersonIdent committer = cmt.getAuthorIdent();
+	public Vertex saveCommitCommitter( RevCommit cmt, PersonIdent committer ) {
 		Vertex cmt_node = getOrCreateCommit( cmt.getId().toString() );
 		Vertex committer_node = saveUser( committer );
 		Edge edge = createEdgeIfNotExist( null, cmt_node, committer_node, EdgeType.COMMITTER );
-		edge.setProperty( "when", committer.getWhen() );
+		setProperty( edge, "when", committer.getWhen() );
 		return committer_node;
 	}
 	
@@ -288,19 +274,22 @@ public class BlueprintsDriver {
 	}
 	
 	public Vertex getOrCreateCommit( String hash ) {
-		return getOrCreateVertexHelper("reponame", hash, VertexType.COMMIT, commitidx);
+		//log.info( "Get or Create Commit: " + hash );
+		return getOrCreateVertexHelper("hash", hash, VertexType.COMMIT, commitidx);
 	}
 	
 	public Vertex getOrCreateRepository( String reponame ) {
+		//log.info( "Get or Create Repository: " + reponame );
 		return getOrCreateVertexHelper("reponame", reponame, VertexType.REPOSITORY, repoidx);
 	}
 	
 	public Vertex getOrCreateTree( String hash ) {
-		return getOrCreateVertexHelper("reponame", hash, VertexType.TREE, treeidx);
+		return getOrCreateVertexHelper("hash", hash, VertexType.TREE, treeidx);
 	}
 	
-	public Vertex getOrCreateUser( String email ) {
-		return getOrCreateVertexHelper("reponame", email, VertexType.USER, useridx);
+	public Vertex getOrCreateUser( String name, String email ) {
+		//log.info( "Get or Create User: " + email );
+		return getOrCreateVertexHelper("email", email, VertexType.USER, useridx);
 	}
 	
 	/*
