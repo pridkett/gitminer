@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.api.v2.services.GistService;
+import com.github.api.v2.services.GitHubException;
 import com.github.api.v2.services.GitHubService;
 import com.github.api.v2.services.IssueService;
 import com.github.api.v2.services.OrganizationService;
@@ -35,7 +36,7 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 	
 	public Object invoke(Object proxy, Method method, Object[] args)
 			throws Throwable {
-		log.info("Method invoked: {}", method.getName());
+		log.trace("Method invoked: {}", method.getName());
 		if (methods.contains(method.getName()))
 			return method.invoke(wrapped, args);
 		throttle.callWait();
@@ -50,6 +51,14 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 		} catch (InvocationTargetException e) {
 			log.error("Invocation target exception (propagated):", e);
 			throw e.getCause();
+		} catch (GitHubException e) {
+			if (e.getMessage().startsWith("API Rate Limit Exceeded for")) {
+				log.warn("Exceeding API rate limit. Throttle down and try again!");
+				return invoke(proxy, method, args);
+			} else {
+				log.error("Unhandled GitHubException: ", e);
+				throw e.getCause();
+			}
 		}
 	}
 

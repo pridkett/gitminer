@@ -16,6 +16,7 @@
 
 package net.wagstrom.research.github;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -47,5 +48,25 @@ public class GithubProperties {
 			e.printStackTrace();
 		}
 		return _githubProperties;
+	}
+	
+	/**
+	 * load the properties file from a filename
+	 * 
+	 * If this is called before the other props() method then it will load the properties
+	 * from the file. Otherwise we'll use the stuff in the classpath.
+	 * 
+	 * @param filename
+	 * @return
+	 */
+	public static Properties props(String filename) {
+		if (_githubProperties != null) return _githubProperties;
+		_githubProperties = new Properties();
+		try {
+			_githubProperties.load(new FileInputStream(filename));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return _githubProperties;		
 	}
 }

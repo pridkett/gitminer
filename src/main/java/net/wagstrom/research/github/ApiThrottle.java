@@ -43,15 +43,14 @@ public class ApiThrottle {
 	 */
 	public void callWait() throws InterruptedException {
 		if (lastReset != null)
-			log.info("API Estimates: Limit: {} Remaining: {} Last Reset: {}", new Object[] {limit, limitRemaining, dateFormatter.format(lastReset.getTime())});
+			log.debug("API Estimates: Limit: {} Remaining: {} Last Reset: {}", new Object[] {limit, limitRemaining, dateFormatter.format(lastReset.getTime())});
 		if (limitRemaining < 1 && limit != -1) {
-			log.info("Going to try and wait a little bit...");
 			Calendar sleepEnd = (Calendar)lastReset.clone();
 			int timeDiff = 3600;
 			if (limit == 60) {
-				timeDiff = 60;
+				timeDiff = 65;
 			} else if (limit == 5000) {
-				timeDiff = 86400;
+				timeDiff = 86460;
 			}
 			sleepEnd.add(Calendar.SECOND, timeDiff);
 			long sleepTime = sleepEnd.getTimeInMillis() - Calendar.getInstance().getTimeInMillis();

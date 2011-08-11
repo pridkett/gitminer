@@ -45,6 +45,11 @@
       <name>TinkerPop Maven2 Repository</name>
       <url>http://tinkerpop.com/maven2</url>
     </repository>
+    <repository>
+      <id>jenkins-repository</id>
+      <name>Jenkins CI Maven2 Repository</name>
+      <url>http://maven.jenkins-ci.org:8081/content/repositories/releases/</url>
+    </repository>
   </repositories>
 
   <properties>
@@ -56,6 +61,7 @@
     <gson.version>1.7.1</gson.version>
     <logback.version>0.9.29</logback.version>
     <logbackAddOns.version>0.1-SNAPSHOT</logbackAddOns.version>
+    <args4j.version>2.0.18</args4j.version>
   </properties>
 
   <dependencies>
@@ -94,6 +100,11 @@
       <groupId>net.wagstrom.logging.logbackAddOns</groupId>
       <artifactId>logbackAddOns</artifactId>
       <version>${logbackAddOns.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>args4j</groupId>
+      <artifactId>args4j</artifactId>
+      <version>${args4j.version}</version>
     </dependency>
   </dependencies>
 
