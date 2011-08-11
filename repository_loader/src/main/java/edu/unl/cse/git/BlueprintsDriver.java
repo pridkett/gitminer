@@ -8,7 +8,6 @@ import java.util.TimeZone;
 
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,7 +25,7 @@ public class BlueprintsDriver {
 	private enum VertexType {
 		COMMIT("COMMIT"),
 		REPOSITORY("REPOSITORY"),
-		TREE("TREE"),
+		FILE("FILE"),
 		USER("USER");
 		
 		private String text;
@@ -43,7 +42,7 @@ public class BlueprintsDriver {
 		PARENT( "PARENT" ),
 		AUTHOR( "AUTHOR" ),
 		COMMITTER( "COMMITTER" ),
-		TREE( "TREE" );
+		CHANGED( "CHANGED" );
 		
 		
 		private String text;
@@ -59,8 +58,8 @@ public class BlueprintsDriver {
 
 	private static final String INDEX_TYPE = "type-idx";
 	private static final String INDEX_COMMIT = "commit-idx";
+	private static final String INDEX_FILE = "file-idx";
 	private static final String INDEX_REPO = "repo-idx";
-	private static final String INDEX_TREE = "tree-idx";
 	private static final String INDEX_USER = "user-idx";
 
 	private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
@@ -73,8 +72,8 @@ public class BlueprintsDriver {
 
 	private Index <Vertex> typeidx = null;
 	private Index <Vertex> commitidx = null;
+	private Index <Vertex> fileidx = null;
 	private Index <Vertex> repoidx = null;
-	private Index <Vertex> treeidx = null;
 	private Index <Vertex> useridx = null;
 	
 	private CommitManager manager = null;
@@ -100,8 +99,8 @@ public class BlueprintsDriver {
 		
 		typeidx = getOrCreateIndex(INDEX_TYPE);
 		commitidx = getOrCreateIndex(INDEX_COMMIT);
+		fileidx = getOrCreateIndex(INDEX_FILE);
 		repoidx = getOrCreateIndex(INDEX_REPO);
-		treeidx = getOrCreateIndex(INDEX_TREE);
 		useridx = getOrCreateIndex(INDEX_USER);
 
 		manager = TransactionalGraphHelper.createCommitManager((TransactionalGraph) graph, COMMITMGR_COMMITS);
@@ -177,10 +176,9 @@ public class BlueprintsDriver {
 		return node;
 	}
 	
-	public Vertex saveTree( RevTree tree ) {
-		log.info( "Save Tree: " + tree.getId().toString() );
-		Vertex node = getOrCreateTree( tree.getId().toString() );
-		//setProperty( node, "message", cmt.getFullMessage() );
+	public Vertex saveFile( String token ) {
+		log.info( "Save File: " + token );
+		Vertex node = getOrCreateFile( token );
 		return node;
 	}
 	
@@ -227,11 +225,15 @@ public class BlueprintsDriver {
 		return mapper;
 	}
 	
-	public Vertex saveCommitTree( RevCommit cmt ) {
-		Vertex cmt_node = getOrCreateCommit( cmt.getId().toString() );
-		Vertex tree_node = saveTree( cmt.getTree() );
-		createEdgeIfNotExist( null, cmt_node, tree_node, EdgeType.TREE );
-		return tree_node;
+	public Map<String, Vertex> saveCommitFiles( RevCommit cmt, Iterable<String> fileTokens ) {
+		Vertex cmtNode = getOrCreateCommit( cmt.getId().toString() );
+		HashMap<String, Vertex> mapper = new HashMap<String, Vertex>();
+		for ( String token : fileTokens ) {
+			Vertex fileNode = getOrCreateFile( token );
+			createEdgeIfNotExist( null, cmtNode, fileNode, EdgeType.CHANGED );
+			mapper.put( token, fileNode );
+		}
+		return mapper;
 	}
 	
 	public Vertex saveCommitAuthor( RevCommit cmt, PersonIdent author ) {
@@ -283,8 +285,9 @@ public class BlueprintsDriver {
 		return getOrCreateVertexHelper("reponame", reponame, VertexType.REPOSITORY, repoidx);
 	}
 	
-	public Vertex getOrCreateTree( String hash ) {
-		return getOrCreateVertexHelper("hash", hash, VertexType.TREE, treeidx);
+	public Vertex getOrCreateFile( String token ) {
+		//log.info( "Get or Create File: " + fileName );
+		return getOrCreateVertexHelper("token", token, VertexType.FILE, fileidx);
 	}
 	
 	public Vertex getOrCreateUser( String name, String email ) {

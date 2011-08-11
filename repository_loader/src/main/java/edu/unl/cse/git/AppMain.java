@@ -2,8 +2,6 @@ package edu.unl.cse.git;
 
 import java.util.Properties;
 
-import org.eclipse.jgit.api.errors.JGitInternalException;
-import org.eclipse.jgit.api.errors.NoHeadException;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,19 +30,6 @@ public class AppMain {
 		return new BlueprintsDriver(dbengine, dburl);
 	}
 	
-	private Iterable<RevCommit> getCommits( String reponame ) {
-		try {
-			return RepositoryLoader.getRepository( reponame ).log().call();
-		} catch (NoHeadException e) {
-			log.trace( e.toString() );
-			System.exit( 1 );
-		} catch (JGitInternalException e) {
-			log.trace( e.toString() );
-			System.exit( 1 );
-		}
-		return null;
-	}
-	
 	public void main() {
 		Properties p = GitProperties.props();
 		
@@ -55,12 +40,17 @@ public class AppMain {
 			log.info( "Loading Repository: " + reponame );
 			bp.saveRepository( reponame );
 			// commits
-			Iterable<RevCommit> cmts = getCommits( reponame );
+			Iterable<RevCommit> cmts = RepositoryLoader.getCommits( reponame );
 			for ( RevCommit cmt : cmts ) {
 				bp.saveCommit( cmt );
 				bp.saveCommitAuthor( cmt, cmt.getAuthorIdent() );
 				bp.saveCommitCommitter( cmt, cmt.getCommitterIdent() );
 				bp.saveCommitParents( cmt, cmt.getParents() );
+				Iterable<String> commitFiles = RepositoryLoader.filesChanged( reponame, cmt );
+				for ( String fileName : commitFiles ) {
+					bp.saveFile( fileName );
+				}
+				bp.saveCommitFiles( cmt, commitFiles );
 			}
 			bp.saveRepositoryCommits( reponame, cmts );
 		}
