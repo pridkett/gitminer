@@ -24,7 +24,7 @@
   </appender>
 
   <logger name="net.wagstrom.research.github.BlueprintsDriver" level="INFO"/>
-  <logger name="net.wagstrom.research.github.ApiThrottle" level="DEBUG"/>
+  <logger name="net.wagstrom.research.github.ApiThrottle" level="TRACE"/>
 
   <root level="INFO">
     <appender-ref ref="STDOUT" />

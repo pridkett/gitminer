@@ -58,7 +58,7 @@ public class Github {
 	public void run(String[] args) {
 		CmdLineParser parser = new CmdLineParser(this);
 		try {
-			log.info("Parsing arguments...");
+			log.trace("Parsing arguments...");
 			parser.parseArgument(args);
 	
 			if (propsFile != null) {

@@ -42,6 +42,7 @@ public class GitHubMain {
 	public GitHubMain() {
 		log = LoggerFactory.getLogger(this.getClass());		
         throttle = new ApiThrottle();
+        throttle.setMaxRate(60,60); // sets the maximum rate to 60 calls in 60 seconds
 	}
 	
 	public void main() {
