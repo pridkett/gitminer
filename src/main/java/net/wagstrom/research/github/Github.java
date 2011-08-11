@@ -21,6 +21,8 @@ import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ibm.research.govsci.graph.GraphShutdownHandler;
+
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
 import ch.qos.logback.core.joran.spi.JoranException;
@@ -83,6 +85,7 @@ public class Github {
 			    StatusPrinter.printInCaseOfErrorsOrWarnings(lc);
 			}
 			GitHubMain main = new GitHubMain();
+			
 	        main.main();					
 		} catch (CmdLineException e) {
 			System.err.println(e.getMessage());

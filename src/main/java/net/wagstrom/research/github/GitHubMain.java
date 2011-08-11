@@ -29,6 +29,7 @@ import com.github.api.v2.schema.Team;
 import com.github.api.v2.services.FeedService;
 import com.github.api.v2.services.GitHubException;
 import com.github.api.v2.services.GitHubServiceFactory;
+import com.ibm.research.govsci.graph.GraphShutdownHandler;
 
 /**
  * Main driver class for GitHub data processing.
@@ -39,10 +40,11 @@ import com.github.api.v2.services.GitHubServiceFactory;
 public class GitHubMain {
 	Logger log = null;
 	ApiThrottle throttle = null;
+	long refreshTime = 0; // minimum age of a resource in milliseconds
+	
 	public GitHubMain() {
 		log = LoggerFactory.getLogger(this.getClass());		
         throttle = new ApiThrottle();
-        throttle.setMaxRate(60,60); // sets the maximum rate to 60 calls in 60 seconds
 	}
 	
 	public void main() {
@@ -53,6 +55,20 @@ public class GitHubMain {
 		GitHubServiceFactory factory = GitHubServiceFactory.newInstance();
 		
 		Properties p = GithubProperties.props();
+
+		// set the maximum rate as specificed in the configuration properties file
+		int maxCalls = Integer.parseInt(p.getProperty("net.wagstrom.research.github.apiThrottle.maxCalls", "0"));
+		int maxCallsInterval = Integer.parseInt(p.getProperty("net.wagstrom.research.github.apiThrottle.maxCallsInterval", "0"));
+        if (maxCalls > 0 && maxCallsInterval > 0) {
+        	log.info("Setting Max Call Rate: {}/{}", maxCalls, maxCallsInterval);
+        	throttle.setMaxRate(maxCalls, maxCallsInterval);
+        }
+        
+        // set the minimum age for an artifact in milliseconds
+        double minAgeDouble = Double.parseDouble(p.getProperty("net.wagstrom.research.github.refreshTime", "0.0"));
+        refreshTime = (long)minAgeDouble * 86400 * 1000;
+        
+        // get the list of projects
 		try {
 			for (String proj : p.getProperty("net.wagstrom.research.github.projects").split(",")) {
 				projects.add(proj.trim());
@@ -62,6 +78,7 @@ public class GitHubMain {
 			System.exit(1);
 		}
 		
+		// get the list of users
 		try{
 			for (String user : p.getProperty("net.wagstrom.research.github.users").split(",")) {
 				users.add(user.trim());
@@ -71,6 +88,7 @@ public class GitHubMain {
 			System.exit(1);
 		}
 		
+		// get the list of organizations
 		try {
 			for (String organization : p.getProperty("net.wagstrom.research.github.organizations").split(",")){
 				organizations.add(organization.trim());
@@ -79,9 +97,16 @@ public class GitHubMain {
 			log.error("property net.wagstrom.research.github.organizations undefined");
 			System.exit(1);
 		}
-		
-		BlueprintsDriver bp = connectToGraph(p);
 
+
+		BlueprintsDriver bp = connectToGraph(p);
+		
+		// make sure that it gets shutdown properly
+		GraphShutdownHandler gsh = new GraphShutdownHandler();
+		gsh.addShutdownHandler(bp);
+		Runtime.getRuntime().addShutdownHook(gsh);
+
+		
 		RepositoryMiner rm = new RepositoryMiner(ThrottledGitHubInvocationHandler.createThrottledRepositoryService(factory.createRepositoryService(), throttle));
 		IssueMiner im = new IssueMiner(ThrottledGitHubInvocationHandler.createThrottledIssueService(factory.createIssueService(), throttle));
 		PullMiner pm = new PullMiner(ThrottledGitHubInvocationHandler.createThrottledPullRequestService(factory.createPullRequestService(), throttle));
@@ -90,6 +115,7 @@ public class GitHubMain {
 			for (String proj : projects) {
 				String [] projsplit = proj.split("/");
 				bp.saveRepository(rm.getRepositoryInformation(projsplit[0], projsplit[1]));
+
 				if (p.getProperty("net.wagstrom.research.github.miner.repositories.collaborators", "true").equals("true"))
 					bp.saveRepositoryCollaborators(proj, rm.getRepositoryCollaborators(projsplit[0], projsplit[1]));
 				if (p.getProperty("net.wagstrom.research.github.miner.repositories.contributors", "true").equals("true"))
@@ -98,6 +124,7 @@ public class GitHubMain {
 					bp.saveRepositoryWatchers(proj, rm.getWatchers(projsplit[0], projsplit[1]));
 				if (p.getProperty("net.wagstrom.research.github.miner.repositories.forks", "true").equals("true"))
 					bp.saveRepositoryForks(proj, rm.getForks(projsplit[0], projsplit[1]));
+				
 				if (p.getProperty("net.wagstrom.research.github.miner.issues","true").equals("true")) {
 					Collection<Issue> issues = im.getAllIssues(projsplit[0], projsplit[1]);
 					bp.saveRepositoryIssues(proj, issues);

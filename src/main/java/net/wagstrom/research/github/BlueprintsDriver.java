@@ -18,14 +18,11 @@ package net.wagstrom.research.github;
 
 import java.util.List;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.TimeZone;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,93 +38,17 @@ import com.github.api.v2.schema.PullRequest;
 import com.github.api.v2.schema.Repository;
 import com.github.api.v2.schema.Team;
 import com.github.api.v2.schema.User;
-import com.github.api.v2.schema.Discussion.Type;
-import com.tinkerpop.blueprints.pgm.Edge;
-import com.tinkerpop.blueprints.pgm.Element;
+import com.ibm.research.govsci.graph.BlueprintsBase;
+import com.ibm.research.govsci.graph.Shutdownable;
 import com.tinkerpop.blueprints.pgm.Index;
-import com.tinkerpop.blueprints.pgm.IndexableGraph;
-import com.tinkerpop.blueprints.pgm.TransactionalGraph;
 import com.tinkerpop.blueprints.pgm.Vertex;
-import com.tinkerpop.blueprints.pgm.impls.neo4j.Neo4jGraph;
-import com.tinkerpop.blueprints.pgm.util.TransactionalGraphHelper;
-import com.tinkerpop.blueprints.pgm.util.TransactionalGraphHelper.CommitManager;
 
 /**
  * 
  * @author Patrick Wagstrom (http://patrick.wagstrom.net/)
  *
  */
-public class BlueprintsDriver {
-
-	private enum VertexType {
-		COMMIT("COMMIT"),
-		USER("USER"),
-		REPOSITORY("REPOSITORY"),
-		ORGANIZATION("ORGANIZATION"),
-		TEAM("TEAM"),
-		GIST("GIST"),
-		ISSUE("ISSUE"),
-		LABEL("LABEL"),
-		COMMENT("COMMENT"),
-		GISTFILE("GISTFILE"),
-		PULLREQUEST("PULLREQUEST"),
-		DISCUSSION("DISCUSSION");
-		
-		private String text;
-		VertexType(String text) {
-			this.text = text;
-		}
-		public String toString() {
-			return this.text;
-		}
-	}
-	
-	private enum EdgeType {
-		COMMITAUTHOR("COMMIT_AUTHOR"),
-		COMMITPARENT("COMMIT_PARENT"),
-		COMMITTER("COMMITTER"),
-		DISCUSSIONCOMMIT("DISCUSSION_COMMIT"),
-		DISCUSSIONUSER("DISCUSSION_USER"),
-		FOLLOWER("FOLLOWER"),
-		FOLLOWING("FOLLOWING"),
-		GISTCOMMENT("GIST_COMMENT"),
-		GISTCOMMENTOWNER("GIST_COMMENT_OWNER"),
-		GISTFILE("GIST_FILE"),
-		GISTOWNER("GIST_OWNER"),
-		ISSUE("ISSUE"),
-		ISSUELABEL("ISSUE_LABEL"),
-		ISSUEOWNER("ISSUE_OWNER"),
-		ISSUECOMMENT("ISSUE_COMMENT"),
-		ISSUECOMMENTOWNER("ISSUE_COMMENT_OWNER"),
-		ORGANIZATIONOWNER("ORGANIZATION_OWNER"),
-		ORGANIZATIONMEMBER("ORGANIZATION_MEMBER"),
-		ORGANIZATIONTEAM("ORGANIZATION_TEAM"),
-		PULLREQUEST("PULLREQUEST"),
-		PULLREQUESTDISCUSSION("PULLREQUEST_DISCUSSION"),
-		PULLREQUESTLABEL("PULLREQUEST_LABEL"),
-		PULLREQUESTOWNER("PULLREQUEST_OWNER"),
-		PULLREQUESTISSUEUSER("PULLREQUEST_ISSUE_USER"),
-		PULLREQUESTISSUECOMMENT("PULLREQUEST_ISSUE_COMMENT"),
-		PULLREQUESTCOMMIT("PULLREQUEST_COMMIT"),
-		PULLREQUESTREVIEWCOMMENT("PULLREQUEST_REVIEW_COMMENT"),
-		PULLREQUESTCOMMENTOWNER("PULLREQUEST_COMMENT_OWNER"),
-		REPOWATCHED("REPO_WATCHED"),
-		REPOOWNER("REPO_OWNER"),
-		REPOCOLLABORATOR("REPO_COLLABORATOR"),
-		REPOCONTRIBUTOR("REPO_CONTRIBUTOR"),
-		REPOFORK("REPO_FORK"),
-		TEAMMEMBER("TEAM_MEMBER");
-		
-		private String text;
-		
-		EdgeType(String text) {
-			this.text = text;
-		}
-		
-		public String toString() {
-			return this.text;
-		}
-	}
+public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
 	private static final String INDEX_USER = "user-idx";
 	private static final String INDEX_REPO = "repo-idx";
@@ -142,17 +63,11 @@ public class BlueprintsDriver {
 	private static final String INDEX_PULLREQUEST = "pullrequest-idx";
 	private static final String INDEX_DISCUSSION = "discussion-idx";
 	private static final String INDEX_COMMIT = "commit-idx";
-	private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
-	
-	private static final int COMMITMGR_COMMITS = 2000;
-	
-	private IndexableGraph graph = null;
+		
 	private Logger log = null;
-	private SimpleDateFormat dateFormatter = null;
 
 	private Index <Vertex> useridx = null;
 	private Index <Vertex> repoidx = null;
-	private Index <Vertex> typeidx = null;
 	private Index <Vertex> orgidx = null;
 	private Index <Vertex> teamidx = null;
 	private Index <Vertex> gistidx = null;
@@ -164,7 +79,6 @@ public class BlueprintsDriver {
 	private Index <Vertex> discussionidx = null;
 	private Index <Vertex> commitidx = null;
 	
-	private CommitManager manager = null;
 	/**
 	 * Base constructor for BlueprintsDriver
 	 * 
@@ -172,17 +86,9 @@ public class BlueprintsDriver {
 	 * @param dburl The url of the database to use
 	 */
 	public BlueprintsDriver(String dbengine, String dburl) {
+		super(dbengine, dburl);
 		log = LoggerFactory.getLogger(this.getClass());
-		dateFormatter = new SimpleDateFormat(DATE_FORMAT);
-		dateFormatter.setTimeZone(TimeZone.getTimeZone("UTC"));
-		if (dbengine.toLowerCase().equals("neo4j")) {
-			log.info("opening neo4j graph at " + dburl);
-			graph = new Neo4jGraph(dburl);
-		} else {
-			log.error("Unknown database engine: " + dbengine);
-			System.exit(-1);
-			// throw new Exception();
-		}
+
 		useridx = getOrCreateIndex(INDEX_USER);
 		repoidx = getOrCreateIndex(INDEX_REPO);
 		typeidx = getOrCreateIndex(INDEX_TYPE);
@@ -196,59 +102,7 @@ public class BlueprintsDriver {
 		pullrequestidx = getOrCreateIndex(INDEX_PULLREQUEST);
 		discussionidx = getOrCreateIndex(INDEX_DISCUSSION);
 		commitidx = getOrCreateIndex(INDEX_COMMIT);
-		manager = TransactionalGraphHelper.createCommitManager((TransactionalGraph) graph, COMMITMGR_COMMITS);
-	}
-	
-	/**
-	 * Gets a reference to the specified index, creating it if it doesn't exist.
-	 * 
-	 * This probably could be better written if it used generics or something like that
-	 * 
-	 * @param idxname the name of the index to load/create
-	 * @param indexClass the class the index should use, either Vertex or Edge
-	 * @return a reference to the loaded/created index
-	 */
-	public <T extends Element> Index<T> getOrCreateIndex(String idxname, Class<T> idxClass) {
-		Index<T> idx = null;
-		try {
-			idx = graph.getIndex(idxname, idxClass);
-		} catch (RuntimeException e) {
-			log.debug("Runtime exception encountered getting index {}. Upgrade to newer version of blueprints.", idxname);
-		}
-		if (idx == null) {
-			log.warn("Creating index {} for class {}", idxname, idxClass.toString());
-			idx = graph.createManualIndex(idxname, idxClass);
-		}
-		return idx;
-	}
-	
-	/**
-	 * Helper function to get Vertex indexes
-	 * 
-	 * @param idxname name of the index to retrieve
-	 * @return the index if it exists, or a new index if it does not
-	 */
-	public Index<Vertex> getOrCreateIndex(String idxname) {
-		return getOrCreateIndex(idxname, Vertex.class);
-	}
-	
-	
-	/**
-	 * Helper function to get Edge indexes
-	 * 
-	 * @param idxname the name of the index to retrieve
-	 * @return the index if it exists, or a new index if it does not
-	 */
-	public Index<Edge> getOrCreateEdgeIndex(String idxname) {
-		return (Index<Edge>)getOrCreateIndex(idxname, Edge.class);
-	}
-	
-	public void shutdown() {
-		manager.close();
-		if (graph != null) {
-			graph.shutdown();
-		}
-	}
+	}	
 	
 	/**
 	 * Saves a User to the graph database
@@ -288,17 +142,7 @@ public class BlueprintsDriver {
 		setProperty(node, "last_updated", new Date()); // save the date of update
 		return node;
 	}
-	
-	private Edge createEdgeIfNotExist(Object id, Vertex outVertex, Vertex inVertex, EdgeType edgetype) {
-		for (Edge e : outVertex.getOutEdges(edgetype.toString())) {
-			if (e.getInVertex().equals(inVertex)) return e;
-		}
-		Edge re = graph.addEdge(id,  outVertex, inVertex, edgetype.toString());
-		re.setProperty("created_at", dateFormatter.format(new Date()));
-		manager.incrCounter();
-		return re;
-	}
-	
+		
 	public Map<String,Vertex> saveUserFollowersFollowing(String sourceuser, List<String> users, EdgeType edgetype) {
 		Vertex source = getOrCreateUser(sourceuser);
 		HashMap<String,Vertex> mapper= new HashMap<String,Vertex>();
@@ -381,55 +225,6 @@ public class BlueprintsDriver {
 		return saveUserRepositoriesHelper(user, repos, EdgeType.REPOOWNER);
 	}
 	
-	/**
-	 * Simple helper function that subtracts d2 from d1
-	 * 
-	 * @param d1
-	 * @param d2
-	 * @return difference in days as a double
-	 */
-	public double dateDifference(Date d1, Date d2) {
-		double diff = (d1.getTime() - d2.getTime())/1000/86400;
-		log.info("Date1: " + d1.getTime());
-		log.info("Date2: " + d2.getTime());
-		log.info("Difference: " + diff);
-		return diff;
-	}
-	
-	/**
-	 * Helper function that gets all of the vertices of a particular type from
-	 * the database provided they have not been updated in age days.
-	 * 
-	 * Vertices that lack a last_updated parameter are always returned
-	 * 
-	 * FIXME: right now this does NOT use indexes
-	 * 
-	 * @param age number of days since last_updated
-	 * @param idxname the name of the index to use (currently ignored)
-	 * @param vtxtype the type of vertex to examine
-	 * @param namefield the name of the field to return in the set
-	 * @return
-	 */
-	public Set<String> getVertexHelper(double age, String idxname, VertexType vtxtype, String fieldname) {
-		Set<String> s = new HashSet<String>();
-		// FIXME: How do we get all of the values from an index?
-		// Right now we iterate over all of the nodes, which is CRAPTASTIC
-		for (Vertex vtx: graph.getVertices()) {
-			Set<String> props = vtx.getPropertyKeys();
-			if (props.contains("type") && vtx.getProperty("type").equals(vtxtype)
-					&& props.contains("username")) {
-				try {
-					if (!props.contains("last_updated") ||
-							dateDifference(new Date(), dateFormatter.parse((String)vtx.getProperty("last_updated"))) > age)
-						s.add((String)vtx.getProperty(fieldname));
-				} catch (ParseException e) {
-					log.info("Error parsing date: " + vtx.getProperty("last_updated"));
-				}
-			}
-		}
-		return s;
-	}
-	
 	
 	/**
 	 * Gets all of the users that have not been updated in a number of days
@@ -442,6 +237,8 @@ public class BlueprintsDriver {
 	
 	/**
 	 * Gets all the repositories that have not been updated in a number of days
+	 * 
+	 * FIXME: is this ever used?
 	 * 
 	 * @param age
 	 * @return 
@@ -472,25 +269,6 @@ public class BlueprintsDriver {
 		return mapper;
 	}
 		
-	protected Vertex getOrCreateVertexHelper(String idcol, Object idval, VertexType vertexType, Index <Vertex> index) {
-		Vertex node = null;
-		Iterable<Vertex> results = index.get(idcol, idval);
-		for (Vertex v : results) {
-			node = v;
-			break;
-		}
-		if (node == null) {
-			node = graph.addVertex(null);
-			node.setProperty(idcol, idval);
-			node.setProperty("type", vertexType.toString());
-			node.setProperty("created_at", dateFormatter.format(new Date()));
-			index.put(idcol, idval, node);
-			typeidx.put("type", vertexType.toString(), node);
-			manager.incrCounter();
-		}
-		return node;
-	}
-	
 	public Vertex getOrCreateUser(String login) {
 		return getOrCreateVertexHelper("login", login, VertexType.USER, useridx);
 	}
@@ -579,8 +357,8 @@ public class BlueprintsDriver {
 		if (repo.getUrl() != null) node.setProperty("url", repo.getUrl());
 		if (repo.getUsername() != null) node.setProperty("username", repo.getUsername());
 		// getVisibility
-		node.setProperty("watchers", repo.getWatchers());
-		node.setProperty("last_updated", dateFormatter.format(new Date())); // save the date of update
+		setProperty(node, "watchers", repo.getWatchers());
+		setProperty(node, "last_updated", new Date());
 		return node;
 	}
 	
@@ -784,37 +562,12 @@ public class BlueprintsDriver {
 		return mapper;
 	}
 	
+	// FIXME: this code does not look like it functions properly
 	public void saveRepositoryPullRequests(String project, Collection<PullRequest> requests) {
 		Vertex projectnode = getOrCreateRepository(project);
 		for (PullRequest request : requests) {
 			saveRepositoryPullRequest(project, request);
 		}
-	}
-	
-	public void setProperty(Element elem, String propname, String property) {
-		// don't save null or empty strings
-		if (property != null && !property.trim().equals("")) elem.setProperty(propname, property);
-		log.trace("{} = {}", propname, property);
-	}
-	public void setProperty(Element elem, String propname, Date propdate) {
-		if (propdate != null) {
-			elem.setProperty(propname, dateFormatter.format(propdate));
-			log.trace("{} = {}", propname, dateFormatter.format(propdate));
-		} else {
-			log.trace("{} = null", propname);
-		}
-	}
-	public void setProperty(Element elem, String propname, int propvalue) {
-		elem.setProperty(propname, propvalue);
-		log.trace("{} = {}", propname, propvalue);
-	}
-	public void setProperty(Element elem, String propname, long propvalue) {
-		elem.setProperty(propname, propvalue);
-		log.trace("{} = {}", propname, propvalue);
-	}	
-	public void setProperty(Element elem, String propname, double propvalue) {
-		elem.setProperty(propname, propvalue);
-		log.trace("{} = {}", propname, propvalue);
 	}
 	
 	public Vertex saveCommit(Commit commit) {
@@ -969,5 +722,22 @@ public class BlueprintsDriver {
 		createEdgeIfNotExist(null, reponode, pullnode, EdgeType.PULLREQUEST);
 		log.trace("saveRepositoryPullRequest: exit");
 		return pullnode;
+	}
+
+	/**
+	 * Gets the date that this repository was last updated
+	 * 
+	 * @param repoId - the name of the repo, eg: defunkt/resque
+	 * @return
+	 */
+	public Date getRepositoryLastUpdated(String reponame) {
+		Vertex node = getOrCreateRepository(reponame);
+		try {
+			Date rv = dateFormatter.parse((String)node.getProperty("last_updated"));
+			return rv;
+		} catch (ParseException e) {
+			log.error("Error parsing last_updated date for {}: {}", reponame, node.getProperty("last_updated"));
+			return null;
+		}
 	}
 }

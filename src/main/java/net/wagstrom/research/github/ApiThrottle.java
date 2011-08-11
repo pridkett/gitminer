@@ -96,7 +96,7 @@ public class ApiThrottle {
 	 * @param seconds
 	 */
 	public void setMaxRate(int calls, int seconds) {
-		internalMaxRate = (long)((double) seconds / (double)calls)*1000;
+		internalMaxRate = (long)(((double) seconds / (double)calls)*1000);
 		log.trace("Internal maximum rate set to: {}ms", internalMaxRate);
 	}
 }
