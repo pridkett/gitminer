@@ -42,7 +42,7 @@ public class IssueMiner {
 	
 	public List<Comment> getIssueComments(String username, String reponame, int issueid) {
 		List<Comment> comments = service.getIssueComments(username, reponame, issueid);
-		log.debug("Retrived issues for project: {}/{} issue: {} number: {}", new Object[]{username, reponame, issueid, comments.size()});
+		log.debug("Retrived comments for {}/{}:{} number: {}", new Object[]{username, reponame, issueid, comments.size()});
 		return comments;
 	}
 }

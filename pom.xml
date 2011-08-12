@@ -33,12 +33,6 @@
     <repository>
         <id>wagstrom-net-external_free</id>
         <url>http://patrick.wagstrom.net/maven/external_free</url>
-        <releases>
-            <updatePolicy>never</updatePolicy>
-        </releases>
-        <snapshots>
-            <updatePolicy>never</updatePolicy>
-        </snapshots>
     </repository>
     <repository>
       <id>tinkerpop-repository</id>

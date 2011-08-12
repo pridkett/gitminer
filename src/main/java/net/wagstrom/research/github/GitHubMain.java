@@ -17,7 +17,10 @@ package net.wagstrom.research.github;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import org.slf4j.Logger;
@@ -67,11 +70,14 @@ public class GitHubMain {
         // set the minimum age for an artifact in milliseconds
         double minAgeDouble = Double.parseDouble(p.getProperty("net.wagstrom.research.github.refreshTime", "0.0"));
         refreshTime = (long)minAgeDouble * 86400 * 1000;
+        log.info("Minimum artifact refresh time: {}ms", refreshTime);
         
         // get the list of projects
 		try {
 			for (String proj : p.getProperty("net.wagstrom.research.github.projects").split(",")) {
-				projects.add(proj.trim());
+				if (!proj.trim().equals("")) {
+					projects.add(proj.trim());
+				}
 			}
 		} catch (NullPointerException e) {
 			log.error("property net.wagstrom.research.github.projects undefined");
@@ -81,7 +87,9 @@ public class GitHubMain {
 		// get the list of users
 		try{
 			for (String user : p.getProperty("net.wagstrom.research.github.users").split(",")) {
-				users.add(user.trim());
+				if (!user.trim().equals("")) {
+					users.add(user.trim());
+				}
 			}
 		} catch (NullPointerException e) {
 			log.error("property net.wagstrom.research.github.users undefined");
@@ -91,7 +99,9 @@ public class GitHubMain {
 		// get the list of organizations
 		try {
 			for (String organization : p.getProperty("net.wagstrom.research.github.organizations").split(",")){
-				organizations.add(organization.trim());
+				if (!organization.trim().equals("")) {
+					organizations.add(organization.trim());
+				}
 			}
 		} catch (NullPointerException e) {
 			log.error("property net.wagstrom.research.github.organizations undefined");
@@ -114,6 +124,7 @@ public class GitHubMain {
 		if (p.getProperty("net.wagstrom.research.github.miner.repositories","true").equals("true")) {
 			for (String proj : projects) {
 				String [] projsplit = proj.split("/");
+
 				bp.saveRepository(rm.getRepositoryInformation(projsplit[0], projsplit[1]));
 
 				if (p.getProperty("net.wagstrom.research.github.miner.repositories.collaborators", "true").equals("true"))
@@ -128,18 +139,27 @@ public class GitHubMain {
 				if (p.getProperty("net.wagstrom.research.github.miner.issues","true").equals("true")) {
 					Collection<Issue> issues = im.getAllIssues(projsplit[0], projsplit[1]);
 					bp.saveRepositoryIssues(proj, issues);
+					
+					Map<Integer, Date> savedIssues = bp.getIssueCommentsAddedAt(proj);
+					log.trace("SavedIssues Keys: {}", savedIssues.keySet());
+
 					for (Issue issue : issues) {
+						// if an issue doesn't appear in the set, we always save it
+						if (savedIssues.containsKey(issue.getNumber())) {
+							Date d = new Date();
+							if (d.getTime() - savedIssues.get(issue.getNumber()).getTime() < refreshTime) {
+								log.debug("Skipping fetching issue {} - recently updated", issue.getNumber());
+								continue;
+							}
+						}
 						bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(projsplit[0], projsplit[1], issue.getNumber()));
 					}
 				}
 				if (p.getProperty("net.wagstrom.research.github.miner.pullrequests", "true").equals("true")) {
 					Collection<PullRequest> requests = pm.getPullRequests(projsplit[0], projsplit[1]);
-					// bp.saveRepositoryPullRequests(proj, requests);
+					bp.saveRepositoryPullRequests(proj, requests);
 					for (PullRequest request : requests) {
-						if (request.getNumber() == 408) {
-							log.info("Fetching pull request 408");
-							bp.saveRepositoryPullRequest(proj, pm.getPullRequest(projsplit[0], projsplit[1], request.getNumber()));
-						}
+						bp.saveRepositoryPullRequest(proj, pm.getPullRequest(projsplit[0], projsplit[1], request.getNumber()));
 					}
 				}
 			}
@@ -163,6 +183,7 @@ public class GitHubMain {
 		OrganizationMiner om = new OrganizationMiner(ThrottledGitHubInvocationHandler.createThrottledOrganizationService(factory.createOrganizationService(), throttle));
 		if (p.getProperty("net.wagstrom.research.github.miner.organizations","true").equals("true")) {
 			for (String organization : organizations) {
+				log.warn("Fetching organization: {}", organization);
 				bp.saveOrganization(om.getOrganizationInformation(organization));
 				// This method fails when you're not an administrator of the organization
 	//			try {

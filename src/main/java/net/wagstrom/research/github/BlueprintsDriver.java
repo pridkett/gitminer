@@ -40,6 +40,7 @@ import com.github.api.v2.schema.Team;
 import com.github.api.v2.schema.User;
 import com.ibm.research.govsci.graph.BlueprintsBase;
 import com.ibm.research.govsci.graph.Shutdownable;
+import com.tinkerpop.blueprints.pgm.Edge;
 import com.tinkerpop.blueprints.pgm.Index;
 import com.tinkerpop.blueprints.pgm.Vertex;
 
@@ -61,6 +62,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	private static final String INDEX_COMMENT = "comment-idx";
 	private static final String INDEX_ISSUELABEL = "issuelabel-idx";
 	private static final String INDEX_PULLREQUEST = "pullrequest-idx";
+	private static final String INDEX_PULLREQUESTREVIEWCOMMENT = "pullrequestreviewcomment-idx";
 	private static final String INDEX_DISCUSSION = "discussion-idx";
 	private static final String INDEX_COMMIT = "commit-idx";
 		
@@ -78,6 +80,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	private Index <Vertex> pullrequestidx = null;
 	private Index <Vertex> discussionidx = null;
 	private Index <Vertex> commitidx = null;
+	private Index <Vertex> pullrequestreviewcommentidx = null;
 	
 	/**
 	 * Base constructor for BlueprintsDriver
@@ -102,6 +105,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		pullrequestidx = getOrCreateIndex(INDEX_PULLREQUEST);
 		discussionidx = getOrCreateIndex(INDEX_DISCUSSION);
 		commitidx = getOrCreateIndex(INDEX_COMMIT);
+		pullrequestreviewcommentidx = getOrCreateIndex(INDEX_PULLREQUESTREVIEWCOMMENT);
 	}	
 	
 	/**
@@ -204,6 +208,14 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		return mapper;
 	}
 	
+	/**
+	 * Saves a list of issues to the project database and connects those issues to the
+	 * project node.
+	 * 
+	 * @param project
+	 * @param issues
+	 * @return
+	 */
 	public Map<String, Vertex> saveRepositoryIssues(String project, Collection<Issue> issues) {
 		Vertex proj = getOrCreateRepository(project);
 		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
@@ -320,6 +332,11 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		return getOrCreateVertexHelper("commit_id", commitId, VertexType.COMMIT, commitidx);
 	}
 	
+	public Vertex getOrCreatePullRequestReviewComment(String commentId) {
+		log.debug("Fetching or creating PullRequestReviewComment: {}", commentId);
+		return getOrCreateVertexHelper("comment_id", commentId, VertexType.PULLREQUESTREVIEWCOMMENT, pullrequestreviewcommentidx);
+	}
+	
 	/**
 	 * Saves a repository to the graph database.
 	 * 
@@ -420,6 +437,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		return saveCommentHelper(comment, EdgeType.PULLREQUESTCOMMENTOWNER);
 	}
 	
+	public Vertex savePullRequestReviewComent(Comment comment) {
+		return saveCommentHelper(comment, EdgeType.PULLREQUESTREVIEWCOMMENT);
+	}
+
 	public Vertex saveGistFile(String repoid, String filename) {
 		Vertex node = getOrCreateGistFile(repoid, filename);
 		return node;
@@ -525,32 +546,54 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		return mapper;
 	}
 	
+	/**
+	 * Save an issue to the database
+	 * 
+	 * If the issue already exists in the database then it will update the issue
+	 * 
+	 * @param project name of the project
+	 * @param issue the GitHub issue object to save
+	 * @return the newly created vertex
+	 */
 	public Vertex saveIssue(String project, Issue issue) {
 		Vertex issuenode = getOrCreateIssue(project, issue);
-		if (issue.getBody() != null) issuenode.setProperty("body", issue.getBody());
-		if (issue.getClosedAt() != null) issuenode.setProperty("closedAt", dateFormatter.format(issue.getClosedAt()));
-		issuenode.setProperty("comments", issue.getComments());
-		if (issue.getCreatedAt() != null) issuenode.setProperty("createdAt", dateFormatter.format(issue.getCreatedAt()));
-		if (issue.getGravatarId() != null) issuenode.setProperty("gravatarId", issue.getGravatarId());
+		if (issue.getBody() != null) setProperty(issuenode, "body", issue.getBody());
+		if (issue.getClosedAt() != null) setProperty(issuenode, "closedAt", dateFormatter.format(issue.getClosedAt()));
+		setProperty(issuenode, "comments", issue.getComments());
+		if (issue.getCreatedAt() != null) setProperty(issuenode, "createdAt", dateFormatter.format(issue.getCreatedAt()));
+		if (issue.getGravatarId() != null) setProperty(issuenode, "gravatarId", issue.getGravatarId());
 		// issue.getLabels()
 		for (String label : issue.getLabels()) {
 			Vertex labelnode = getOrCreateIssueLabel(label);
 			createEdgeIfNotExist(null, issuenode, labelnode, EdgeType.ISSUELABEL);
 		}
-		issuenode.setProperty("number", issue.getNumber());
-		issuenode.setProperty("position", issue.getPosition());
-		if (issue.getState() != null) issuenode.setProperty("state", issue.getState().toString());
-		if (issue.getTitle() != null) issuenode.setProperty("title", issue.getTitle());
-		if (issue.getUpdatedAt() != null) issuenode.setProperty("updatedAt", dateFormatter.format(issue.getUpdatedAt()));
+		setProperty(issuenode, "number", issue.getNumber());
+		setProperty(issuenode, "position", issue.getPosition());
+		if (issue.getState() != null) setProperty(issuenode, "state", issue.getState().toString());
+		if (issue.getTitle() != null) setProperty(issuenode, "title", issue.getTitle());
+		if (issue.getUpdatedAt() != null) setProperty(issuenode, "updatedAt", issue.getUpdatedAt());
 		if (issue.getUser() != null) {
-			issuenode.setProperty("user", issue.getUser());
+			setProperty(issuenode, "user", issue.getUser());
 			Vertex userNode = getOrCreateUser(issue.getUser());
 			createEdgeIfNotExist(null, userNode, issuenode, EdgeType.ISSUEOWNER);
 		}
-		issuenode.setProperty("votes", issue.getVotes());
+		setProperty(issuenode, "votes", issue.getVotes());
+		setProperty(issuenode, "updated_at", new Date());
 		return issuenode;
 	}
 	
+	/**
+	 * Saves the comments that match up with a given issue
+	 * 
+	 * Also, of note this method sets the property comments_added_at to indicate when
+	 * the comments were added to the comment. This can be used to avoid pulling comments
+	 * multiple times.
+	 * 
+	 * @param project
+	 * @param issue
+	 * @param comments
+	 * @return
+	 */
 	public Map<Long,Vertex> saveRepositoryIssueComments(String project, Issue issue, Collection<Comment> comments) {
 		Vertex issuenode = getOrCreateIssue(project, issue);
 		HashMap<Long,Vertex> mapper = new HashMap<Long,Vertex>();
@@ -559,6 +602,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 			createEdgeIfNotExist(null, issuenode, commentnode, EdgeType.ISSUECOMMENT);
 			mapper.put(new Long(comment.getId()), commentnode);
 		}
+		setProperty(issuenode, "comments_added_at", new Date());
 		return mapper;
 	}
 	
@@ -606,9 +650,31 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	}
 	
 	public Vertex savePullRequestReviewComment(PullRequestReviewComment comment) {
-		// Vertex node = getOrCreatePullRequestReviewComment()
-		log.error("Attempt to save PullRequestReviewComment but I don't know how to create one!");
-		return null;
+		log.trace("savePullRequestReviewComment: enter");
+		String commentId = comment.getCommitId() + ":" + dateFormatter.format(comment.getCreatedAt());
+		Vertex node = getOrCreatePullRequestReviewComment(commentId);
+		setProperty(node, "body", comment.getBody());
+		setProperty(node, "commitId", comment.getCommitId());
+		setProperty(node, "createdAt", comment.getCreatedAt());
+		setProperty(node, "diffHunk", comment.getDiffHunk());
+		setProperty(node, "originalCommitId", comment.getOriginalCommitId());
+		setProperty(node, "path", comment.getPath());
+		setProperty(node, "position", comment.getPosition());
+		setProperty(node, "updatedAt", comment.getUpdatedAt());
+		if (comment.getUser() != null) {
+			Vertex user = saveUser(comment.getUser());
+			createEdgeIfNotExist(user, node, EdgeType.PULLREQUESTREVIEWCOMMENTOWNER);
+		}
+		if (comment.getCommitId() != null) {
+			Vertex commit = getOrCreateCommit(comment.getCommitId());
+			createEdgeIfNotExist(node, commit, EdgeType.PULLREQUESTREVIEWCOMMENTCOMMIT);
+		}
+		if (comment.getOriginalCommitId() != null) {
+			Vertex commit = getOrCreateCommit(comment.getOriginalCommitId());
+			createEdgeIfNotExist(node, commit, EdgeType.PULLREQUESTREVIEWCOMMENTORIGINALCOMMIT);		
+		}
+		log.trace("savePullRequestReviewComment: exit");
+		return node;
 	}
 	
 	public Vertex createCommitFromDiscussion(Discussion disc) {
@@ -633,7 +699,12 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		comment.setBody(disc.getBody());
 		comment.setCreatedAt(disc.getCreatedAt());
 		comment.setGravatarId(disc.getGravatarId());
-		comment.setId(Long.parseLong(disc.getId()));
+		try {
+			comment.setId(Long.parseLong(disc.getId()));
+		} catch (NumberFormatException e) {
+			log.debug("Discussion has a null id: {}", disc);
+			// comment.setId(null);
+		}
 		comment.setUpdatedAt(disc.getUpdatedAt());
 		comment.setUser(disc.getUser().getLogin());
 		Vertex node = savePullRequestComment(comment);
@@ -661,6 +732,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Vertex saveDiscussion(Discussion discussion) {
 		log.trace("saveDiscussion: enter");
 		Vertex node = null;
+		if (discussion.getType() == null && discussion.getBody() != null) {
+			log.warn("Discussion type was null now ISSUE_COMMENT: {}", discussion.toString());
+			discussion.setType(Discussion.Type.ISSUE_COMMENT);
+		}
 		log.trace("Discussion type: {}", discussion.getType().toString());
 		if (discussion.getType().equals(Discussion.Type.COMMIT)) {
 			node = createCommitFromDiscussion(discussion);
@@ -690,7 +765,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		setProperty(pullnode, "comments", request.getComments());
 		setProperty(pullnode, "createdAt", request.getCreatedAt());
 		setProperty(pullnode, "diffUrl", request.getDiffUrl());
-		log.info("Getting discussion");
+
 		for (Discussion discussion : request.getDiscussion()) {
 			Vertex discussionnode = saveDiscussion(discussion);
 			log.trace("Created discussion node");
@@ -739,5 +814,25 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 			log.error("Error parsing last_updated date for {}: {}", reponame, node.getProperty("last_updated"));
 			return null;
 		}
+	}
+	
+	public Map<Integer, Date> getIssueCommentsAddedAt(String reponame) {
+		Vertex node = getOrCreateRepository(reponame);
+		HashMap<Integer, Date> m = new HashMap<Integer, Date>();
+		for (Edge edge : node.getOutEdges(EdgeType.ISSUE.toString())) {
+			Vertex issue = edge.getInVertex();
+			Set<String> keys = issue.getPropertyKeys();
+			try {
+				if (keys.contains("comments_added_at")) {
+					Date d = dateFormatter.parse((String)issue.getProperty("comments_added_at"));
+					m.put(Integer.parseInt(((String)issue.getProperty("issue_id")).split(":")[1]), d);
+				} else {
+					log.trace("No comments_added_at for issue {}", issue.getProperty("issue_id"));
+				}
+			} catch (ParseException e) {
+				log.error("Error parsing comments_added_at property for {}", issue.getProperty("issue_id"));
+			}		
+		}
+		return m;
 	}
 }

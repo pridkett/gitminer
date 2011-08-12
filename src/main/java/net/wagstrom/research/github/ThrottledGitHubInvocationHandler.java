@@ -5,6 +5,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.HashSet;
 
@@ -49,8 +50,14 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 			log.error("Undeclared Throwable Exception (propagated):", e);
 			throw e.getCause();
 		} catch (InvocationTargetException e) {
-			log.error("Invocation target exception (propagated):", e);
-			throw e.getCause();
+			if (e.getCause() instanceof GitHubException) {
+				log.error("Invocation target exception caused by GitHub Exception -- Sleep for 5 seconds and try again", e);
+				Thread.sleep(5000);
+				return invoke(proxy, method, args);
+			} else {
+				log.error("Invocation target exception (propagated):", e);
+				throw e.getCause();
+			}
 		} catch (GitHubException e) {
 			if (e.getMessage().startsWith("API Rate Limit Exceeded for")) {
 				log.warn("Exceeding API rate limit -- Sleep for 5 seconds and try again");

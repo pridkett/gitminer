@@ -66,7 +66,7 @@ public class ApiThrottle {
 		if (internalMaxRate != -1 && lastCall != null) {
 			long sleepTime = internalMaxRate - (Calendar.getInstance().getTimeInMillis() - lastCall.getTimeInMillis());
 			if (sleepTime > 0) {
-				log.trace("Exceeded maximum internal rate. Sleeping for {}ms", sleepTime);
+				log.trace("Exceeded internal rate. Sleeping for {}ms", sleepTime);
 				Thread.sleep(sleepTime);
 			}
 		}
