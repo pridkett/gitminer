@@ -26,6 +26,13 @@
   <logger name="net.wagstrom.research.github.BlueprintsDriver" level="INFO"/>
   <logger name="net.wagstrom.research.github.ApiThrottle" level="TRACE"/>
 
+  <logger name="net.wagstrom.research.github.GistMiner" level="DEBUG"/>
+  <logger name="net.wagstrom.research.github.IssueMiner" level="DEBUG"/>
+  <logger name="net.wagstrom.research.github.OrganizationMiner" level="DEBUG"/>
+  <logger name="net.wagstrom.research.github.PullMiner" level="DEBUG"/>
+  <logger name="net.wagstrom.research.github.RepositoryMiner" level="DEBUG"/>
+  <logger name="net.wagstrom.research.github.UserMiner" level="DEBUG"/>
+  
   <root level="INFO">
     <appender-ref ref="STDOUT" />
     <appender-ref ref="FILE" />

@@ -53,7 +53,12 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 			throw e.getCause();
 		} catch (GitHubException e) {
 			if (e.getMessage().startsWith("API Rate Limit Exceeded for")) {
-				log.warn("Exceeding API rate limit. Throttle down and try again!");
+				log.warn("Exceeding API rate limit -- Sleep for 5 seconds and try again");
+				Thread.sleep(5000);
+				return invoke(proxy, method, args);
+			} else if (e.getMessage().toLowerCase().indexOf("<title>server error - github</title>") != -1) {
+				log.warn("Received a server error from GitHub -- Sleep for 5 seconds and try again");
+				Thread.sleep(5000);
 				return invoke(proxy, method, args);
 			} else {
 				log.error("Unhandled GitHubException: ", e);
