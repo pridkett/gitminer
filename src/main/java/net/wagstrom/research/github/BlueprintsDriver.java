@@ -562,7 +562,6 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		setProperty(issuenode, "comments", issue.getComments());
 		if (issue.getCreatedAt() != null) setProperty(issuenode, "createdAt", dateFormatter.format(issue.getCreatedAt()));
 		if (issue.getGravatarId() != null) setProperty(issuenode, "gravatarId", issue.getGravatarId());
-		// issue.getLabels()
 		for (String label : issue.getLabels()) {
 			Vertex labelnode = getOrCreateIssueLabel(label);
 			createEdgeIfNotExist(null, issuenode, labelnode, EdgeType.ISSUELABEL);
@@ -601,8 +600,9 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 			Vertex commentnode = saveIssueComment(comment);
 			createEdgeIfNotExist(null, issuenode, commentnode, EdgeType.ISSUECOMMENT);
 			mapper.put(new Long(comment.getId()), commentnode);
+			
 		}
-		setProperty(issuenode, "comments_added_at", new Date());
+		setProperty(issuenode, "sys:comments_added", new Date());
 		return mapper;
 	}
 	
@@ -770,6 +770,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 			Vertex discussionnode = saveDiscussion(discussion);
 			log.trace("Created discussion node");
 			createEdgeIfNotExist(null, pullnode, discussionnode, EdgeType.PULLREQUESTDISCUSSION);
+			setProperty(pullnode, "sys:discussions_added", new Date());
 		}
 		setProperty(pullnode, "gravatarId", request.getGravatarId());
 		// request.getHead()
@@ -795,6 +796,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		}
 		setProperty(pullnode, "votes", request.getVotes());
 		createEdgeIfNotExist(null, reponode, pullnode, EdgeType.PULLREQUEST);
+
+		setProperty(pullnode, "sys:update_complete", new Date());
 		log.trace("saveRepositoryPullRequest: exit");
 		return pullnode;
 	}
@@ -823,16 +826,36 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 			Vertex issue = edge.getInVertex();
 			Set<String> keys = issue.getPropertyKeys();
 			try {
-				if (keys.contains("comments_added_at")) {
-					Date d = dateFormatter.parse((String)issue.getProperty("comments_added_at"));
+				if (keys.contains("sys:comments_added")) {
+					Date d = dateFormatter.parse((String)issue.getProperty("sys:comments_added"));
 					m.put(Integer.parseInt(((String)issue.getProperty("issue_id")).split(":")[1]), d);
 				} else {
-					log.trace("No comments_added_at for issue {}", issue.getProperty("issue_id"));
+					log.trace("No sys:comments_added for issue {}", issue.getProperty("issue_id"));
 				}
 			} catch (ParseException e) {
-				log.error("Error parsing comments_added_at property for {}", issue.getProperty("issue_id"));
+				log.error("Error parsing sys:comments_added property for {}", issue.getProperty("issue_id"));
 			}		
 		}
+		return m;
+	}
+
+	public Map<Integer, Date> getPullRequestDiscussionsAddedAt(String reponame) {
+		Vertex node = getOrCreateRepository(reponame);
+		HashMap<Integer, Date> m = new HashMap<Integer, Date>();
+		for (Edge edge : node.getOutEdges(EdgeType.PULLREQUEST.toString())) {
+			Vertex pullrequest = edge.getInVertex();
+			Set<String> keys = pullrequest.getPropertyKeys();
+			try {
+				if (keys.contains("sys:discussions_added")) {
+					Date d = dateFormatter.parse((String)pullrequest.getProperty("sys:discussions_added"));
+					m.put(Integer.parseInt(((String)pullrequest.getProperty("pullrequest_id")).split(":")[1]), d);
+				} else {
+					log.trace("No sys:discussions_added for issue {}", pullrequest.getProperty("pullrequest_id"));
+				}
+			} catch (ParseException e) {
+				log.error("Error parsing sys:discussions_added property for {}", pullrequest.getProperty("pullrequest_id"));
+			}		
+		}		
 		return m;
 	}
 }

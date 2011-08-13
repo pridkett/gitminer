@@ -21,28 +21,39 @@ public class IssueMiner {
 		log = LoggerFactory.getLogger(this.getClass());
 	}
 	
-	public List<Issue> getOpenIssues(String username, String reponame) {
+	public Collection<Issue> getOpenIssues(String username, String reponame) {
+		log.trace("Retrieving open issues for project: {}/{}", username, reponame);
 		List<Issue> issues = service.getIssues(username, reponame, State.OPEN);
-		log.debug("Retrieved open issues for project: {}/{} number: {}", new Object[]{username, reponame, issues.size()});
+		log.debug("Retrieved open issues for project: {}/{} number: {}", new Object[]{username, reponame, issues==null?"null":issues.size()});
 		return issues;
 	}
 	
-	public List<Issue> getClosedIssues(String username, String reponame) {
+	public Collection<Issue> getClosedIssues(String username, String reponame) {
+		log.trace("Retrieving closed issues for project: {}/{}", username, reponame);
 		List<Issue> issues = service.getIssues(username, reponame, State.CLOSED);
-		log.debug("Retrieved closed issues for project: {}/{} number: {}", new Object[]{username, reponame, issues.size()});
+		log.debug("Retrieved closed issues for project: {}/{} number: {}", new Object[]{username, reponame, issues==null?"null":issues.size()});
 		return issues;
 	}
 	
 	public Collection<Issue> getAllIssues(String username, String reponame) {
-		HashSet<Issue> issues = new HashSet<Issue>(getOpenIssues(username, reponame));
-		issues.addAll(getClosedIssues(username, reponame));
+		log.trace("Retrieving all issus for project: {}/{}", username, reponame);
+		HashSet<Issue> issues = new HashSet<Issue>();
+		Collection<Issue> openIssues = getOpenIssues(username, reponame);
+		Collection<Issue> closedIssues = getClosedIssues(username, reponame);
+		if (openIssues != null) {
+			issues.addAll(openIssues);
+		}
+		if (closedIssues != null) {
+			issues.addAll(closedIssues);
+		}
 		log.debug("Retrieved all issues for project: {}/{} number: {}", new Object[]{username, reponame, issues.size()});
 		return issues;
 	}
 	
 	public List<Comment> getIssueComments(String username, String reponame, int issueid) {
+		log.trace("Retrieving comments for {}/{}:{}", new Object []{username, reponame, issueid});
 		List<Comment> comments = service.getIssueComments(username, reponame, issueid);
-		log.debug("Retrived comments for {}/{}:{} number: {}", new Object[]{username, reponame, issueid, comments.size()});
+		log.debug("Retrieved comments for {}/{}:{} number: {}", new Object[]{username, reponame, issueid, comments==null?"null":comments.size()});
 		return comments;
 	}
 }

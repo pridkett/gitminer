@@ -19,12 +19,14 @@ public class PullMiner {
 	}
 	
 	public Collection<PullRequest> getPullRequests(String username, String reponame) {
+		log.trace("Retrieving all pull requests for project: {}/{}", username, reponame);
 		List<PullRequest> requests = service.getPullRequests(username, reponame);
-		log.debug("Retrieved all pull requests for project: {}/{} number: {}", new Object[]{username, reponame, requests.size()});
+		log.debug("Retrieved all pull requests for project: {}/{} number: {}", new Object[]{username, reponame, requests==null?"null":requests.size()});
 		return requests;
 	}
 	
 	public PullRequest getPullRequest(String username, String reponame, int issueid) {
+		log.trace("Retrieving pull request: {}/{}:{}", new Object[]{username, reponame, issueid});
 		PullRequest req = service.getPullRequest(username, reponame, issueid);
 		log.debug("Retrieved pull request {}/{}:{}", new Object[]{username, reponame, issueid});
 		return req;

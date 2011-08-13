@@ -152,14 +152,31 @@ public class GitHubMain {
 								continue;
 							}
 						}
-						bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(projsplit[0], projsplit[1], issue.getNumber()));
+						try {
+							bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(projsplit[0], projsplit[1], issue.getNumber()));
+						} catch (NullPointerException e) {
+							log.error("NullPointerException saving issue comments: {}:{}", proj, issue);
+						}
 					}
 				}
 				if (p.getProperty("net.wagstrom.research.github.miner.pullrequests", "true").equals("true")) {
 					Collection<PullRequest> requests = pm.getPullRequests(projsplit[0], projsplit[1]);
 					bp.saveRepositoryPullRequests(proj, requests);
+					Map<Integer, Date> savedRequests = bp.getPullRequestDiscussionsAddedAt(proj);
+					log.trace("SavedPullRequest Keys: {}", savedRequests.keySet());
 					for (PullRequest request : requests) {
-						bp.saveRepositoryPullRequest(proj, pm.getPullRequest(projsplit[0], projsplit[1], request.getNumber()));
+						if (savedRequests.containsKey(request.getNumber())) {
+							Date d = new Date();
+							if (d.getTime() - savedRequests.get(request.getNumber()).getTime() < refreshTime) {
+								log.debug("Skipping fetching issue {} - recently updated", request.getNumber());
+								continue;
+							}						
+						}
+						try {
+							bp.saveRepositoryPullRequest(proj, pm.getPullRequest(projsplit[0], projsplit[1], request.getNumber()));
+						} catch (NullPointerException e) {
+							log.error("NullPointerException saving pull request: {}:{}", proj, request.getNumber());
+						}
 					}
 				}
 			}
