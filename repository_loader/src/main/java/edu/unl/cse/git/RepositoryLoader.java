@@ -75,9 +75,8 @@ public class RepositoryLoader {
 	}
 	
 	static public String fileToken( String reponame, String fileName ) {
-		//TODO: need to split the username away from the repository name before forming into token
-		//reponame.split( "/" );
-		return reponame + "--" + fileName;
+		// need to split the username away from the repository name before forming into token
+		return reponame.split( "/" )[1] + "--" + fileName;
 	}
 	
 	static public List<String> filesChanged( String reponame, RevCommit cmt ) {
