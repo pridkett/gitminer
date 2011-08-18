@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
 
+import org.eclipse.jgit.lib.AnyObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
@@ -26,7 +27,7 @@ public class BlueprintsDriver {
 		COMMIT("COMMIT"),
 		REPOSITORY("REPOSITORY"),
 		FILE("FILE"),
-		USER("USER");
+		PERSON("PERSON");
 		
 		private String text;
 		VertexType(String text) {
@@ -60,7 +61,7 @@ public class BlueprintsDriver {
 	private static final String INDEX_COMMIT = "commit-idx";
 	private static final String INDEX_FILE = "file-idx";
 	private static final String INDEX_REPO = "repo-idx";
-	private static final String INDEX_USER = "user-idx";
+	private static final String INDEX_PERSON = "person-idx";
 
 	private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
 
@@ -74,7 +75,7 @@ public class BlueprintsDriver {
 	private Index <Vertex> commitidx = null;
 	private Index <Vertex> fileidx = null;
 	private Index <Vertex> repoidx = null;
-	private Index <Vertex> useridx = null;
+	private Index <Vertex> personidx = null;
 	
 	private CommitManager manager = null;
 
@@ -101,7 +102,7 @@ public class BlueprintsDriver {
 		commitidx = getOrCreateIndex(INDEX_COMMIT);
 		fileidx = getOrCreateIndex(INDEX_FILE);
 		repoidx = getOrCreateIndex(INDEX_REPO);
-		useridx = getOrCreateIndex(INDEX_USER);
+		personidx = getOrCreateIndex(INDEX_PERSON);
 
 		manager = TransactionalGraphHelper.createCommitManager((TransactionalGraph) graph, COMMITMGR_COMMITS);
 	}
@@ -162,8 +163,8 @@ public class BlueprintsDriver {
 	 */
 	
 	public Vertex saveCommit( RevCommit cmt ) {
-		log.info( "Save Commit: " + cmt.getId().toString() );
-		Vertex node = getOrCreateCommit( cmt.getId().toString() );
+		log.info( "Save Commit: " + gitHash( cmt) );
+		Vertex node = getOrCreateCommit( gitHash( cmt ) );
 		setProperty( node, "message", cmt.getFullMessage() );
 		setProperty( node, "isMerge", cmt.getParentCount() > 1 );
 		return node;
@@ -182,9 +183,9 @@ public class BlueprintsDriver {
 		return node;
 	}
 	
-	public Vertex saveUser( PersonIdent person ) {
-		log.info( "Save User: " + person.getEmailAddress() );
-		Vertex node = getOrCreateUser( person.getName(), person.getEmailAddress() );
+	public Vertex savePerson( PersonIdent person ) {
+		log.info( "Save Person: " + person.getEmailAddress() );
+		Vertex node = getOrCreatePerson( person.getName(), person.getEmailAddress() );
 		setProperty( node, "name", person.getName() );
 		return node;
 	}
@@ -207,7 +208,7 @@ public class BlueprintsDriver {
 		HashMap<RevCommit, Vertex> mapper = new HashMap<RevCommit, Vertex>();
 		Vertex repo_node = getOrCreateRepository( reponame );
 		for ( RevCommit cmt : cmts ) {
-			Vertex cmt_node = getOrCreateCommit( cmt.getId().toString() );
+			Vertex cmt_node = getOrCreateCommit( gitHash( cmt ) );
 			createEdgeIfNotExist( null, cmt_node, repo_node, EdgeType.REPOSITORY );
 			mapper.put( cmt, cmt_node );
 		}
@@ -216,9 +217,9 @@ public class BlueprintsDriver {
 	
 	public Map<RevCommit, Vertex> saveCommitParents( RevCommit cmt, RevCommit[] parents ) {
 		HashMap<RevCommit, Vertex> mapper = new HashMap<RevCommit, Vertex>();
-		Vertex child = getOrCreateCommit( cmt.getId().toString() );
+		Vertex child = getOrCreateCommit( gitHash( cmt ) );
 		for ( RevCommit parent : parents ) {
-			Vertex node = getOrCreateCommit( parent.getId().toString() );
+			Vertex node = getOrCreateCommit( gitHash( parent ) );
 			createEdgeIfNotExist( null, child, node, EdgeType.PARENT );
 			mapper.put( cmt, node );
 		}
@@ -226,7 +227,7 @@ public class BlueprintsDriver {
 	}
 	
 	public Map<String, Vertex> saveCommitFiles( RevCommit cmt, Iterable<String> fileTokens ) {
-		Vertex cmtNode = getOrCreateCommit( cmt.getId().toString() );
+		Vertex cmtNode = getOrCreateCommit( gitHash( cmt ) );
 		HashMap<String, Vertex> mapper = new HashMap<String, Vertex>();
 		for ( String token : fileTokens ) {
 			Vertex fileNode = getOrCreateFile( token );
@@ -238,16 +239,16 @@ public class BlueprintsDriver {
 	
 	public Vertex saveCommitAuthor( RevCommit cmt, PersonIdent author ) {
 		if ( author == null ) { return null; }
-		Vertex cmt_node = getOrCreateCommit( cmt.getId().toString() );
-		Vertex author_node = saveUser( author );
+		Vertex cmt_node = getOrCreateCommit( gitHash( cmt ) );
+		Vertex author_node = savePerson( author );
 		Edge edge = createEdgeIfNotExist( null, cmt_node, author_node, EdgeType.AUTHOR );
 		setProperty( edge, "when", author.getWhen() );
 		return author_node;
 	}
 	
 	public Vertex saveCommitCommitter( RevCommit cmt, PersonIdent committer ) {
-		Vertex cmt_node = getOrCreateCommit( cmt.getId().toString() );
-		Vertex committer_node = saveUser( committer );
+		Vertex cmt_node = getOrCreateCommit( gitHash( cmt ) );
+		Vertex committer_node = savePerson( committer );
 		Edge edge = createEdgeIfNotExist( null, cmt_node, committer_node, EdgeType.COMMITTER );
 		setProperty( edge, "when", committer.getWhen() );
 		return committer_node;
@@ -290,9 +291,17 @@ public class BlueprintsDriver {
 		return getOrCreateVertexHelper("token", token, VertexType.FILE, fileidx);
 	}
 	
-	public Vertex getOrCreateUser( String name, String email ) {
+	public Vertex getOrCreatePerson( String name, String email ) {
 		//log.info( "Get or Create User: " + email );
-		return getOrCreateVertexHelper("email", email, VertexType.USER, useridx);
+		return getOrCreateVertexHelper("email", email, VertexType.PERSON, personidx);
+	}
+	
+	/*
+	 * git helpers
+	 */
+	
+	private String gitHash( AnyObjectId obj ) {
+		return obj.getName();
 	}
 	
 	/*
