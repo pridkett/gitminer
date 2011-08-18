@@ -18,8 +18,9 @@ public class GistMiner {
 	}
 	
 	public List<Gist> getUserGists(String user) {
+		log.trace("Fetching gists for user: {}", user);
 		List<Gist> gists = service.getUserGists(user);
-		log.debug("Fetched gists for user: {} number: {}", user, gists.size());
+		log.debug("Fetched gists for user: {} number: {}", user, gists==null?"null":gists.size());
 		return gists;
 	}
 	

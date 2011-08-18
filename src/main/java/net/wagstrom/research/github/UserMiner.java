@@ -43,8 +43,9 @@ public class UserMiner {
 	 * @return
 	 */
 	public User getUserInformation(String username) {
+		log.trace("Fetching user: {}", username);
 		User user = service.getUserByUsername(username);
-		log.debug("Fetched user: {} email: {}", username, user.getEmail());
+		log.debug("Fetched user: {} email: {}", username, user==null?"null":user.getEmail());
 		return user;
 	}
 	
@@ -55,20 +56,23 @@ public class UserMiner {
 	 * @return a List of the users
 	 */
 	public List<String> getUserFollowers(String username) {
+		log.trace("Fetching user followers: {}", username);
 		List<String> rv = service.getUserFollowers(username);
-		log.debug("Fetched users followers: {} number: {}", username, rv.size());
+		log.debug("Fetched users followers: {} number: {}", username, rv==null?"null":rv.size());
 		return rv;
 	}
 	
 	public List<String> getUserFollowing(String username) {
+		log.trace("Fetching users following: {}", username);
 		List<String> rv = service.getUserFollowing(username);
-		log.debug("Fetched users following: {} number: {}", username, rv.size());
+		log.debug("Fetched users following: {} number: {}", username, rv==null?"null":rv.size());
 		return rv;
 	}
 	
 	public List<Repository> getWatchedRepositories (String username) {
+		log.trace("Fetching watched repositories: {}", username);
 		List <Repository> rv = service.getWatchedRepositories(username);
-		log.debug("Fetched watched repositories: {} number: {}", username, rv.size());
+		log.debug("Fetched watched repositories: {} number: {}", username, rv==null?"null":rv.size());
 		return rv;
 	}
 }

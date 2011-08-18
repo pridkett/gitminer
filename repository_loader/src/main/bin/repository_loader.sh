@@ -28,7 +28,7 @@ if [ "$JAVA_OPTIONS" = "" ] ; then
     JAVA_OPTIONS="-Xms32M -Xmx512M"
 fi
 
-$JAVA $JAVA_OPTIONS -cp $CP net.wagstrom.research.github.Github $@
+$JAVA $JAVA_OPTIONS -cp $CP edu.unl.cse.git.App $@
 
 # Return the program's exit code
 exit $?

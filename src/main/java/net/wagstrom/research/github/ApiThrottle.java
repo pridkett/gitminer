@@ -22,9 +22,11 @@ public class ApiThrottle {
 	private int limit;
 	private int limitRemaining;
 	private Calendar lastReset = null;
+	private Calendar lastCall = null;
 	private Logger log;
 	private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
 	private SimpleDateFormat dateFormatter = null;
+	private long internalMaxRate = -1;
 	
 	public ApiThrottle() {
 		limit = -1;
@@ -43,15 +45,14 @@ public class ApiThrottle {
 	 */
 	public void callWait() throws InterruptedException {
 		if (lastReset != null)
-			log.info("API Estimates: Limit: {} Remaining: {} Last Reset: {}", new Object[] {limit, limitRemaining, dateFormatter.format(lastReset.getTime())});
+			log.debug("API Estimates: Limit: {} Remaining: {} Last Reset: {}", new Object[] {limit, limitRemaining, dateFormatter.format(lastReset.getTime())});
 		if (limitRemaining < 1 && limit != -1) {
-			log.info("Going to try and wait a little bit...");
 			Calendar sleepEnd = (Calendar)lastReset.clone();
 			int timeDiff = 3600;
 			if (limit == 60) {
-				timeDiff = 60;
+				timeDiff = 65;
 			} else if (limit == 5000) {
-				timeDiff = 86400;
+				timeDiff = 86460;
 			}
 			sleepEnd.add(Calendar.SECOND, timeDiff);
 			long sleepTime = sleepEnd.getTimeInMillis() - Calendar.getInstance().getTimeInMillis();
@@ -62,6 +63,14 @@ public class ApiThrottle {
 				log.info("Should be no reason to sleep");
 			}
 		}
+		if (internalMaxRate != -1 && lastCall != null) {
+			long sleepTime = internalMaxRate - (Calendar.getInstance().getTimeInMillis() - lastCall.getTimeInMillis());
+			if (sleepTime > 0) {
+				log.trace("Exceeded internal rate. Sleeping for {}ms", sleepTime);
+				Thread.sleep(sleepTime);
+			}
+		}
+		lastCall = Calendar.getInstance();
 		return;
 	}
 	
@@ -75,5 +84,19 @@ public class ApiThrottle {
 		if (this.limitRemaining == this.limit - 1) {
 			lastReset = Calendar.getInstance();
 		}
+	}
+	
+	/**
+	 * Sets the maximum rate as the number of calls in the number of seconds
+	 * 
+	 * This is external from the given API rate and is used to be nice to servers.
+	 * Internally it is stored as a long indicating the minimum wait between calls
+	 * 
+	 * @param calls
+	 * @param seconds
+	 */
+	public void setMaxRate(int calls, int seconds) {
+		internalMaxRate = (long)(((double) seconds / (double)calls)*1000);
+		log.trace("Internal maximum rate set to: {}ms", internalMaxRate);
 	}
 }

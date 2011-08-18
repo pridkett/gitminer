@@ -3,17 +3,38 @@
   <conversionRule conversionWord="colorlvl" 
                   converterClass="net.wagstrom.logging.logbackAddOns.AnsiColorConverter" /> 
 
+  <!-- default console appender, with coloring -->
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
       <layout class="ch.qos.logback.classic.PatternLayout">
-        <pattern>%d{HH:mm:ss.SSS} [%thread] %-5colorlvl %logger{36} %file:%line - %msg%n</pattern>
+        <pattern>%d{HH:mm:ss} [%thread] %-5colorlvl %logger{36} %file:%line - %msg%n</pattern>
       </layout>
     </encoder>
   </appender>
    
+  <!-- file appender -->
+ <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+    <file>github.log</file>
+    <append>false</append>
+    <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+      <layout class="ch.qos.logback.classic.PatternLayout">
+        <pattern>%d{HH:mm:ss} [%thread] %-5level %logger{36} %file:%line - %msg%n</pattern>
+      </layout>
+    </encoder>
+  </appender>
+
   <logger name="net.wagstrom.research.github.BlueprintsDriver" level="INFO"/>
- 
+  <logger name="net.wagstrom.research.github.ApiThrottle" level="TRACE"/>
+
+  <logger name="net.wagstrom.research.github.GistMiner" level="TRACE"/>
+  <logger name="net.wagstrom.research.github.IssueMiner" level="TRACE"/>
+  <logger name="net.wagstrom.research.github.OrganizationMiner" level="TRACE"/>
+  <logger name="net.wagstrom.research.github.PullMiner" level="TRACE"/>
+  <logger name="net.wagstrom.research.github.RepositoryMiner" level="TRACE"/>
+  <logger name="net.wagstrom.research.github.UserMiner" level="TRACE"/>
+  
   <root level="INFO">
     <appender-ref ref="STDOUT" />
+    <appender-ref ref="FILE" />
   </root>
 </configuration>
