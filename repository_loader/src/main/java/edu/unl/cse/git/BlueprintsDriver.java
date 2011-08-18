@@ -26,7 +26,7 @@ public class BlueprintsDriver {
 		COMMIT("COMMIT"),
 		REPOSITORY("REPOSITORY"),
 		FILE("FILE"),
-		USER("USER");
+		PERSON("PERSON");
 		
 		private String text;
 		VertexType(String text) {
@@ -60,7 +60,7 @@ public class BlueprintsDriver {
 	private static final String INDEX_COMMIT = "commit-idx";
 	private static final String INDEX_FILE = "file-idx";
 	private static final String INDEX_REPO = "repo-idx";
-	private static final String INDEX_USER = "user-idx";
+	private static final String INDEX_PERSON = "person-idx";
 
 	private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
 
@@ -74,7 +74,7 @@ public class BlueprintsDriver {
 	private Index <Vertex> commitidx = null;
 	private Index <Vertex> fileidx = null;
 	private Index <Vertex> repoidx = null;
-	private Index <Vertex> useridx = null;
+	private Index <Vertex> personidx = null;
 	
 	private CommitManager manager = null;
 
@@ -101,7 +101,7 @@ public class BlueprintsDriver {
 		commitidx = getOrCreateIndex(INDEX_COMMIT);
 		fileidx = getOrCreateIndex(INDEX_FILE);
 		repoidx = getOrCreateIndex(INDEX_REPO);
-		useridx = getOrCreateIndex(INDEX_USER);
+		personidx = getOrCreateIndex(INDEX_PERSON);
 
 		manager = TransactionalGraphHelper.createCommitManager((TransactionalGraph) graph, COMMITMGR_COMMITS);
 	}
@@ -182,9 +182,9 @@ public class BlueprintsDriver {
 		return node;
 	}
 	
-	public Vertex saveUser( PersonIdent person ) {
-		log.info( "Save User: " + person.getEmailAddress() );
-		Vertex node = getOrCreateUser( person.getName(), person.getEmailAddress() );
+	public Vertex savePerson( PersonIdent person ) {
+		log.info( "Save Person: " + person.getEmailAddress() );
+		Vertex node = getOrCreatePerson( person.getName(), person.getEmailAddress() );
 		setProperty( node, "name", person.getName() );
 		return node;
 	}
@@ -239,7 +239,7 @@ public class BlueprintsDriver {
 	public Vertex saveCommitAuthor( RevCommit cmt, PersonIdent author ) {
 		if ( author == null ) { return null; }
 		Vertex cmt_node = getOrCreateCommit( cmt.getId().toString() );
-		Vertex author_node = saveUser( author );
+		Vertex author_node = savePerson( author );
 		Edge edge = createEdgeIfNotExist( null, cmt_node, author_node, EdgeType.AUTHOR );
 		setProperty( edge, "when", author.getWhen() );
 		return author_node;
@@ -247,7 +247,7 @@ public class BlueprintsDriver {
 	
 	public Vertex saveCommitCommitter( RevCommit cmt, PersonIdent committer ) {
 		Vertex cmt_node = getOrCreateCommit( cmt.getId().toString() );
-		Vertex committer_node = saveUser( committer );
+		Vertex committer_node = savePerson( committer );
 		Edge edge = createEdgeIfNotExist( null, cmt_node, committer_node, EdgeType.COMMITTER );
 		setProperty( edge, "when", committer.getWhen() );
 		return committer_node;
@@ -290,9 +290,9 @@ public class BlueprintsDriver {
 		return getOrCreateVertexHelper("token", token, VertexType.FILE, fileidx);
 	}
 	
-	public Vertex getOrCreateUser( String name, String email ) {
+	public Vertex getOrCreatePerson( String name, String email ) {
 		//log.info( "Get or Create User: " + email );
-		return getOrCreateVertexHelper("email", email, VertexType.USER, useridx);
+		return getOrCreateVertexHelper("email", email, VertexType.PERSON, personidx);
 	}
 	
 	/*
