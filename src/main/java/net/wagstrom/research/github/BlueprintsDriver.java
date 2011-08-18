@@ -19,6 +19,7 @@ package net.wagstrom.research.github;
 import java.util.List;
 import java.text.ParseException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -754,7 +755,29 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		return node;
 	}
 	
+	/**
+	 * Helper function to save an indivdual pull request
+	 * 
+	 * This function assumes that the pull request is not the full information,
+	 * thus it does not set all of the properties, such as sys:discussions_added
+	 * 
+	 * @param reponame
+	 * @param request
+	 * @return
+	 */
 	public Vertex saveRepositoryPullRequest(String reponame, PullRequest request) {
+		return saveRepositoryPullRequest(reponame, request, false);
+	}
+	
+	/**
+	 * Main function to save an individual pull request
+	 * 
+	 * @param reponame
+	 * @param request
+	 * @param full whether or not this is a full update. If true then it sets parameters such as sys:discussions_added
+	 * @return
+	 */
+	public Vertex saveRepositoryPullRequest(String reponame, PullRequest request, boolean full) {
 		log.trace("saveRepositoryPullRequest: enter");
 		log.trace("Saving pull request {}", request.getNumber());
 		log.trace(request.toString());
@@ -770,7 +793,6 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 			Vertex discussionnode = saveDiscussion(discussion);
 			log.trace("Created discussion node");
 			createEdgeIfNotExist(null, pullnode, discussionnode, EdgeType.PULLREQUESTDISCUSSION);
-			setProperty(pullnode, "sys:discussions_added", new Date());
 		}
 		setProperty(pullnode, "gravatarId", request.getGravatarId());
 		// request.getHead()
@@ -797,7 +819,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		setProperty(pullnode, "votes", request.getVotes());
 		createEdgeIfNotExist(null, reponode, pullnode, EdgeType.PULLREQUEST);
 
-		setProperty(pullnode, "sys:update_complete", new Date());
+		if (full == true) {
+			setProperty(pullnode, "sys:discussions_added", new Date());
+			setProperty(pullnode, "sys:update_complete", new Date());
+		}
 		log.trace("saveRepositoryPullRequest: exit");
 		return pullnode;
 	}
@@ -819,6 +844,14 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		}
 	}
 	
+	/**
+	 * Get a map of date when comments were added to each issue
+	 * 
+	 * In the case that sys:comments_added is not set null is inserted into the map.
+	 * 
+	 * @param reponame the name of the repository to mine
+	 * @return a Map that maps issue_ids to the date that the comments were downloaded
+	 */
 	public Map<Integer, Date> getIssueCommentsAddedAt(String reponame) {
 		Vertex node = getOrCreateRepository(reponame);
 		HashMap<Integer, Date> m = new HashMap<Integer, Date>();
@@ -831,6 +864,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 					m.put(Integer.parseInt(((String)issue.getProperty("issue_id")).split(":")[1]), d);
 				} else {
 					log.trace("No sys:comments_added for issue {}", issue.getProperty("issue_id"));
+					m.put(Integer.parseInt(((String)issue.getProperty("issue_id")).split(":")[1]), null);
 				}
 			} catch (ParseException e) {
 				log.error("Error parsing sys:comments_added property for {}", issue.getProperty("issue_id"));
@@ -839,6 +873,38 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		return m;
 	}
 
+	/**
+	 * Similar to getIssueCommentsAddedAt except it infers missing values
+	 * 
+	 * The method is pretty simple, find the largest value obtained from
+	 * getIssueCommentsAt and insert null values for all of the values going
+	 * up to that point.
+	 * 
+	 * This function is needed because there are times that GitHub chokes on
+	 * getting the issues for a particular project. In particular this happens
+	 * with mxcl/homebrew which has about 7000 closed issues.
+	 * 
+	 * @param reponame name of the repository to mine
+	 * @return a Map that maps issue_ids to the date that the comments were downloaded
+	 */
+	public Map<Integer, Date> getIssueCommentsAddedAtBruteForce(String reponame) {
+		Map<Integer, Date> m = getIssueCommentsAddedAt(reponame);
+		int max = Collections.max(m.keySet());
+		for (int i=1; i < max; i ++) {
+			if (!m.containsKey(i)) {
+				m.put(i, null);
+			}
+		}
+		return m;
+	}
+	
+	/**
+	 * Return a mapping between pull requests and the date they were augmented
+	 * with discussions.
+	 * 
+	 * @param reponame
+	 * @return
+	 */
 	public Map<Integer, Date> getPullRequestDiscussionsAddedAt(String reponame) {
 		Vertex node = getOrCreateRepository(reponame);
 		HashMap<Integer, Date> m = new HashMap<Integer, Date>();

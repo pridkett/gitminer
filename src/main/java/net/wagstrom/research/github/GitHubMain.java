@@ -145,12 +145,9 @@ public class GitHubMain {
 
 					for (Issue issue : issues) {
 						// if an issue doesn't appear in the set, we always save it
-						if (savedIssues.containsKey(issue.getNumber())) {
-							Date d = new Date();
-							if (d.getTime() - savedIssues.get(issue.getNumber()).getTime() < refreshTime) {
-								log.debug("Skipping fetching issue {} - recently updated", issue.getNumber());
-								continue;
-							}
+						if (!needsUpdate(savedIssues.get(issue.getNumber()))) {
+							log.debug("Skipping fetching issue {} - recently updated", issue.getNumber());
+							continue;
 						}
 						try {
 							bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(projsplit[0], projsplit[1], issue.getNumber()));
@@ -159,6 +156,7 @@ public class GitHubMain {
 						}
 					}
 				}
+				
 				if (p.getProperty("net.wagstrom.research.github.miner.pullrequests", "true").equals("true")) {
 					Collection<PullRequest> requests = pm.getPullRequests(projsplit[0], projsplit[1]);
 					bp.saveRepositoryPullRequests(proj, requests);
@@ -166,20 +164,22 @@ public class GitHubMain {
 					log.trace("SavedPullRequest Keys: {}", savedRequests.keySet());
 					for (PullRequest request : requests) {
 						if (savedRequests.containsKey(request.getNumber())) {
-							Date d = new Date();
-							if (d.getTime() - savedRequests.get(request.getNumber()).getTime() < refreshTime) {
-								log.debug("Skipping fetching issue {} - recently updated", request.getNumber());
-								continue;
+							if (!needsUpdate(savedRequests.get(request.getNumber()))) {
+								log.debug("Skipping fetching pull request {} - recently updated", request.getNumber());
+								continue;								
 							}						
 						}
 						try {
-							bp.saveRepositoryPullRequest(proj, pm.getPullRequest(projsplit[0], projsplit[1], request.getNumber()));
+							bp.saveRepositoryPullRequest(proj, pm.getPullRequest(projsplit[0], projsplit[1], request.getNumber()), true);
 						} catch (NullPointerException e) {
 							log.error("NullPointerException saving pull request: {}:{}", proj, request.getNumber());
 						}
 					}
 				}
 			}
+			
+			// this iterates over the projects by itself
+			bruteForceIssueComments(im, bp, p);
 		}
 
 		UserMiner um = new UserMiner(ThrottledGitHubInvocationHandler.createThrottledUserService(factory.createUserService(), throttle));
@@ -226,6 +226,52 @@ public class GitHubMain {
 
 		log.info("Shutting down graph");
 		bp.shutdown();
+	}
+	
+	private void bruteForceIssueComments(IssueMiner im, BlueprintsDriver bp, Properties p) {
+		ArrayList<String> projects = new ArrayList<String>();
+		if (p.getProperty("net.wagstrom.research.github.miner.issues.bruteforce","true").equals("true")) {
+	        // get the list of projects
+			try {
+				for (String proj : p.getProperty("net.wagstrom.research.github.projects.bruteforce").split(",")) {
+					if (!proj.trim().equals("")) {
+						projects.add(proj.trim());
+					}
+				}
+			} catch (NullPointerException e) {
+				log.error("property net.wagstrom.research.github.projects.bruteforce undefined");
+				System.exit(1);
+			}	
+		}
+		
+		for (String proj : projects) {
+			Map<Integer, Date> issues = bp.getIssueCommentsAddedAtBruteForce(proj);
+			for (int i : issues.keySet()) {
+				if (needsUpdate(issues.get(i), true)) {
+					try {
+						Issue issue = im.getIssue(proj, i);
+						if (issue != null) {
+							bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(proj, issue.getNumber()));					
+						}
+					} catch (GitHubException e) {
+						log.error("Error fetching issue {}:{}", proj, i);
+					} catch (NullPointerException e) {
+						log.error("Somehow got a null pointer exception on issue {}:{}", proj, i);
+					}
+				}
+			}
+		}
+		return;
+	}
+	
+	private boolean needsUpdate(Date elementDate) {
+		return needsUpdate(elementDate, false);
+	}
+	
+	private boolean needsUpdate(Date elementDate, boolean nullTrueFalse) {
+		Date currentDate = new Date();
+		if (elementDate == null) return nullTrueFalse;		
+		return ((currentDate.getTime() - elementDate.getTime()) >= refreshTime);
 	}
 	
 	private BlueprintsDriver connectToGraph(Properties p) {

@@ -12,11 +12,12 @@ import com.github.api.v2.schema.Issue;
 import com.github.api.v2.schema.Issue.State;
 import com.github.api.v2.services.IssueService;
 
-public class IssueMiner {
+public class IssueMiner extends BaseMiner {
 	private IssueService service = null;
 	private Logger log;
 	
 	public IssueMiner(IssueService service) {
+		super();
 		this.service = service;
 		log = LoggerFactory.getLogger(this.getClass());
 	}
@@ -50,10 +51,23 @@ public class IssueMiner {
 		return issues;
 	}
 	
+	public Issue getIssue(String projectname, int issueNumber) {
+		String[] proj = projsplit(projectname);
+		log.trace("Retrieving issue: {}:{}", projectname, issueNumber);
+		Issue issue = service.getIssue(proj[0], proj[1], issueNumber);
+		log.debug("Retrieved issue: {}:{}", projectname, issueNumber);
+		return issue;
+	}
+	
 	public List<Comment> getIssueComments(String username, String reponame, int issueid) {
 		log.trace("Retrieving comments for {}/{}:{}", new Object []{username, reponame, issueid});
 		List<Comment> comments = service.getIssueComments(username, reponame, issueid);
 		log.debug("Retrieved comments for {}/{}:{} number: {}", new Object[]{username, reponame, issueid, comments==null?"null":comments.size()});
 		return comments;
+	}
+	
+	public List<Comment> getIssueComments(String projectname, int issueid) {
+		String[] proj = projsplit(projectname);
+		return getIssueComments(proj[0], proj[1], issueid);
 	}
 }
