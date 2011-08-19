@@ -47,6 +47,7 @@ import com.github.api.v2.schema.User;
 import com.ibm.research.govsci.graph.BlueprintsBase;
 import com.ibm.research.govsci.graph.Shutdownable;
 import com.tinkerpop.blueprints.pgm.Edge;
+import com.tinkerpop.blueprints.pgm.Element;
 import com.tinkerpop.blueprints.pgm.Graph;
 import com.tinkerpop.blueprints.pgm.Index;
 import com.tinkerpop.blueprints.pgm.Vertex;
@@ -893,20 +894,18 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Map<Integer, Date> getIssueCommentsAddedAt(String reponame) {
 		Vertex node = getOrCreateRepository(reponame);
 		HashMap<Integer, Date> m = new HashMap<Integer, Date>();
-		for (Edge edge : node.getOutEdges(EdgeType.ISSUE.toString())) {
-			Vertex issue = edge.getInVertex();
-			Set<String> keys = issue.getPropertyKeys();
-			try {
-				if (keys.contains("sys:comments_added")) {
-					Date d = dateFormatter.parse((String)issue.getProperty("sys:comments_added"));
-					m.put(Integer.parseInt(((String)issue.getProperty("issue_id")).split(":")[1]), d);
-				} else {
-					log.trace("No sys:comments_added for issue {}", issue.getProperty("issue_id"));
-					m.put(Integer.parseInt(((String)issue.getProperty("issue_id")).split(":")[1]), null);
-				}
-			} catch (ParseException e) {
-				log.error("Error parsing sys:comments_added property for {}", issue.getProperty("issue_id"));
-			}		
+		
+		ScriptEngine engine = new GremlinScriptEngine();
+		List<Vertex> list = new ArrayList<Vertex>();
+		engine.put("g", this.graph);
+		engine.put("list", list);		
+		engine.put("node", node);
+
+		try {
+			engine.eval("node._().out('" + EdgeType.ISSUE + "') >> list");
+			addValuesFromIterable(list, m, "number", "sys:coments_added");
+		} catch (ScriptException e) {
+			log.error("ScriptException encountered in getIssueCommentsAddedAt");
 		}
 		return m;
 	}
@@ -946,25 +945,39 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Map<Integer, Date> getPullRequestDiscussionsAddedAt(String reponame) {
 		Vertex node = getOrCreateRepository(reponame);
 		HashMap<Integer, Date> m = new HashMap<Integer, Date>();
-		for (Edge edge : node.getOutEdges(EdgeType.PULLREQUEST.toString())) {
-			Vertex pullrequest = edge.getInVertex();
-			Set<String> keys = pullrequest.getPropertyKeys();
-			try {
-				if (keys.contains("sys:discussions_added")) {
-					Date d = dateFormatter.parse((String)pullrequest.getProperty("sys:discussions_added"));
-					m.put(Integer.parseInt(((String)pullrequest.getProperty("pullrequest_id")).split(":")[1]), d);
-				} else {
-					log.trace("No sys:discussions_added for issue {}", pullrequest.getProperty("pullrequest_id"));
-				}
-			} catch (ParseException e) {
-				log.error("Error parsing sys:discussions_added property for {}", pullrequest.getProperty("pullrequest_id"));
-			}		
-		}		
+		
+		ScriptEngine engine = new GremlinScriptEngine();
+		List<Vertex> list = new ArrayList<Vertex>();
+		engine.put("g", this.graph);
+		engine.put("list", list);		
+		engine.put("node", node);
+
+		try {
+			engine.eval("node._().out('" + EdgeType.PULLREQUEST + "') >> list");
+			addValuesFromIterable(list, m, "number", "sys:discussions_added");
+		} catch (ScriptException e) {
+			log.error("ScriptException encountered in getPullRequestDiscussionsAddedAt");
+		}
 		return m;
 	}
 
-	private void addUsersFromIterator(Iterable<Vertex> it, HashMap<String, Date> m, String idkey, String datekey) {
-		for (Vertex v : it) {
+	/**
+	 * A generic method that goes over an iterable and adds the appropriate value to a map
+	 * 
+	 * This is most commonly used when iterating over a list of nodes obtained
+	 * from a Gremlin traversal. It stores properties in a map of idkey:datekey. Thus,
+	 * right now this ONLY works if you're looking at dates, which is a common
+	 * occurance.
+	 * 
+	 * @param it The iterable to iterate over. Usually and ArrayList<Vertex>
+	 * @param m The map that will map class T to Date. Usually T is String or Integer
+	 * @param idkey The property of Elements in it that contains the value of T in the map
+	 * @param datekey The property of Element in it that contains the value of Date in the map
+	 * @return the updated map
+	 */
+	@SuppressWarnings("unchecked")
+	private <T, I extends Element> Map<T, Date> addValuesFromIterable(Iterable<I> it, Map<T, Date> m, String idkey, String datekey) {
+		for (I v : it) {
 			Set<String> keys = v.getPropertyKeys();
 			try {
 				if (!keys.contains(idkey)) {
@@ -973,16 +986,30 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 				}
 				if (keys.contains(datekey)) {
 					Date d = dateFormatter.parse((String)v.getProperty(datekey));
-					m.put((String)v.getProperty(idkey), d);
+					m.put((T)v.getProperty(idkey), d);
 				} else {
-					m.put((String)v.getProperty(idkey), null);
+					m.put((T)v.getProperty(idkey), null);
 				}
 			} catch (ParseException e) {
 				log.error("Invalid {} for user: {}", datekey, (String)v.getProperty(idkey));
 			}
-		}		
+		}
+		return m;
 	}
-
+	
+	/**
+	 * An aggressive method that attempts to get the last date that ALL the users
+	 * associated with a project were updated.
+	 * 
+	 * This looks at watchers, collaborators, contributors, and all those active
+	 * on issues and pullrequests (including subdiscussions).
+	 * 
+	 * This method is commonly used to get a list of users and the dates they were
+	 * updated for purposes of crawling all of the users again.
+	 * 
+	 * @param reponame the name of the repository, eg mxcl/homebrew
+	 * @return a mapping of usernames to the date they last had a full update
+	 */
 	public Map<String, Date> getProjectUsersLastFullUpdate(String reponame) {
 		Vertex node = getOrCreateRepository(reponame);
 		HashMap<String, Date> m = new HashMap<String, Date>();
@@ -996,31 +1023,31 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		try {
 			// first: get all the users watching the project
 			engine.eval("node._().in('" + EdgeType.REPOWATCHED + "') >> list");
-			addUsersFromIterator(list, m, "login", "sys:last_full_update");	
-
+			addValuesFromIterable(list, m, "login", "sys:last_full_update");
+			
 			// add the collaborators
 			engine.eval("node._().in('" + EdgeType.REPOCOLLABORATOR + "') >> list");
-			addUsersFromIterator(list, m, "login", "sys:last_full_update");	
+			addValuesFromIterable(list, m, "login", "sys:last_full_update");	
 
 			// add the contributors
 			engine.eval("node._().in('" + EdgeType.REPOCONTRIBUTOR + "') >> list");
-			addUsersFromIterator(list, m, "login", "sys:last_full_update");	
+			addValuesFromIterable(list, m, "login", "sys:last_full_update");	
 
 			// add the issue owners
 			engine.eval("node._().out('" + EdgeType.ISSUE + "').in('" + EdgeType.ISSUEOWNER + "').unique() >> list");
-			addUsersFromIterator(list, m, "login", "sys:last_full_update");	
+			addValuesFromIterable(list, m, "login", "sys:last_full_update");	
 
 			// add the individuals who commented on the issues
 			engine.eval("node._().out('" + EdgeType.ISSUE + "').out('" + EdgeType.ISSUECOMMENT + "').in('" + EdgeType.ISSUECOMMENTOWNER + "').unique() >> list");
-			addUsersFromIterator(list, m, "login", "sys:last_full_update");	
+			addValuesFromIterable(list, m, "login", "sys:last_full_update");	
 
 			// add the pull request owners
 			engine.eval("node._().out('" + EdgeType.PULLREQUEST + "').inE.outV{it.type=='" + VertexType.USER + "'}.unique() >> list");
-			addUsersFromIterator(list, m, "login", "sys:last_full_update");	
+			addValuesFromIterable(list, m, "login", "sys:last_full_update");	
 
 			// add the pull request commenters
 			engine.eval("node._().out('" + EdgeType.PULLREQUEST + "').out('" + EdgeType.PULLREQUESTDISCUSSION + "').in{it.type=='" + VertexType.USER + "'}.unique() >> list");
-			addUsersFromIterator(list, m, "login", "sys:last_full_update");	
+			addValuesFromIterable(list, m, "login", "sys:last_full_update");	
 
 		} catch (ScriptException e) {
 			log.error("Script exception thrown processing project users: ");

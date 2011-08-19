@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import com.github.api.v2.schema.Repository;
 import com.github.api.v2.schema.User;
+import com.github.api.v2.services.GitHubException;
 import com.github.api.v2.services.UserService;
 
 public class UserMiner extends BaseMiner {
@@ -44,10 +45,15 @@ public class UserMiner extends BaseMiner {
 	 * @return
 	 */
 	public User getUserInformation(String username) {
-		log.trace("Fetching user: {}", username);
-		User user = service.getUserByUsername(username);
-		log.debug("Fetched user: {} email: {}", username, user==null?"null":user.getEmail());
-		return user;
+		try {
+			log.trace("Fetching user: {}", username);
+			User user = service.getUserByUsername(username);
+			log.debug("Fetched user: {} email: {}", username, user==null?"null":user.getEmail());
+			return user;
+		} catch (Exception e) {
+			log.error("Received exception attempting to fetch information for user: {}", username);
+			return null;
+		}
 	}
 	
 	/**

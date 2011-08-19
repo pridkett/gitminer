@@ -26,9 +26,12 @@ import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.api.v2.schema.Gist;
 import com.github.api.v2.schema.Issue;
 import com.github.api.v2.schema.PullRequest;
+import com.github.api.v2.schema.Repository;
 import com.github.api.v2.schema.Team;
+import com.github.api.v2.schema.User;
 import com.github.api.v2.services.FeedService;
 import com.github.api.v2.services.GitHubException;
 import com.github.api.v2.services.GitHubServiceFactory;
@@ -290,16 +293,52 @@ public class GitHubMain {
 	}
 
 	private void fetchAllUserData(BlueprintsDriver bp, UserMiner um, RepositoryMiner rm, GistMiner gm, String user) {
-		bp.saveUserFollowers(user, um.getUserFollowers(user));
-		bp.saveUserFollowing(user, um.getUserFollowing(user));
-		bp.saveUserWatchedRepositories(user, um.getWatchedRepositories(user));
-		bp.saveUserRepositories(user, rm.getUserRepositories(user));
-		if (p.getProperty("net.wagstrom.research.github.miner.gists","true").equals("true")) {
-			bp.saveUserGists(user, gm.getUserGists(user));
+		List<String> followers = um.getUserFollowers(user);
+		if (followers != null) {
+			bp.saveUserFollowers(user, followers);
+		} else {
+			log.debug("user: {} null followers", user);
 		}
+		
+		List<String> following = um.getUserFollowing(user);
+		if (following != null) {
+			bp.saveUserFollowing(user, following);
+		} else {
+			log.debug("user: {} null fullowing", user);
+		}
+		
+		List<Repository> watchedRepos = um.getWatchedRepositories(user);
+		if (watchedRepos != null) {
+			bp.saveUserWatchedRepositories(user, watchedRepos);
+		} else {
+			log.debug("user: {} null watched repositories", user);
+		}
+		
+		List<Repository> userRepos = rm.getUserRepositories(user);
+		if (userRepos != null) {
+			bp.saveUserRepositories(user, userRepos);
+		} else {
+			log.debug("user: {} null user repositries", user);
+			
+		}
+		
+		if (p.getProperty("net.wagstrom.research.github.miner.gists","true").equals("true")) {
+			List<Gist> gists = gm.getUserGists(user);
+			if (gists != null) {
+				bp.saveUserGists(user, gists);
+			} else {
+				log.debug("user: {} null gists", user);
+			}
+		}
+		
 		// yes, the user is saved last, this way if any of the other parts
 		// fail we don't accidentally say the user was updated
-		bp.saveUser(um.getUserInformation(user), true);
+		User userInfo = um.getUserInformation(user);
+		if (userInfo != null) {
+			bp.saveUser(userInfo, true);
+		} else {
+			log.debug("user: {} null user information", user);
+		}
 	}
 	
 	private BlueprintsDriver connectToGraph(Properties p) {

@@ -63,8 +63,11 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 			log.warn("Received a server error from GitHub -- Sleep for {}ms and try again", failSleepDelay);
 			failSleep();
 			return invoke(proxy, method, args);
+		} else if (e.getMessage().trim().toLowerCase().equals("{\"error\":\"not found\"}")) {
+			log.warn("GitHub returned Not Found: Method: {}, Args: {}", method.getName(), args);
+			return null;
 		} else {
-			log.error("Unhandled GitHubException: ", e);
+			log.error("Unhandled GitHubException: Method: {} Args: {}", method.getName(), args);
 			throw e.getCause();
 		}	
 	}
