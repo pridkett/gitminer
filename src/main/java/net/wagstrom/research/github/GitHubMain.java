@@ -44,6 +44,7 @@ public class GitHubMain {
 	Logger log = null;
 	ApiThrottle throttle = null;
 	long refreshTime = 0; // minimum age of a resource in milliseconds
+	Properties p;
 	
 	public GitHubMain() {
 		log = LoggerFactory.getLogger(this.getClass());		
@@ -57,7 +58,7 @@ public class GitHubMain {
 		ArrayList <String> organizations = new ArrayList<String> ();
 		GitHubServiceFactory factory = GitHubServiceFactory.newInstance();
 		
-		Properties p = GithubProperties.props();
+		p = GithubProperties.props();
 
 		// set the maximum rate as specificed in the configuration properties file
 		int maxCalls = Integer.parseInt(p.getProperty("net.wagstrom.research.github.apiThrottle.maxCalls", "0"));
@@ -115,11 +116,13 @@ public class GitHubMain {
 		GraphShutdownHandler gsh = new GraphShutdownHandler();
 		gsh.addShutdownHandler(bp);
 		Runtime.getRuntime().addShutdownHook(gsh);
-
 		
 		RepositoryMiner rm = new RepositoryMiner(ThrottledGitHubInvocationHandler.createThrottledRepositoryService(factory.createRepositoryService(), throttle));
 		IssueMiner im = new IssueMiner(ThrottledGitHubInvocationHandler.createThrottledIssueService(factory.createIssueService(), throttle));
 		PullMiner pm = new PullMiner(ThrottledGitHubInvocationHandler.createThrottledPullRequestService(factory.createPullRequestService(), throttle));
+		UserMiner um = new UserMiner(ThrottledGitHubInvocationHandler.createThrottledUserService(factory.createUserService(), throttle));
+		GistMiner gm = new GistMiner(ThrottledGitHubInvocationHandler.createThrottledGistService(factory.createGistService(), throttle));
+		OrganizationMiner om = new OrganizationMiner(ThrottledGitHubInvocationHandler.createThrottledOrganizationService(factory.createOrganizationService(), throttle));
 		
 		if (p.getProperty("net.wagstrom.research.github.miner.repositories","true").equals("true")) {
 			for (String proj : projects) {
@@ -176,28 +179,36 @@ public class GitHubMain {
 						}
 					}
 				}
+				
+				if (p.getProperty("net.wagstrom.research.github.repository.users", "true").equals("true")) {
+					Map<String, Date> allProjectUsers = bp.getProjectUsersLastFullUpdate(proj);
+					log.info("keyset: {}", allProjectUsers.keySet());
+					for (String username : allProjectUsers.keySet()) {
+						if (username == null || username.trim().equals("")) {
+							log.warn("null/empty username! continuing");
+							continue;
+						}
+ 						if (needsUpdate(allProjectUsers.get(username), true)) {
+							log.debug("Fetching user: {}", username);
+							fetchAllUserData(bp, um, rm, gm, username);
+						} else {
+							log.debug("User: {} needs no update", username);
+						}
+					}
+				}
 			}
 			
 			// this iterates over the projects by itself
 			bruteForceIssueComments(im, bp, p);
 		}
 
-		UserMiner um = new UserMiner(ThrottledGitHubInvocationHandler.createThrottledUserService(factory.createUserService(), throttle));
-		GistMiner gm = new GistMiner(ThrottledGitHubInvocationHandler.createThrottledGistService(factory.createGistService(), throttle));
+		// FIXME: this should check for when the user was last updated
 		if (p.getProperty("net.wagstrom.research.github.miner.users","true").equals("true")) {
-			for (String user : users) {
-				bp.saveUser(um.getUserInformation(user));
-				bp.saveUserFollowers(user, um.getUserFollowers(user));
-				bp.saveUserFollowing(user, um.getUserFollowing(user));
-				bp.saveUserWatchedRepositories(user, um.getWatchedRepositories(user));
-				bp.saveUserRepositories(user, rm.getUserRepositories(user));
-				if (p.getProperty("net.wagstrom.research.github.miner.gists","true").equals("true")) {
-					bp.saveUserGists(user, gm.getUserGists(user));
-				}
+			for (String username : users) {
+				fetchAllUserData(bp, um, rm, gm, username);
 			}
 		}
 	
-		OrganizationMiner om = new OrganizationMiner(ThrottledGitHubInvocationHandler.createThrottledOrganizationService(factory.createOrganizationService(), throttle));
 		if (p.getProperty("net.wagstrom.research.github.miner.organizations","true").equals("true")) {
 			for (String organization : organizations) {
 				log.warn("Fetching organization: {}", organization);
@@ -272,6 +283,19 @@ public class GitHubMain {
 		Date currentDate = new Date();
 		if (elementDate == null) return nullTrueFalse;		
 		return ((currentDate.getTime() - elementDate.getTime()) >= refreshTime);
+	}
+
+	private void fetchAllUserData(BlueprintsDriver bp, UserMiner um, RepositoryMiner rm, GistMiner gm, String user) {
+		bp.saveUserFollowers(user, um.getUserFollowers(user));
+		bp.saveUserFollowing(user, um.getUserFollowing(user));
+		bp.saveUserWatchedRepositories(user, um.getWatchedRepositories(user));
+		bp.saveUserRepositories(user, rm.getUserRepositories(user));
+		if (p.getProperty("net.wagstrom.research.github.miner.gists","true").equals("true")) {
+			bp.saveUserGists(user, gm.getUserGists(user));
+		}
+		// yes, the user is saved last, this way if any of the other parts
+		// fail we don't accidentally say the user was updated
+		bp.saveUser(um.getUserInformation(user), true);
 	}
 	
 	private BlueprintsDriver connectToGraph(Properties p) {

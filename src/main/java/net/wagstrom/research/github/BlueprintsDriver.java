@@ -18,12 +18,17 @@ package net.wagstrom.research.github;
 
 import java.util.List;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+
+import javax.script.ScriptEngine;
+import javax.script.ScriptException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,8 +47,18 @@ import com.github.api.v2.schema.User;
 import com.ibm.research.govsci.graph.BlueprintsBase;
 import com.ibm.research.govsci.graph.Shutdownable;
 import com.tinkerpop.blueprints.pgm.Edge;
+import com.tinkerpop.blueprints.pgm.Graph;
 import com.tinkerpop.blueprints.pgm.Index;
 import com.tinkerpop.blueprints.pgm.Vertex;
+import com.tinkerpop.blueprints.pgm.impls.tg.TinkerGraphFactory;
+import com.tinkerpop.gremlin.Gremlin;
+import com.tinkerpop.gremlin.jsr223.GremlinScriptEngine;
+import com.tinkerpop.pipes.Pipe;
+import com.tinkerpop.pipes.filter.UniquePathFilterPipe;
+import com.tinkerpop.pipes.transform.InPipe;
+import com.tinkerpop.pipes.transform.OutPipe;
+import com.tinkerpop.pipes.util.Pipeline;
+import com.tinkerpop.pipes.util.SingleIterator;
 
 /**
  * 
@@ -110,41 +125,64 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	}	
 	
 	/**
+	 * Helper function to indicate when a user save is not considered to
+	 * be a complete save function.
+	 * 
+	 * This is used when user information is obtained from sources other than
+	 * a full user dump.
+	 * 
+	 * @param user
+	 * @return
+	 */
+	public Vertex saveUser(User user) {
+		return saveUser(user, false);
+	}
+	
+	/**
 	 * Saves a User to the graph database
 	 * 
 	 * Right now this only saves the properties of the user and does not save any relationships.
 	 * 
 	 * @param user the GitHub user to save
+	 * @param overwrite if this ia full dump then it will overwrite parameters
 	 * @return the newly created database node
 	 */
-	public Vertex saveUser(User user) {
+	public Vertex saveUser(User user, boolean overwrite) {
 		Vertex node = getOrCreateUser(user.getLogin());
-		log.debug(user.toString());
+		log.debug("Saving User: {}", user.toString());
 
 		setProperty(node, "blog", user.getBlog());
-		setProperty(node, "collaborators", user.getCollaborators());
 		setProperty(node, "company", user.getCompany());
 		setProperty(node, "createdAt", user.getCreatedAt());
-		setProperty(node, "diskUsage", user.getDiskUsage());
 		setProperty(node, "email", user.getEmail());
-		setProperty(node, "followersCount", user.getFollowersCount());
-		setProperty(node, "followingCount", user.getFollowingCount());
+		// these are all properties that tend to be 0 when non-full information is passed
+		// thus we need to ignore them unless we're doing a full update
+		if (overwrite) {
+			setProperty(node, "diskUsage", user.getDiskUsage());
+			setProperty(node, "collaborators", user.getCollaborators());
+			setProperty(node, "followersCount", user.getFollowersCount());
+			setProperty(node, "followingCount", user.getFollowingCount());
+			setProperty(node, "ownedPrivateRepoCount", user.getOwnedPrivateRepoCount());
+			setProperty(node, "privateGistCount", user.getPrivateGistCount());
+			setProperty(node, "publicGistCount", user.getPublicGistCount());
+			setProperty(node, "publicRepoCount", user.getPublicRepoCount());
+			setProperty(node, "score", user.getScore());
+			setProperty(node, "totalPrivateRepoCount", user.getTotalPrivateRepoCount());
+			setProperty(node, "sys:last_full_update", new Date());
+		}
 		setProperty(node, "fullname", user.getFullname());
 		setProperty(node, "gravatarId", user.getGravatarId());
 		setProperty(node, "gitHubId", user.getId()); // note name change
 		setProperty(node, "location", user.getLocation());
 		setProperty(node, "login", user.getLogin());
 		setProperty(node, "name", user.getName());
-		setProperty(node, "ownedPrivateRepoCount", user.getOwnedPrivateRepoCount());
+		setProperty(node, "sys:last_updated", new Date());
 		// getPermission
 		// getPlan
-		setProperty(node, "privateGistCount", user.getPrivateGistCount());
-		setProperty(node, "publicGistCount", user.getPublicGistCount());
-		setProperty(node, "publicRepoCount", user.getPublicRepoCount());
-		setProperty(node, "score", user.getScore());
-		setProperty(node, "totalPrivateRepoCount", user.getTotalPrivateRepoCount());
+		
 		setProperty(node, "username", user.getUsername());
-		setProperty(node, "last_updated", new Date()); // save the date of update
+		if (overwrite) {
+		}
 		return node;
 	}
 		
@@ -922,6 +960,72 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 				log.error("Error parsing sys:discussions_added property for {}", pullrequest.getProperty("pullrequest_id"));
 			}		
 		}		
+		return m;
+	}
+
+	private void addUsersFromIterator(Iterable<Vertex> it, HashMap<String, Date> m, String idkey, String datekey) {
+		for (Vertex v : it) {
+			Set<String> keys = v.getPropertyKeys();
+			try {
+				if (!keys.contains(idkey)) {
+					log.warn("Node found with no idkey: {}", v);
+					continue;
+				}
+				if (keys.contains(datekey)) {
+					Date d = dateFormatter.parse((String)v.getProperty(datekey));
+					m.put((String)v.getProperty(idkey), d);
+				} else {
+					m.put((String)v.getProperty(idkey), null);
+				}
+			} catch (ParseException e) {
+				log.error("Invalid {} for user: {}", datekey, (String)v.getProperty(idkey));
+			}
+		}		
+	}
+
+	public Map<String, Date> getProjectUsersLastFullUpdate(String reponame) {
+		Vertex node = getOrCreateRepository(reponame);
+		HashMap<String, Date> m = new HashMap<String, Date>();
+		
+		ScriptEngine engine = new GremlinScriptEngine();
+		List<Vertex> list = new ArrayList<Vertex>();
+		engine.put("g", this.graph);
+		engine.put("list", list);		
+		engine.put("node", node);
+		
+		try {
+			// first: get all the users watching the project
+			engine.eval("node._().in('" + EdgeType.REPOWATCHED + "') >> list");
+			addUsersFromIterator(list, m, "login", "sys:last_full_update");	
+
+			// add the collaborators
+			engine.eval("node._().in('" + EdgeType.REPOCOLLABORATOR + "') >> list");
+			addUsersFromIterator(list, m, "login", "sys:last_full_update");	
+
+			// add the contributors
+			engine.eval("node._().in('" + EdgeType.REPOCONTRIBUTOR + "') >> list");
+			addUsersFromIterator(list, m, "login", "sys:last_full_update");	
+
+			// add the issue owners
+			engine.eval("node._().out('" + EdgeType.ISSUE + "').in('" + EdgeType.ISSUEOWNER + "').unique() >> list");
+			addUsersFromIterator(list, m, "login", "sys:last_full_update");	
+
+			// add the individuals who commented on the issues
+			engine.eval("node._().out('" + EdgeType.ISSUE + "').out('" + EdgeType.ISSUECOMMENT + "').in('" + EdgeType.ISSUECOMMENTOWNER + "').unique() >> list");
+			addUsersFromIterator(list, m, "login", "sys:last_full_update");	
+
+			// add the pull request owners
+			engine.eval("node._().out('" + EdgeType.PULLREQUEST + "').inE.outV{it.type=='" + VertexType.USER + "'}.unique() >> list");
+			addUsersFromIterator(list, m, "login", "sys:last_full_update");	
+
+			// add the pull request commenters
+			engine.eval("node._().out('" + EdgeType.PULLREQUEST + "').out('" + EdgeType.PULLREQUESTDISCUSSION + "').in{it.type=='" + VertexType.USER + "'}.unique() >> list");
+			addUsersFromIterator(list, m, "login", "sys:last_full_update");	
+
+		} catch (ScriptException e) {
+			log.error("Script exception thrown processing project users: ");
+		}
+		
 		return m;
 	}
 }

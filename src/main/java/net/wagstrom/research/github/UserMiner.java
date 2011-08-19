@@ -24,11 +24,12 @@ import com.github.api.v2.schema.Repository;
 import com.github.api.v2.schema.User;
 import com.github.api.v2.services.UserService;
 
-public class UserMiner {
+public class UserMiner extends BaseMiner {
 	private UserService service = null;
 	private Logger log;
 	
 	public UserMiner(UserService service) {
+		super();
 		this.service = service;
 		log = LoggerFactory.getLogger(UserMiner.class);
 	}
@@ -56,6 +57,10 @@ public class UserMiner {
 	 * @return a List of the users
 	 */
 	public List<String> getUserFollowers(String username) {
+		if (username == null || username.trim().equals("")) {
+			log.warn("empty string passed into getUserFollowers");
+			return null;
+		}
 		log.trace("Fetching user followers: {}", username);
 		List<String> rv = service.getUserFollowers(username);
 		log.debug("Fetched users followers: {} number: {}", username, rv==null?"null":rv.size());
