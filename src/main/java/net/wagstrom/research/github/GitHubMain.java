@@ -183,12 +183,14 @@ public class GitHubMain {
 				if (p.getProperty("net.wagstrom.research.github.repository.users", "true").equals("true")) {
 					Map<String, Date> allProjectUsers = bp.getProjectUsersLastFullUpdate(proj);
 					log.info("keyset: {}", allProjectUsers.keySet());
-					for (String username : allProjectUsers.keySet()) {
+					for (Map.Entry<String, Date> entry : allProjectUsers.entrySet()) {
+						String username = entry.getKey();
+						Date date = entry.getValue();
 						if (username == null || username.trim().equals("")) {
 							log.warn("null/empty username! continuing");
 							continue;
 						}
- 						if (needsUpdate(allProjectUsers.get(username), true)) {
+ 						if (needsUpdate(date, true)) {
 							log.debug("Fetching user: {}", username);
 							fetchAllUserData(bp, um, rm, gm, username);
 						} else {
@@ -257,17 +259,19 @@ public class GitHubMain {
 		
 		for (String proj : projects) {
 			Map<Integer, Date> issues = bp.getIssueCommentsAddedAtBruteForce(proj);
-			for (int i : issues.keySet()) {
-				if (needsUpdate(issues.get(i), true)) {
+			for (Map.Entry<Integer, Date> entry : issues.entrySet()) {
+			    int issueID = entry.getKey();
+				Date date = entry.getValue();
+				if (needsUpdate(date, true)) {
 					try {
-						Issue issue = im.getIssue(proj, i);
+						Issue issue = im.getIssue(proj, issueID);
 						if (issue != null) {
 							bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(proj, issue.getNumber()));					
 						}
 					} catch (GitHubException e) {
-						log.error("Error fetching issue {}:{}", proj, i);
+						log.error("Error fetching issue {}:{}", proj, issueID);
 					} catch (NullPointerException e) {
-						log.error("Somehow got a null pointer exception on issue {}:{}", proj, i);
+						log.error("Somehow got a null pointer exception on issue {}:{}", proj, issueID);
 					}
 				}
 			}
