@@ -5,6 +5,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.net.ConnectException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -48,13 +49,13 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 		}
 	}
 	
-	private Object handleGitHubException(GitHubException e, Object proxy, Method method, Object[] args) throws Throwable {
+	private Object handleInvocationException(GitHubException e, Object proxy, Method method, Object[] args) throws Throwable {
 		if (failSleepDelay > MAX_SLEEP_DELAY) {
 			log.error("Too many failures. Giving up and returning null");
 			log.error("method: {} args: {}", method, args);
 			return null;
 		}
-		
+
 		if (e.getMessage().startsWith("API Rate Limit Exceeded for")) {
 			log.warn("Exceeding API rate limit -- Sleep for {}ms and try again", failSleepDelay);
 			failSleep();
@@ -66,10 +67,15 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 		} else if (e.getMessage().trim().toLowerCase().equals("{\"error\":\"not found\"}")) {
 			log.warn("GitHub returned Not Found: Method: {}, Args: {}", method.getName(), args);
 			return null;
-		} else {
-			log.error("Unhandled GitHubException: Method: {} Args: {}", method.getName(), args);
-			throw e.getCause();
-		}	
+		} else if (e.getCause() instanceof ConnectException) {
+			if (e.getMessage().trim().toLowerCase().equals("operation timed out")) {
+				failSleep();
+				return invoke(proxy, method, args);
+			}
+		}
+
+		log.error("Unhandled exception: Method: {} Args: {}", method.getName(), args);
+		throw e.getCause();
 	}
 	
 	public Object invoke(Object proxy, Method method, Object[] args)
@@ -89,13 +95,13 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 			throw e.getCause();
 		} catch (InvocationTargetException e) {
 			if (e.getCause() instanceof GitHubException) {
-				return handleGitHubException((GitHubException) e.getCause(), proxy, method, args);
+				return handleInvocationException((GitHubException) e.getCause(), proxy, method, args);
 			} else {
 				log.error("Invocation target exception (propagated):", e);
 				throw e.getCause();
 			}
 		} catch (GitHubException e) {
-			return handleGitHubException(e, proxy, method, args);
+			return handleInvocationException(e, proxy, method, args);
 		}
 	}
 
