@@ -27,7 +27,9 @@ public class BlueprintsDriver {
 		COMMIT("COMMIT"),
 		REPOSITORY("REPOSITORY"),
 		FILE("FILE"),
-		PERSON("PERSON");
+		GIT_USER("GIT_USER"),
+		NAME("NAME"),
+		EMAIL("EMAIL");
 		
 		private String text;
 		VertexType(String text) {
@@ -43,7 +45,9 @@ public class BlueprintsDriver {
 		PARENT( "PARENT" ),
 		AUTHOR( "AUTHOR" ),
 		COMMITTER( "COMMITTER" ),
-		CHANGED( "CHANGED" );
+		CHANGED( "CHANGED" ),
+		NAME( "NAME" ),
+		EMAIL( "EMAIL" );
 		
 		
 		private String text;
@@ -61,7 +65,9 @@ public class BlueprintsDriver {
 	private static final String INDEX_COMMIT = "commit-idx";
 	private static final String INDEX_FILE = "file-idx";
 	private static final String INDEX_REPO = "repo-idx";
-	private static final String INDEX_PERSON = "person-idx";
+	private static final String INDEX_GIT_USER = "git-user-idx";
+	private static final String INDEX_NAME = "name-idx";
+	private static final String INDEX_EMAIL = "email-idx";
 
 	private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
 
@@ -75,7 +81,9 @@ public class BlueprintsDriver {
 	private Index <Vertex> commitidx = null;
 	private Index <Vertex> fileidx = null;
 	private Index <Vertex> repoidx = null;
-	private Index <Vertex> personidx = null;
+	private Index <Vertex> gituseridx = null;
+	private Index <Vertex> nameidx = null;
+	private Index <Vertex> emailidx = null;
 	
 	private CommitManager manager = null;
 
@@ -102,7 +110,9 @@ public class BlueprintsDriver {
 		commitidx = getOrCreateIndex(INDEX_COMMIT);
 		fileidx = getOrCreateIndex(INDEX_FILE);
 		repoidx = getOrCreateIndex(INDEX_REPO);
-		personidx = getOrCreateIndex(INDEX_PERSON);
+		gituseridx = getOrCreateIndex(INDEX_GIT_USER);
+		nameidx = getOrCreateIndex(INDEX_NAME);
+		emailidx = getOrCreateIndex(INDEX_EMAIL);
 
 		manager = TransactionalGraphHelper.createCommitManager((TransactionalGraph) graph, COMMITMGR_COMMITS);
 	}
@@ -183,13 +193,18 @@ public class BlueprintsDriver {
 		return node;
 	}
 	
-	public Vertex savePerson( PersonIdent person ) {
-		log.info( "Save Person: " + person.getEmailAddress() );
-		Vertex node = getOrCreatePerson( person.getName(), person.getEmailAddress() );
-		setProperty( node, "name", person.getName() );
-		return node;
+	public Vertex saveGitUser( PersonIdent person ) {
+		log.info( "Save GitUser: " + person.getEmailAddress() );
+		String sName = person.getName();
+		String sEmail = person.getEmailAddress();
+		Vertex gitUser = getOrCreateGitUser( sName, sEmail );
+		Vertex vName = getOrCreateName( sName );
+		Vertex vEmail = getOrCreateEmail( sEmail );
+		createEdgeIfNotExist( null, gitUser, vName, EdgeType.NAME );
+		createEdgeIfNotExist( null, gitUser, vEmail, EdgeType.EMAIL );
+		return gitUser;
 	}
-	
+
 	/*
 	 * Edges
 	 */
@@ -240,7 +255,7 @@ public class BlueprintsDriver {
 	public Vertex saveCommitAuthor( RevCommit cmt, PersonIdent author ) {
 		if ( author == null ) { return null; }
 		Vertex cmt_node = getOrCreateCommit( gitHash( cmt ) );
-		Vertex author_node = savePerson( author );
+		Vertex author_node = saveGitUser( author );
 		Edge edge = createEdgeIfNotExist( null, cmt_node, author_node, EdgeType.AUTHOR );
 		setProperty( edge, "when", author.getWhen() );
 		return author_node;
@@ -248,7 +263,7 @@ public class BlueprintsDriver {
 	
 	public Vertex saveCommitCommitter( RevCommit cmt, PersonIdent committer ) {
 		Vertex cmt_node = getOrCreateCommit( gitHash( cmt ) );
-		Vertex committer_node = savePerson( committer );
+		Vertex committer_node = saveGitUser( committer );
 		Edge edge = createEdgeIfNotExist( null, cmt_node, committer_node, EdgeType.COMMITTER );
 		setProperty( edge, "when", committer.getWhen() );
 		return committer_node;
@@ -282,18 +297,24 @@ public class BlueprintsDriver {
 	}
 	
 	public Vertex getOrCreateRepository( String reponame ) {
-		//log.info( "Get or Create Repository: " + reponame );
 		return getOrCreateVertexHelper("reponame", reponame, VertexType.REPOSITORY, repoidx);
 	}
 	
 	public Vertex getOrCreateFile( String token ) {
-		//log.info( "Get or Create File: " + fileName );
 		return getOrCreateVertexHelper("token", token, VertexType.FILE, fileidx);
 	}
 	
-	public Vertex getOrCreatePerson( String name, String email ) {
-		//log.info( "Get or Create User: " + email );
-		return getOrCreateVertexHelper("email", email, VertexType.PERSON, personidx);
+	public Vertex getOrCreateGitUser( String name, String email ) {
+		String key = name + " <" + email + ">";
+		return getOrCreateVertexHelper("string", key, VertexType.GIT_USER, gituseridx);
+	}
+	
+	public Vertex getOrCreateName( String name ) {
+		return getOrCreateVertexHelper("name", name, VertexType.NAME, nameidx);
+	}
+	
+	public Vertex getOrCreateEmail( String email ) {
+		return getOrCreateVertexHelper("email", email, VertexType.EMAIL, emailidx);
 	}
 	
 	/*
