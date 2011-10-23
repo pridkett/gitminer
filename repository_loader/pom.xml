@@ -24,10 +24,13 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <blueprints-version>0.8</blueprints-version>
+    <blueprints-version>1.0</blueprints-version>
     <junit-version>3.8.1</junit-version>
     <slf4j-version>1.6.1</slf4j-version>
-    <jgit-version>1.0.0.201106090707-r</jgit-version>
+    <jgit-version>1.1.0.201109151100-r</jgit-version>
+    <govscigraph.version>0.1-SNAPSHOT</govscigraph.version>
+    <pipes.version>0.7</pipes.version>
+    <gremlin.version>1.2</gremlin.version>
   </properties>
 
   <dependencies>
@@ -56,6 +59,21 @@
       <groupId>com.tinkerpop.blueprints</groupId>
       <artifactId>blueprints-neo4j-graph</artifactId>
       <version>${blueprints-version}</version>
+    </dependency>
+        <dependency>
+    	<groupId>com.tinkerpop</groupId>
+    	<artifactId>pipes</artifactId>
+    	<version>${pipes.version}</version>
+    </dependency>
+    <dependency>
+    	<groupId>com.tinkerpop</groupId>
+    	<artifactId>gremlin</artifactId>
+    	<version>${gremlin.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.ibm.research.govsci.graph</groupId>
+      <artifactId>govscigraph</artifactId>
+      <version>${govscigraph.version}</version>
     </dependency>
   </dependencies>
 
