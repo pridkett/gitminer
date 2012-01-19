@@ -3,7 +3,8 @@ package net.wagstrom.research.github;
 import com.ibm.research.govsci.graph.StringableEnum;
 
 public enum EdgeType implements StringableEnum {
-	COMMITAUTHOR("COMMIT_AUTHOR"),
+	// FIXME: refactor in the existing database and rename edge type
+	COMMITAUTHOR("AUTHOR"),
 	COMMITPARENT("COMMIT_PARENT"),
 	COMMITTER("COMMITTER"),
 	DISCUSSIONCOMMIT("DISCUSSION_COMMIT"),

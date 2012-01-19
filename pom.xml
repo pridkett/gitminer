@@ -44,21 +44,26 @@
       <name>Jenkins CI Maven2 Repository</name>
       <url>http://maven.jenkins-ci.org:8081/content/repositories/releases/</url>
     </repository>
+    <repository>
+      <id>jgit-repository</id>
+      <url>http://download.eclipse.org/jgit/maven</url>
+    </repository>
   </repositories>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <github-java-sdk.version>0.1.wagstrom1</github-java-sdk.version>
     <slf4j.version>1.6.1</slf4j.version>
-    <blueprints.version>0.9</blueprints.version>
     <junit.version>3.8.1</junit.version>
     <gson.version>1.7.1</gson.version>
     <logback.version>0.9.29</logback.version>
     <logbackAddOns.version>0.1-SNAPSHOT</logbackAddOns.version>
     <args4j.version>2.0.18</args4j.version>
-    <govscigraph.version>0.1-SNAPSHOT</govscigraph.version>
-    <pipes.version>0.7</pipes.version>
-    <gremlin.version>1.2</gremlin.version>
+    <govscigraph.version>0.2-SNAPSHOT</govscigraph.version>
+    <blueprints.version>1.1</blueprints.version>
+    <pipes.version>0.9</pipes.version>
+    <gremlin.version>1.4</gremlin.version>
+    <jgit.version>1.1.0.201109151100-r</jgit.version>
   </properties>
 
   <dependencies>
@@ -89,8 +94,8 @@
     	<version>${pipes.version}</version>
     </dependency>
     <dependency>
-    	<groupId>com.tinkerpop</groupId>
-    	<artifactId>gremlin</artifactId>
+    	<groupId>com.tinkerpop.gremlin</groupId>
+    	<artifactId>gremlin-java</artifactId>
     	<version>${gremlin.version}</version>
     </dependency>
     <dependency>
@@ -117,6 +122,11 @@
       <groupId>com.ibm.research.govsci.graph</groupId>
       <artifactId>govscigraph</artifactId>
       <version>${govscigraph.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jgit</groupId>
+      <artifactId>org.eclipse.jgit</artifactId>
+      <version>${jgit.version}</version>
     </dependency>
   </dependencies>
 
@@ -146,6 +156,7 @@
           <archive>
             <manifest>
               <mainClass>net.wagstrom.research.github.Github</mainClass>
+              <!-- <mainClass>edu.unl.cse.git.App</mainClass> -->
             </manifest>
           </archive>
         </configuration>

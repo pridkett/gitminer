@@ -343,11 +343,20 @@ public class GitHubMain {
 	
 	private BlueprintsDriver connectToGraph(Properties p) {
 		BlueprintsDriver bp = null;
-		
+        
+		// pass through all the db.XXX properties to the database
+		HashMap<String, String> dbprops = new HashMap<String, String>();
+        for (Object o : p.keySet()) {
+            String s = (String) o;
+            if (s.startsWith("db.")) {
+                dbprops.put(s.substring(3), p.getProperty(s));
+            }
+        }
+        
 		try {
 			String dbengine = p.getProperty("net.wagstrom.research.github.dbengine").trim();
 			String dburl = p.getProperty("net.wagstrom.research.github.dburl").trim();
-			bp = new BlueprintsDriver(dbengine, dburl);
+			bp = new BlueprintsDriver(dbengine, dburl, dbprops);
 		} catch (NullPointerException e) {
 			log.error("properties undefined, must define both net.wagstrom.research.github.dbengine and net.wagstrom.research.github.dburl");
 		}
