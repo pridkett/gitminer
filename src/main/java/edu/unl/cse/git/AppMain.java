@@ -3,6 +3,8 @@ package edu.unl.cse.git;
 import java.util.HashMap;
 import java.util.Properties;
 
+import net.wagstrom.research.github.GithubProperties;
+
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +43,7 @@ public class AppMain {
 	}
 	
 	public void main() {
-		Properties p = GitProperties.props();
+		Properties p = GithubProperties.props();
 		
 		BlueprintsDriver bp = connectToGraph(p);
 		

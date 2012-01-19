@@ -80,6 +80,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	 */
 	public BlueprintsDriver(String dbengine, String dburl, Map<String, String> config) {
 		super(dbengine, dburl, config);
+		// FIXME: eventually this should be configurable
+		setMaxBufferSize(100000);
 		log = LoggerFactory.getLogger(this.getClass());
 
 		useridx = getOrCreateIndex(IndexNames.INDEX_USER);

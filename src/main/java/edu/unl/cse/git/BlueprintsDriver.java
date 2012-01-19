@@ -47,6 +47,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		gituseridx = getOrCreateIndex(IndexNames.INDEX_GIT_USER);
 		nameidx = getOrCreateIndex(IndexNames.INDEX_NAME);
 		emailidx = getOrCreateIndex(IndexNames.INDEX_EMAIL);
+		setMaxBufferSize(100000);
 	}
 		
 	/*

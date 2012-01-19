@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.wagstrom.research.github.GithubProperties;
+
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.JGitInternalException;
 import org.eclipse.jgit.api.errors.NoHeadException;
@@ -20,7 +22,7 @@ import org.slf4j.LoggerFactory;
 public class RepositoryLoader {
 	final static String METHOD = "http://";
 	final static String BASE = "github.com/";
-	final static File LOCAL_STORE = new File( "/tmp/repo_loader" );
+	final static File LOCAL_STORE = new File(GithubProperties.props().getProperty("edu.unl.cse.git.localStore", "/tmp/repo_loader" ));
 	final static Logger log = LoggerFactory.getLogger(RepositoryLoader.class);
 	
 	static public Git getRepository( String username, String repoName ) {
@@ -55,8 +57,7 @@ public class RepositoryLoader {
 			//repo.fetch();
 			return repo;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("Exception encountered opening repository:", e);
 		}
 		return null;
 	}
@@ -94,17 +95,13 @@ public class RepositoryLoader {
 			}
 			return changed;
 		} catch (MissingObjectException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("Exception encountered getting changed files:",e);
 		} catch (IncorrectObjectTypeException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("Exception encountered getting changed files:",e);
 		} catch (CorruptObjectException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("Exception encountered getting changed files:",e);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("Exception encountered getting changed files:",e);
 		}
 		return null;
 	}
