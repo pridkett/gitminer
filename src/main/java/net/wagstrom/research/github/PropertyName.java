@@ -34,6 +34,7 @@ public enum PropertyName implements StringableEnum {
 	ID_NUM("id_num"),
 	ISSUE_CREATED_AT("issueCreatedAt"),
 	ISSUE_UPDATED_AT("issueUpdatedAt"),
+	IS_MERGE("isMerge"),
 	LOCATION("location"),
 	LOGIN("login"),
 	MESSAGE("message"),
@@ -75,7 +76,8 @@ public enum PropertyName implements StringableEnum {
 	USER("user"),
 	USERNAME("username"), // FIXME: is this the same as USER?
 	VOTES("votes"),
-	WATCHERS("watchers");
+	WATCHERS("watchers"),
+	WHEN("when");
 	
 	private String text;
 	

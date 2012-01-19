@@ -19,7 +19,11 @@ package net.wagstrom.research.github;
 import com.ibm.research.govsci.graph.StringableEnum;
 
 public enum VertexType implements StringableEnum {
-	COMMIT("COMMIT"),
+	COMMIT("COMMIT"), // also used by RepositoryLoader
+	FILE("FILE"), // used for RepositoryLoader
+	GIT_USER("GIT_USER"), // also used by RepositoryLoader
+	EMAIL("EMAIL"), // also used by RepositoryLoader
+	NAME("NAME"), // used by RepositoryLoader
 	USER("USER"),
 	REPOSITORY("REPOSITORY"),
 	ORGANIZATION("ORGANIZATION"),

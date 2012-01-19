@@ -55,21 +55,6 @@ import com.tinkerpop.pipes.PipeFunction;
  */
 public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
-	private static final String INDEX_USER = "user-idx";
-	private static final String INDEX_REPO = "repo-idx";
-	private static final String INDEX_TYPE = "type-idx";
-	private static final String INDEX_ORGANIZATION = "org-idx";
-	private static final String INDEX_TEAM = "team-idx";
-	private static final String INDEX_GIST = "gist-idx";
-	private static final String INDEX_GISTFILE = "gistfile-idx";
-	private static final String INDEX_ISSUE = "issue-idx";
-	private static final String INDEX_COMMENT = "comment-idx";
-	private static final String INDEX_ISSUELABEL = "issuelabel-idx";
-	private static final String INDEX_PULLREQUEST = "pullrequest-idx";
-	private static final String INDEX_PULLREQUESTREVIEWCOMMENT = "pullrequestreviewcomment-idx";
-	private static final String INDEX_DISCUSSION = "discussion-idx";
-	private static final String INDEX_COMMIT = "commit-idx";
-		
 	private Logger log = null;
 
 	private Index <Vertex> useridx = null;
@@ -85,6 +70,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	private Index <Vertex> discussionidx = null;
 	private Index <Vertex> commitidx = null;
 	private Index <Vertex> pullrequestreviewcommentidx = null;
+	private Index <Vertex> emailidx = null;
 	
 	/**
 	 * Base constructor for BlueprintsDriver
@@ -96,20 +82,21 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		super(dbengine, dburl, config);
 		log = LoggerFactory.getLogger(this.getClass());
 
-		useridx = getOrCreateIndex(INDEX_USER);
-		repoidx = getOrCreateIndex(INDEX_REPO);
-		typeidx = getOrCreateIndex(INDEX_TYPE);
-		orgidx = getOrCreateIndex(INDEX_ORGANIZATION);
-		teamidx = getOrCreateIndex(INDEX_TEAM);
-		gistidx = getOrCreateIndex(INDEX_GIST);
-		commentidx = getOrCreateIndex(INDEX_COMMENT);
-		gistfileidx = getOrCreateIndex(INDEX_GISTFILE);
-		issueidx = getOrCreateIndex(INDEX_ISSUE);
-		issuelabelidx = getOrCreateIndex(INDEX_ISSUELABEL);
-		pullrequestidx = getOrCreateIndex(INDEX_PULLREQUEST);
-		discussionidx = getOrCreateIndex(INDEX_DISCUSSION);
-		commitidx = getOrCreateIndex(INDEX_COMMIT);
-		pullrequestreviewcommentidx = getOrCreateIndex(INDEX_PULLREQUESTREVIEWCOMMENT);
+		useridx = getOrCreateIndex(IndexNames.INDEX_USER);
+		repoidx = getOrCreateIndex(IndexNames.INDEX_REPO);
+		typeidx = getOrCreateIndex(IndexNames.INDEX_TYPE);
+		orgidx = getOrCreateIndex(IndexNames.INDEX_ORGANIZATION);
+		teamidx = getOrCreateIndex(IndexNames.INDEX_TEAM);
+		gistidx = getOrCreateIndex(IndexNames.INDEX_GIST);
+		commentidx = getOrCreateIndex(IndexNames.INDEX_COMMENT);
+		gistfileidx = getOrCreateIndex(IndexNames.INDEX_GISTFILE);
+		issueidx = getOrCreateIndex(IndexNames.INDEX_ISSUE);
+		issuelabelidx = getOrCreateIndex(IndexNames.INDEX_ISSUELABEL);
+		pullrequestidx = getOrCreateIndex(IndexNames.INDEX_PULLREQUEST);
+		discussionidx = getOrCreateIndex(IndexNames.INDEX_DISCUSSION);
+		commitidx = getOrCreateIndex(IndexNames.INDEX_COMMIT);
+		pullrequestreviewcommentidx = getOrCreateIndex(IndexNames.INDEX_PULLREQUESTREVIEWCOMMENT);
+		emailidx = getOrCreateIndex(IndexNames.INDEX_EMAIL);
 	}	
 	
 	/**
@@ -142,7 +129,11 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		setProperty(node, PropertyName.BLOG, user.getBlog());
 		setProperty(node, PropertyName.COMPANY, user.getCompany());
 		setProperty(node, PropertyName.CREATED_AT, user.getCreatedAt());
-		setProperty(node, PropertyName.EMAIL, user.getEmail());
+		if (user.getEmail() != null) {
+			setProperty(node, PropertyName.EMAIL, user.getEmail());
+			Vertex email = getOrCreateEmail(user.getEmail());
+			createEdgeIfNotExist(node, email, EdgeType.EMAIL);
+		}
 		// these are all properties that tend to be 0 when non-full information is passed
 		// thus we need to ignore them unless we're doing a full update
 		if (overwrite) {
@@ -269,7 +260,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	 * @return a set of the users that have not been updated
 	 */
 	public Set<String> getUsers(double age) {
-		return getVertexHelper(age, INDEX_USER, VertexType.USER, "username");
+		return getVertexHelper(age, IndexNames.INDEX_USER, VertexType.USER, "username");
 	}
 	
 	/**
@@ -281,7 +272,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	 * @return 
 	 */
 	public Set<String> getRepos(double age) {
-		return getVertexHelper(age, INDEX_REPO, VertexType.REPOSITORY, "fullname");
+		return getVertexHelper(age, IndexNames.INDEX_REPO, VertexType.REPOSITORY, "fullname");
 	}
 
 	public Map<String,Vertex> saveRepositoryCollaborators(String reponame, List<String> collabs) {
@@ -308,6 +299,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		
 	public Vertex getOrCreateUser(String login) {
 		return getOrCreateVertexHelper("login", login, VertexType.USER, useridx);
+	}
+	
+	public Vertex getOrCreateEmail(String email) {
+		return getOrCreateVertexHelper("email", email, VertexType.EMAIL, emailidx);
 	}
 	
 	public Vertex getOrCreateRepository(String reponame) {
