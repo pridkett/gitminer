@@ -22,9 +22,7 @@ public enum PropertyName implements StringableEnum {
 	DISK_USAGE("diskUsage"),
 	EMAIL("email"),
 	FOLLOWERS("followers"),
-	FOLLOWERS_COUNT("followersCount"), // FIXME: is this the same as followers?
 	FOLLOWING("following"),
-	FOLLOWING_COUNT("followingCount"), // FIXME: is this the same as following?
 	FORKS("forks"),
 	FULLNAME("fullname"),
 	GITHUB_ID("gitHubId"),

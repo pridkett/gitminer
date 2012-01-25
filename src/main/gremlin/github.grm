@@ -1,5 +1,4 @@
-print ("test!");
-def DBPATH="/tmp/graph.db"
+def DBPATH="/users/pwagstro/Documents/workspace/github/graph.db"
 def getIndex(g, indexname) {
     for (idx in g.indices) {
         if (idx.indexName == indexname) {

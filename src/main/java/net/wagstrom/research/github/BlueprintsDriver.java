@@ -77,6 +77,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	 * 
 	 * @param dbengine The name of the engine to use, e.g. neo4j, orientdb, etc
 	 * @param dburl The url of the database to use
+	 * @param config additional configuration parameters to be passed to the database
 	 */
 	public BlueprintsDriver(String dbengine, String dburl, Map<String, String> config) {
 		super(dbengine, dburl, config);
@@ -141,8 +142,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		if (overwrite) {
 			setProperty(node, PropertyName.DISK_USAGE, user.getDiskUsage());
 			setProperty(node, PropertyName.COLLABORATORS, user.getCollaborators());
-			setProperty(node, PropertyName.FOLLOWERS_COUNT, user.getFollowersCount());
-			setProperty(node, PropertyName.FOLLOWING_COUNT, user.getFollowingCount());
+			setProperty(node, PropertyName.FOLLOWERS, user.getFollowersCount());
+			setProperty(node, PropertyName.FOLLOWING, user.getFollowingCount());
 			setProperty(node, PropertyName.OWNED_PRIVATE_REPO_COUNT, user.getOwnedPrivateRepoCount());
 			setProperty(node, PropertyName.PRIVATE_GIST_COUNT, user.getPrivateGistCount());
 			setProperty(node, PropertyName.PUBLIC_GIST_COUNT, user.getPublicGistCount());
@@ -378,7 +379,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
 		setProperty(node, PropertyName.NAME, repo.getName());
 		setProperty(node, PropertyName.ACTIONS, repo.getActions());
-		setProperty(node, PropertyName.CREATED_AT, dateFormatter.format(repo.getCreatedAt()));
+		setProperty(node, PropertyName.CREATED_AT, repo.getCreatedAt());
 		setProperty(node, PropertyName.DESCRIPTION, repo.getDescription());
 		setProperty(node, PropertyName.FOLLOWERS, repo.getFollowers());
 		setProperty(node, PropertyName.FORKS, repo.getForks());
@@ -390,7 +391,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		setProperty(node, PropertyName.OWNER, repo.getOwner());
 		setProperty(node, PropertyName.PARENT, repo.getParent());
 		// getPermission
-		setProperty(node, PropertyName.PUSHED_AT, dateFormatter.format(repo.getPushedAt())); 
+		setProperty(node, PropertyName.PUSHED_AT, repo.getPushedAt()); 
 		setProperty(node, PropertyName.SCORE, repo.getScore());
 		setProperty(node, PropertyName.SIZE, repo.getSize());
 		setProperty(node, PropertyName.SOURCE, repo.getSource());
@@ -408,7 +409,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		setProperty(node, PropertyName.BILLING_EMAIL, org.getBillingEmail());
 		setProperty(node, PropertyName.BLOG, org.getBlog());
 		setProperty(node, PropertyName.COMPANY, org.getCompany());
-		setProperty(node, PropertyName.CREATED_AT, dateFormatter.format(org.getCreatedAt()));
+		setProperty(node, PropertyName.CREATED_AT, org.getCreatedAt());
 		setProperty(node, PropertyName.EMAIL, org.getEmail());
 		setProperty(node, PropertyName.FOLLOWERS, org.getFollowersCount());
 		setProperty(node, PropertyName.FOLLOWING, org.getFollowingCount());
@@ -438,10 +439,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	protected Vertex saveCommentHelper(Comment comment, EdgeType edgetype) {
 		Vertex node = getOrCreateComment(comment.getId());
 		setProperty(node, PropertyName.BODY, comment.getBody());
-		setProperty(node, PropertyName.CREATED_AT, dateFormatter.format(comment.getCreatedAt()));
+		setProperty(node, PropertyName.CREATED_AT, comment.getCreatedAt());
 		// FIXME: perhaps gravatarId should be another node?
 		setProperty(node, PropertyName.GRAVATAR_ID, comment.getGravatarId());
-		setProperty(node, PropertyName.UPDATED_AT, dateFormatter.format(comment.getUpdatedAt()));
+		setProperty(node, PropertyName.UPDATED_AT, comment.getUpdatedAt());
 		if (comment.getUser() != null) {
 			Vertex user = getOrCreateUser(comment.getUser());
 			createEdgeIfNotExist(user, node, edgetype);
@@ -476,7 +477,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 			Vertex commentnode = saveGistComment(comment);
 			createEdgeIfNotExist(node, commentnode, EdgeType.GISTCOMMENT);
 		}
-		setProperty(node, PropertyName.CREATED_AT, dateFormatter.format(gist.getCreatedAt()));
+		setProperty(node, PropertyName.CREATED_AT, gist.getCreatedAt());
 		setProperty(node, PropertyName.DESCRIPTION, gist.getDescription());
 		for (String file : gist.getFiles()) {
 			Vertex filenode = saveGistFile(gist.getRepo(), file);
@@ -582,9 +583,9 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Vertex saveIssue(String project, Issue issue) {
 		Vertex issuenode = getOrCreateIssue(project, issue);
 		setProperty(issuenode, PropertyName.BODY, issue.getBody());
-		setProperty(issuenode, PropertyName.CLOSED_AT, dateFormatter.format(issue.getClosedAt()));
+		setProperty(issuenode, PropertyName.CLOSED_AT, issue.getClosedAt());
 		setProperty(issuenode, PropertyName.COMMENTS, issue.getComments());
-		setProperty(issuenode, PropertyName.CREATED_AT, dateFormatter.format(issue.getCreatedAt()));
+		setProperty(issuenode, PropertyName.CREATED_AT, issue.getCreatedAt());
 		setProperty(issuenode, PropertyName.GRAVATAR_ID, issue.getGravatarId());
 		for (String label : issue.getLabels()) {
 			Vertex labelnode = getOrCreateIssueLabel(label);
@@ -674,7 +675,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	
 	public Vertex savePullRequestReviewComment(PullRequestReviewComment comment) {
 		log.trace("savePullRequestReviewComment: enter");
-		String commentId = comment.getCommitId() + ":" + dateFormatter.format(comment.getCreatedAt());
+		String commentId = comment.getCommitId() + ":" + comment.getCreatedAt()==null?"UNKNOWNDATE":dateFormatter.format(comment.getCreatedAt());
 		Vertex node = getOrCreatePullRequestReviewComment(commentId);
 		setProperty(node, PropertyName.BODY, comment.getBody());
 		setProperty(node, PropertyName.COMMIT_ID, comment.getCommitId());

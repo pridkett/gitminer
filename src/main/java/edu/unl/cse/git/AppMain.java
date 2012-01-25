@@ -30,7 +30,7 @@ public class AppMain {
 		String dbengine = getProperty( p, "edu.unl.cse.git.dbengine");
 		String dburl = getProperty( p, "edu.unl.cse.git.dburl");
 		
-		// pass through all the db.XXX properties to the database
+		// pass through all the db.XYZ properties to the database
 		HashMap<String, String> dbprops = new HashMap<String, String>();
         for (Object o : p.keySet()) {
             String s = (String) o;
