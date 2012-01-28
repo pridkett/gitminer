@@ -42,6 +42,7 @@ import com.github.api.v2.schema.User;
 import com.ibm.research.govsci.graph.BlueprintsBase;
 import com.ibm.research.govsci.graph.Shutdownable;
 import com.ibm.research.govsci.graph.StringableEnum;
+import com.tinkerpop.blueprints.pgm.Edge;
 import com.tinkerpop.blueprints.pgm.Element;
 import com.tinkerpop.blueprints.pgm.Index;
 import com.tinkerpop.blueprints.pgm.Vertex;
@@ -1011,53 +1012,45 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Map<String, Date> getProjectUsersLastFullUpdate(String reponame) {
 		Vertex node = getOrCreateRepository(reponame);
 		HashMap<String, Date> m = new HashMap<String, Date>();
-		
-//		ScriptEngine engine = new GremlinScriptEngine();
-//		List<Vertex> list = new ArrayList<Vertex>();
-//		engine.put("g", this.graph);
-//		engine.put("list", list);		
-//		engine.put("node", node);
-
 		GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
-		pipe.start(node).out(EdgeType.PULLREQUEST.toString());
 		
 		// first: get all the users watching the project
-		// engine.eval("node._().in('" + EdgeType.REPOWATCHED + "') >> list");
-		pipe.start(node).out(EdgeType.REPOWATCHED.toString());
+		pipe.start(node).in(EdgeType.REPOWATCHED.toString());
 		addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
 		
 		// add the collaborators
-		// engine.eval("node._().in('" + EdgeType.REPOCOLLABORATOR + "') >> list");
+		pipe = new GremlinPipeline<Vertex, Vertex>();
 		pipe.start(node).out(EdgeType.REPOCOLLABORATOR.toString());
 		addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
 		// add the contributors
-		// engine.eval("node._().in('" + EdgeType.REPOCONTRIBUTOR + "') >> list");
+		pipe = new GremlinPipeline<Vertex, Vertex>();
 		pipe.start(node).out(EdgeType.REPOCONTRIBUTOR.toString());
 		addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
 		// add the issue owners
+		pipe = new GremlinPipeline<Vertex, Vertex>();
 		pipe.start(node).out(EdgeType.ISSUE.toString()).in(EdgeType.ISSUEOWNER.toString()).dedup();
-		// engi.eval("node._().out('" + EdgeType.ISSUE + "').in('" + EdgeType.ISSUEOWNER + "').unique() >> list");
 		addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
 		// add the individuals who commented on the issues
+		pipe = new GremlinPipeline<Vertex, Vertex>();
 		pipe.start(node).out(EdgeType.ISSUE.toString()).out(EdgeType.ISSUECOMMENT.toString()).in(EdgeType.ISSUECOMMENTOWNER.toString()).dedup();
-		// engine.eval("node._().out('" + EdgeType.ISSUE + "').out('" + EdgeType.ISSUECOMMENT + "').in('" + EdgeType.ISSUECOMMENTOWNER + "').unique() >> list");
 		addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
 		// add the pull request owners
+		pipe = new GremlinPipeline<Vertex, Vertex>();
 		pipe.start(node).out(EdgeType.PULLREQUEST.toString()).in(EdgeType.PULLREQUESTOWNER.toString()).dedup();
-		// engine.eval("node._().out('" + EdgeType.PULLREQUEST + "').inE.outV{it.type=='" + VertexType.USER + "'}.unique() >> list");
 		addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
 		// add the pull request commenters
+		// XXX: this method has NOT been confirmed
+		pipe = new GremlinPipeline<Vertex, Vertex>();
 		pipe.start(node).out(EdgeType.PULLREQUEST.toString()).out(EdgeType.PULLREQUESTDISCUSSION.toString()).in().filter(new PipeFunction<Vertex, Boolean>() {
 			public Boolean compute(Vertex argument) {
 				return (argument.getProperty(PropertyName.TYPE.toString()).equals(VertexType.USER.toString()));
 			}
 		}).dedup();
-		// engine.eval("node._().out('" + EdgeType.PULLREQUEST + "').out('" + EdgeType.PULLREQUESTDISCUSSION + "').in{it.type=='" + VertexType.USER + "'}.unique() >> list");
 		addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 		
 		return m;

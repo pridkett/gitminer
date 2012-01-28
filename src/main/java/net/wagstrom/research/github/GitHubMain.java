@@ -184,6 +184,7 @@ public class GitHubMain {
 				}
 				
 				if (p.getProperty("net.wagstrom.research.github.repository.users", "true").equals("true")) {
+					log.info("calling getProjectUsersLastFullUpdate");
 					Map<String, Date> allProjectUsers = bp.getProjectUsersLastFullUpdate(proj);
 					log.info("keyset: {}", allProjectUsers.keySet());
 					for (Map.Entry<String, Date> entry : allProjectUsers.entrySet()) {
