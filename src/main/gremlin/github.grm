@@ -1,4 +1,9 @@
-def DBPATH="/users/pwagstro/Documents/workspace/github/graph.db"
+def DBPATH="/users/pwagstro/Documents/workspace/github/graph.20120125.db"
+typeidx = g.idx("type-idx")
+users = []; typeidx[["type": "USER"]].fill(users); null
+repositories = []; typeidx[["type": "REPOSITORY"]].fill(repositories); null
+
+
 def getIndex(g, indexname) {
     for (idx in g.indices) {
         if (idx.indexName == indexname) {
@@ -17,6 +22,7 @@ def getAllIndices(g) {
 
 def exportFollowerSubgraph(users, outfile) {
 	to = new TinkerGraph()
+    System.out.println("processing users")
 	for (vertex in users) {
 		System.out.println("user: " + vertex["login"]) 
 		toVertex = to.addVertex(vertex.getId()) 

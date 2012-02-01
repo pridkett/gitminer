@@ -26,6 +26,7 @@
   <logger name="net.wagstrom.research.github.BlueprintsDriver" level="INFO"/>
   <logger name="net.wagstrom.research.github.ApiThrottle" level="TRACE"/>
 
+  <logger name="net.wagstrom.research.github.GitHubMain" level="DEBUG"/>
   <logger name="net.wagstrom.research.github.GistMiner" level="TRACE"/>
   <logger name="net.wagstrom.research.github.IssueMiner" level="TRACE"/>
   <logger name="net.wagstrom.research.github.OrganizationMiner" level="TRACE"/>

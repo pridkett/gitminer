@@ -936,19 +936,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
 		GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
 		pipe.start(node).out(EdgeType.PULLREQUEST.toString());
-//		
-//		ScriptEngine engine = new GremlinScriptEngine();
-//		List<Vertex> list = new ArrayList<Vertex>();
-//		engine.put("g", this.graph);
-//		engine.put("list", list);		
-//		engine.put("node", node);
-//
-//		try {
-//			engine.eval("node._().out('" + EdgeType.PULLREQUEST + "') >> list");
 		addValuesFromIterable(pipe, m, PropertyName.NUMBER, PropertyName.SYS_DISCUSSIONS_ADDED);
-//		} catch (ScriptException e) {
-//			log.error("ScriptException encountered in getPullRequestDiscussionsAddedAt");
-//		}
 		return m;
 	}
 
@@ -1044,7 +1032,6 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
 		// add the pull request commenters
-		// XXX: this method has NOT been confirmed
 		pipe = new GremlinPipeline<Vertex, Vertex>();
 		pipe.start(node).out(EdgeType.PULLREQUEST.toString()).out(EdgeType.PULLREQUESTDISCUSSION.toString()).in().filter(new PipeFunction<Vertex, Boolean>() {
 			public Boolean compute(Vertex argument) {

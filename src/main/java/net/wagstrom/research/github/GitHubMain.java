@@ -163,15 +163,17 @@ public class GitHubMain {
 					}
 				}
 				
-				if (p.getProperty("net.wagstrom.research.github.miner.pullrequests", "true").equals("true")) {
-					Collection<PullRequest> requests = pm.getPullRequests(projsplit[0], projsplit[1]);
+				if (p.getProperty("net.wagstrom.research.github.miner.repositories.pullrequests", "true").equals("true")) {
+					Collection<PullRequest> requests = pm.getAllPullRequests(projsplit[0], projsplit[1]);
+					log.debug("Saving repository pull requests");
 					bp.saveRepositoryPullRequests(proj, requests);
+					log.debug("Pull requests saved");
 					Map<Integer, Date> savedRequests = bp.getPullRequestDiscussionsAddedAt(proj);
-					log.trace("SavedPullRequest Keys: {}", savedRequests.keySet());
+					log.debug("SavedPullRequest Keys: {}", savedRequests.keySet());
 					for (PullRequest request : requests) {
 						if (savedRequests.containsKey(request.getNumber())) {
-							if (!needsUpdate(savedRequests.get(request.getNumber()))) {
-								log.debug("Skipping fetching pull request {} - recently updated", request.getNumber());
+							if (!needsUpdate(savedRequests.get(request.getNumber()), true)) {
+								log.debug("Skipping fetching pull request {} - recently updated {}", request.getNumber(), savedRequests.get(request.getNumber()));
 								continue;								
 							}						
 						}
@@ -183,10 +185,12 @@ public class GitHubMain {
 					}
 				}
 				
-				if (p.getProperty("net.wagstrom.research.github.repository.users", "true").equals("true")) {
+				if (p.getProperty("net.wagstrom.research.github.miner.repositories.users", "true").equals("true")) {
 					log.info("calling getProjectUsersLastFullUpdate");
 					Map<String, Date> allProjectUsers = bp.getProjectUsersLastFullUpdate(proj);
 					log.info("keyset: {}", allProjectUsers.keySet());
+					int ctr = 1;
+					int numUsers = allProjectUsers.size();
 					for (Map.Entry<String, Date> entry : allProjectUsers.entrySet()) {
 						String username = entry.getKey();
 						Date date = entry.getValue();
@@ -195,10 +199,10 @@ public class GitHubMain {
 							continue;
 						}
  						if (needsUpdate(date, true)) {
-							log.debug("Fetching user: {}", username);
+							log.debug("Fetching {} user {}/{}: {}", new Object[]{proj, ctr++, numUsers, username});
 							fetchAllUserData(bp, um, rm, gm, username);
 						} else {
-							log.debug("User: {} needs no update", username);
+							log.debug("Fecthing {} user {}/{}: {} needs no update", new Object[]{proj, ctr++, numUsers, username});
 						}
 					}
 				}
@@ -283,10 +287,29 @@ public class GitHubMain {
 		return;
 	}
 	
+	/**
+	 * Helper function for {@link #needsUpdate(Date, boolean)} that defaults to false
+	 * 
+	 * @param elementDate Date to check
+	 * @return boolean whether or not the element needs to be updated
+	 */
 	private boolean needsUpdate(Date elementDate) {
 		return needsUpdate(elementDate, false);
 	}
 	
+	/**
+	 * Simple helper function that is used to determine if a given date is outside
+	 * of the window for being updated.
+	 * 
+	 * For example if we wanted to make sure that elements were more than day old,
+	 * we'd set refreshTime to 86400000 (number of milliseconds in a day). If we wanted
+	 * null values to evaluate as true (indicating that we should update such values),
+	 * then we'd set nullTrueFalse to true.
+	 * 
+	 * @param elementDate date to check
+	 * @param nullTrueFalse return value if elementDate is null
+	 * @return whether or not it has been at least refreshTime milliseconds since elementDate
+	 */
 	private boolean needsUpdate(Date elementDate, boolean nullTrueFalse) {
 		Date currentDate = new Date();
 		if (elementDate == null) return nullTrueFalse;		
