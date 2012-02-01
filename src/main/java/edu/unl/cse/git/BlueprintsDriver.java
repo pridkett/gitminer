@@ -3,6 +3,11 @@ package edu.unl.cse.git;
 import java.util.HashMap;
 import java.util.Map;
 
+import net.wagstrom.research.github.EdgeType;
+import net.wagstrom.research.github.VertexType;
+import net.wagstrom.research.github.PropertyName;
+import net.wagstrom.research.github.IndexNames;
+
 import org.eclipse.jgit.lib.AnyObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -16,15 +21,6 @@ import com.tinkerpop.blueprints.pgm.Index;
 import com.tinkerpop.blueprints.pgm.Vertex;
 
 public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
-
-	private static final String INDEX_TYPE = "type-idx";
-	private static final String INDEX_COMMIT = "commit-idx";
-	private static final String INDEX_FILE = "file-idx";
-	private static final String INDEX_REPO = "repo-idx";
-	private static final String INDEX_GIT_USER = "git-user-idx";
-	private static final String INDEX_NAME = "name-idx";
-	private static final String INDEX_EMAIL = "email-idx";
-
 	private Logger log = null;
 
 	private Index <Vertex> commitidx = null;
@@ -40,17 +36,18 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	 * @param dbengine The name of the engine to use, e.g. neo4j, orientdb, etc
 	 * @param dburl The url of the database to use
 	 */
-	BlueprintsDriver( String dbengine, String dburl ) {
-		super(dbengine, dburl);
+	BlueprintsDriver( String dbengine, String dburl, Map <String, String> config ) {
+		super(dbengine, dburl, config);
 		log = LoggerFactory.getLogger(this.getClass());
 		
-		typeidx = getOrCreateIndex(INDEX_TYPE);
-		commitidx = getOrCreateIndex(INDEX_COMMIT);
-		fileidx = getOrCreateIndex(INDEX_FILE);
-		repoidx = getOrCreateIndex(INDEX_REPO);
-		gituseridx = getOrCreateIndex(INDEX_GIT_USER);
-		nameidx = getOrCreateIndex(INDEX_NAME);
-		emailidx = getOrCreateIndex(INDEX_EMAIL);
+		typeidx = getOrCreateIndex(IndexNames.INDEX_TYPE);
+		commitidx = getOrCreateIndex(IndexNames.INDEX_COMMIT);
+		fileidx = getOrCreateIndex(IndexNames.INDEX_FILE);
+		repoidx = getOrCreateIndex(IndexNames.INDEX_REPO);
+		gituseridx = getOrCreateIndex(IndexNames.INDEX_GIT_USER);
+		nameidx = getOrCreateIndex(IndexNames.INDEX_NAME);
+		emailidx = getOrCreateIndex(IndexNames.INDEX_EMAIL);
+		setMaxBufferSize(100000);
 	}
 		
 	/*
@@ -60,8 +57,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Vertex saveCommit( RevCommit cmt ) {
 		log.info( "Save Commit: " + gitHash( cmt) );
 		Vertex node = getOrCreateCommit( gitHash( cmt ) );
-		setProperty( node, "message", cmt.getFullMessage() );
-		setProperty( node, "isMerge", cmt.getParentCount() > 1 );
+		setProperty( node, PropertyName.MESSAGE, cmt.getFullMessage() );
+		setProperty( node, PropertyName.IS_MERGE, cmt.getParentCount() > 1 );
 		return node;
 	}
 	
@@ -85,8 +82,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		Vertex gitUser = getOrCreateGitUser( sName, sEmail );
 		Vertex vName = getOrCreateName( sName );
 		Vertex vEmail = getOrCreateEmail( sEmail );
-		createEdgeIfNotExist( null, gitUser, vName, EdgeType.NAME );
-		createEdgeIfNotExist( null, gitUser, vEmail, EdgeType.EMAIL );
+		createEdgeIfNotExist( gitUser, vName, EdgeType.NAME );
+		createEdgeIfNotExist( gitUser, vEmail, EdgeType.EMAIL );
 		return gitUser;
 	}
 
@@ -99,7 +96,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		Vertex repo_node = getOrCreateRepository( reponame );
 		for ( RevCommit cmt : cmts ) {
 			Vertex cmt_node = getOrCreateCommit( gitHash( cmt ) );
-			createEdgeIfNotExist( null, cmt_node, repo_node, EdgeType.REPOSITORY );
+			createEdgeIfNotExist( cmt_node, repo_node, EdgeType.REPOSITORY );
 			mapper.put( cmt, cmt_node );
 		}
 		return mapper;
@@ -110,7 +107,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		Vertex child = getOrCreateCommit( gitHash( cmt ) );
 		for ( RevCommit parent : parents ) {
 			Vertex node = getOrCreateCommit( gitHash( parent ) );
-			createEdgeIfNotExist( null, child, node, EdgeType.PARENT );
+			createEdgeIfNotExist( child, node, EdgeType.COMMITPARENT );
 			mapper.put( cmt, node );
 		}
 		return mapper;
@@ -121,7 +118,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		HashMap<String, Vertex> mapper = new HashMap<String, Vertex>();
 		for ( String token : fileTokens ) {
 			Vertex fileNode = getOrCreateFile( token );
-			createEdgeIfNotExist( null, cmtNode, fileNode, EdgeType.CHANGED );
+			createEdgeIfNotExist( cmtNode, fileNode, EdgeType.CHANGED );
 			mapper.put( token, fileNode );
 		}
 		return mapper;
@@ -131,8 +128,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		if ( author == null ) { return null; }
 		Vertex cmt_node = getOrCreateCommit( gitHash( cmt ) );
 		Vertex author_node = saveGitUser( author );
-		Edge edge = createEdgeIfNotExist( null, cmt_node, author_node, EdgeType.AUTHOR );
-		setProperty( edge, "when", author.getWhen() );
+		Edge edge = createEdgeIfNotExist( null, cmt_node, author_node, EdgeType.COMMITAUTHOR );
+		setProperty( edge, PropertyName.WHEN, author.getWhen() );
 		return author_node;
 	}
 	
@@ -140,7 +137,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		Vertex cmt_node = getOrCreateCommit( gitHash( cmt ) );
 		Vertex committer_node = saveGitUser( committer );
 		Edge edge = createEdgeIfNotExist( null, cmt_node, committer_node, EdgeType.COMMITTER );
-		setProperty( edge, "when", committer.getWhen() );
+		setProperty( edge, PropertyName.WHEN, committer.getWhen() );
 		return committer_node;
 	}
 	

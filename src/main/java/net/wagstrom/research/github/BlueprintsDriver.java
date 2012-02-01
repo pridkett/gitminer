@@ -18,17 +18,12 @@ package net.wagstrom.research.github;
 
 import java.util.List;
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-
-import javax.script.ScriptEngine;
-import javax.script.ScriptException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,20 +41,13 @@ import com.github.api.v2.schema.Team;
 import com.github.api.v2.schema.User;
 import com.ibm.research.govsci.graph.BlueprintsBase;
 import com.ibm.research.govsci.graph.Shutdownable;
+import com.ibm.research.govsci.graph.StringableEnum;
 import com.tinkerpop.blueprints.pgm.Edge;
 import com.tinkerpop.blueprints.pgm.Element;
-import com.tinkerpop.blueprints.pgm.Graph;
 import com.tinkerpop.blueprints.pgm.Index;
 import com.tinkerpop.blueprints.pgm.Vertex;
-import com.tinkerpop.blueprints.pgm.impls.tg.TinkerGraphFactory;
-import com.tinkerpop.gremlin.Gremlin;
-import com.tinkerpop.gremlin.jsr223.GremlinScriptEngine;
-import com.tinkerpop.pipes.Pipe;
-import com.tinkerpop.pipes.filter.UniquePathFilterPipe;
-import com.tinkerpop.pipes.transform.InPipe;
-import com.tinkerpop.pipes.transform.OutPipe;
-import com.tinkerpop.pipes.util.Pipeline;
-import com.tinkerpop.pipes.util.SingleIterator;
+import com.tinkerpop.gremlin.java.GremlinPipeline;
+import com.tinkerpop.pipes.PipeFunction;
 
 /**
  * 
@@ -68,21 +56,6 @@ import com.tinkerpop.pipes.util.SingleIterator;
  */
 public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
-	private static final String INDEX_USER = "user-idx";
-	private static final String INDEX_REPO = "repo-idx";
-	private static final String INDEX_TYPE = "type-idx";
-	private static final String INDEX_ORGANIZATION = "org-idx";
-	private static final String INDEX_TEAM = "team-idx";
-	private static final String INDEX_GIST = "gist-idx";
-	private static final String INDEX_GISTFILE = "gistfile-idx";
-	private static final String INDEX_ISSUE = "issue-idx";
-	private static final String INDEX_COMMENT = "comment-idx";
-	private static final String INDEX_ISSUELABEL = "issuelabel-idx";
-	private static final String INDEX_PULLREQUEST = "pullrequest-idx";
-	private static final String INDEX_PULLREQUESTREVIEWCOMMENT = "pullrequestreviewcomment-idx";
-	private static final String INDEX_DISCUSSION = "discussion-idx";
-	private static final String INDEX_COMMIT = "commit-idx";
-		
 	private Logger log = null;
 
 	private Index <Vertex> useridx = null;
@@ -98,31 +71,36 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	private Index <Vertex> discussionidx = null;
 	private Index <Vertex> commitidx = null;
 	private Index <Vertex> pullrequestreviewcommentidx = null;
+	private Index <Vertex> emailidx = null;
 	
 	/**
 	 * Base constructor for BlueprintsDriver
 	 * 
 	 * @param dbengine The name of the engine to use, e.g. neo4j, orientdb, etc
 	 * @param dburl The url of the database to use
+	 * @param config additional configuration parameters to be passed to the database
 	 */
-	public BlueprintsDriver(String dbengine, String dburl) {
-		super(dbengine, dburl);
+	public BlueprintsDriver(String dbengine, String dburl, Map<String, String> config) {
+		super(dbengine, dburl, config);
+		// FIXME: eventually this should be configurable
+		setMaxBufferSize(100000);
 		log = LoggerFactory.getLogger(this.getClass());
 
-		useridx = getOrCreateIndex(INDEX_USER);
-		repoidx = getOrCreateIndex(INDEX_REPO);
-		typeidx = getOrCreateIndex(INDEX_TYPE);
-		orgidx = getOrCreateIndex(INDEX_ORGANIZATION);
-		teamidx = getOrCreateIndex(INDEX_TEAM);
-		gistidx = getOrCreateIndex(INDEX_GIST);
-		commentidx = getOrCreateIndex(INDEX_COMMENT);
-		gistfileidx = getOrCreateIndex(INDEX_GISTFILE);
-		issueidx = getOrCreateIndex(INDEX_ISSUE);
-		issuelabelidx = getOrCreateIndex(INDEX_ISSUELABEL);
-		pullrequestidx = getOrCreateIndex(INDEX_PULLREQUEST);
-		discussionidx = getOrCreateIndex(INDEX_DISCUSSION);
-		commitidx = getOrCreateIndex(INDEX_COMMIT);
-		pullrequestreviewcommentidx = getOrCreateIndex(INDEX_PULLREQUESTREVIEWCOMMENT);
+		useridx = getOrCreateIndex(IndexNames.INDEX_USER);
+		repoidx = getOrCreateIndex(IndexNames.INDEX_REPO);
+		typeidx = getOrCreateIndex(IndexNames.INDEX_TYPE);
+		orgidx = getOrCreateIndex(IndexNames.INDEX_ORGANIZATION);
+		teamidx = getOrCreateIndex(IndexNames.INDEX_TEAM);
+		gistidx = getOrCreateIndex(IndexNames.INDEX_GIST);
+		commentidx = getOrCreateIndex(IndexNames.INDEX_COMMENT);
+		gistfileidx = getOrCreateIndex(IndexNames.INDEX_GISTFILE);
+		issueidx = getOrCreateIndex(IndexNames.INDEX_ISSUE);
+		issuelabelidx = getOrCreateIndex(IndexNames.INDEX_ISSUELABEL);
+		pullrequestidx = getOrCreateIndex(IndexNames.INDEX_PULLREQUEST);
+		discussionidx = getOrCreateIndex(IndexNames.INDEX_DISCUSSION);
+		commitidx = getOrCreateIndex(IndexNames.INDEX_COMMIT);
+		pullrequestreviewcommentidx = getOrCreateIndex(IndexNames.INDEX_PULLREQUESTREVIEWCOMMENT);
+		emailidx = getOrCreateIndex(IndexNames.INDEX_EMAIL);
 	}	
 	
 	/**
@@ -152,38 +130,40 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		Vertex node = getOrCreateUser(user.getLogin());
 		log.debug("Saving User: {}", user.toString());
 
-		setProperty(node, "blog", user.getBlog());
-		setProperty(node, "company", user.getCompany());
-		setProperty(node, "createdAt", user.getCreatedAt());
-		setProperty(node, "email", user.getEmail());
+		setProperty(node, PropertyName.BLOG, user.getBlog());
+		setProperty(node, PropertyName.COMPANY, user.getCompany());
+		setProperty(node, PropertyName.CREATED_AT, user.getCreatedAt());
+		if (user.getEmail() != null) {
+			setProperty(node, PropertyName.EMAIL, user.getEmail());
+			Vertex email = getOrCreateEmail(user.getEmail());
+			createEdgeIfNotExist(node, email, EdgeType.EMAIL);
+		}
 		// these are all properties that tend to be 0 when non-full information is passed
 		// thus we need to ignore them unless we're doing a full update
 		if (overwrite) {
-			setProperty(node, "diskUsage", user.getDiskUsage());
-			setProperty(node, "collaborators", user.getCollaborators());
-			setProperty(node, "followersCount", user.getFollowersCount());
-			setProperty(node, "followingCount", user.getFollowingCount());
-			setProperty(node, "ownedPrivateRepoCount", user.getOwnedPrivateRepoCount());
-			setProperty(node, "privateGistCount", user.getPrivateGistCount());
-			setProperty(node, "publicGistCount", user.getPublicGistCount());
-			setProperty(node, "publicRepoCount", user.getPublicRepoCount());
-			setProperty(node, "score", user.getScore());
-			setProperty(node, "totalPrivateRepoCount", user.getTotalPrivateRepoCount());
-			setProperty(node, "sys:last_full_update", new Date());
+			setProperty(node, PropertyName.DISK_USAGE, user.getDiskUsage());
+			setProperty(node, PropertyName.COLLABORATORS, user.getCollaborators());
+			setProperty(node, PropertyName.FOLLOWERS, user.getFollowersCount());
+			setProperty(node, PropertyName.FOLLOWING, user.getFollowingCount());
+			setProperty(node, PropertyName.OWNED_PRIVATE_REPO_COUNT, user.getOwnedPrivateRepoCount());
+			setProperty(node, PropertyName.PRIVATE_GIST_COUNT, user.getPrivateGistCount());
+			setProperty(node, PropertyName.PUBLIC_GIST_COUNT, user.getPublicGistCount());
+			setProperty(node, PropertyName.PUBLIC_REPO_COUNT, user.getPublicRepoCount());
+			setProperty(node, PropertyName.SCORE, user.getScore());
+			setProperty(node, PropertyName.TOTAL_PRIVATE_REPO_COUNT, user.getTotalPrivateRepoCount());
+			setProperty(node, PropertyName.SYS_LAST_FULL_UPDATE.toString(), new Date());
 		}
-		setProperty(node, "fullname", user.getFullname());
-		setProperty(node, "gravatarId", user.getGravatarId());
-		setProperty(node, "gitHubId", user.getId()); // note name change
-		setProperty(node, "location", user.getLocation());
-		setProperty(node, "login", user.getLogin());
-		setProperty(node, "name", user.getName());
-		setProperty(node, "sys:last_updated", new Date());
+		setProperty(node, PropertyName.FULLNAME, user.getFullname());
+		setProperty(node, PropertyName.GRAVATAR_ID, user.getGravatarId());
+		setProperty(node, PropertyName.GITHUB_ID, user.getId()); // note name change
+		setProperty(node, PropertyName.LOCATION, user.getLocation());
+		setProperty(node, PropertyName.LOGIN, user.getLogin());
+		setProperty(node, PropertyName.NAME, user.getName());
+		setProperty(node, PropertyName.SYS_LAST_UPDATED.toString(), new Date());
 		// getPermission
 		// getPlan
 		
-		setProperty(node, "username", user.getUsername());
-		if (overwrite) {
-		}
+		setProperty(node, PropertyName.USERNAME, user.getUsername());
 		return node;
 	}
 		
@@ -284,7 +264,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	 * @return a set of the users that have not been updated
 	 */
 	public Set<String> getUsers(double age) {
-		return getVertexHelper(age, INDEX_USER, VertexType.USER, "username");
+		return getVertexHelper(age, IndexNames.INDEX_USER, VertexType.USER, "username");
 	}
 	
 	/**
@@ -296,7 +276,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	 * @return 
 	 */
 	public Set<String> getRepos(double age) {
-		return getVertexHelper(age, INDEX_REPO, VertexType.REPOSITORY, "fullname");
+		return getVertexHelper(age, IndexNames.INDEX_REPO, VertexType.REPOSITORY, "fullname");
 	}
 
 	public Map<String,Vertex> saveRepositoryCollaborators(String reponame, List<String> collabs) {
@@ -323,6 +303,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		
 	public Vertex getOrCreateUser(String login) {
 		return getOrCreateVertexHelper("login", login, VertexType.USER, useridx);
+	}
+	
+	public Vertex getOrCreateEmail(String email) {
+		return getOrCreateVertexHelper("email", email, VertexType.EMAIL, emailidx);
 	}
 	
 	public Vertex getOrCreateRepository(String reponame) {
@@ -369,7 +353,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	
 	public Vertex getOrCreateCommit(String commitId) {
 		log.debug("Fetching or creating commit: {}", commitId);
-		return getOrCreateVertexHelper("commit_id", commitId, VertexType.COMMIT, commitidx);
+		// FIXME: update current database to replace commit_id with hash
+		return getOrCreateVertexHelper("hash", commitId, VertexType.COMMIT, commitidx);
 	}
 	
 	public Vertex getOrCreatePullRequestReviewComment(String commentId) {
@@ -390,62 +375,63 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Vertex saveRepository(Repository repo) {
 		String projectFullName = repo.getOwner() + "/" + repo.getName();
 		Vertex node = getOrCreateRepository(projectFullName);
-		
-		node.setProperty("fullname", projectFullName);
-		node.setProperty("name", repo.getName());
-		node.setProperty("actions", repo.getActions());
-		if (repo.getCreatedAt() != null) node.setProperty("createdAt", dateFormatter.format(repo.getCreatedAt()));
-		if (repo.getDescription() != null) node.setProperty("description", repo.getDescription());
-		node.setProperty("followers", repo.getFollowers());
-		node.setProperty("forks", repo.getForks());
-		if (repo.getHomepage() != null) node.setProperty("homepage", repo.getHomepage());
-		if (repo.getId() != null) node.setProperty("gitHubId", repo.getId()); // note name change
+
+		setProperty(node, PropertyName.FULLNAME, projectFullName);
+
+		setProperty(node, PropertyName.NAME, repo.getName());
+		setProperty(node, PropertyName.ACTIONS, repo.getActions());
+		setProperty(node, PropertyName.CREATED_AT, repo.getCreatedAt());
+		setProperty(node, PropertyName.DESCRIPTION, repo.getDescription());
+		setProperty(node, PropertyName.FOLLOWERS, repo.getFollowers());
+		setProperty(node, PropertyName.FORKS, repo.getForks());
+		setProperty(node, PropertyName.HOMEPAGE, repo.getHomepage());
+		setProperty(node, PropertyName.GITHUB_ID, repo.getId()); // note name change
 		// getLanguage
-		node.setProperty("openIssues", repo.getOpenIssues());
-		if (repo.getOrganization() != null) node.setProperty("organization", repo.getOrganization());
-		if (repo.getOwner() != null) node.setProperty("owner", repo.getOwner());
-		if (repo.getParent() != null) node.setProperty("parent", repo.getParent());
+		setProperty(node, PropertyName.OPEN_ISSUES, repo.getOpenIssues());
+		setProperty(node, PropertyName.ORGANIZATION, repo.getOrganization());
+		setProperty(node, PropertyName.OWNER, repo.getOwner());
+		setProperty(node, PropertyName.PARENT, repo.getParent());
 		// getPermission
-		if (repo.getPushedAt() != null) node.setProperty("pushedAt", dateFormatter.format(repo.getPushedAt())); 
-		node.setProperty("score", repo.getScore());
-		node.setProperty("size", repo.getSize());
-		if (repo.getSource() != null) node.setProperty("source", repo.getSource());
-		if (repo.getType() != null) node.setProperty("repoType", repo.getType()); // note name change
-		if (repo.getUrl() != null) node.setProperty("url", repo.getUrl());
-		if (repo.getUsername() != null) node.setProperty("username", repo.getUsername());
+		setProperty(node, PropertyName.PUSHED_AT, repo.getPushedAt()); 
+		setProperty(node, PropertyName.SCORE, repo.getScore());
+		setProperty(node, PropertyName.SIZE, repo.getSize());
+		setProperty(node, PropertyName.SOURCE, repo.getSource());
+		setProperty(node, PropertyName.REPO_TYPE, repo.getType()); // note name change
+		setProperty(node, PropertyName.URL, repo.getUrl());
+		setProperty(node, PropertyName.USERNAME, repo.getUsername());
 		// getVisibility
-		setProperty(node, "watchers", repo.getWatchers());
-		setProperty(node, "last_updated", new Date());
+		setProperty(node, PropertyName.WATCHERS, repo.getWatchers());
+		setProperty(node, PropertyName.SYS_LAST_UPDATED, new Date());
 		return node;
 	}
 	
 	public Vertex saveOrganization(Organization org) {
 		Vertex node = getOrCreateOrganization(org.getLogin());
-		if (org.getBillingEmail() != null) node.setProperty("billingEmail", org.getBillingEmail());
-		if (org.getBlog() != null) node.setProperty("blog", org.getBlog());
-		if (org.getCompany() != null) node.setProperty("company", org.getCompany());
-		if (org.getCreatedAt() != null) node.setProperty("createdAt", dateFormatter.format(org.getCreatedAt()));
-		if (org.getEmail() != null) node.setProperty("email", org.getEmail());
-		node.setProperty("followers", org.getFollowersCount());
-		node.setProperty("following", org.getFollowingCount());
-		if (org.getGravatarId() != null) node.setProperty("gravatarId", org.getGravatarId());
-		if (org.getId() != null) node.setProperty("idNum", org.getId()); // note name change
-		if (org.getLocation() != null) node.setProperty("location", org.getLocation());
-		if (org.getLogin() != null) node.setProperty("login", org.getLogin());
-		if (org.getName() != null) node.setProperty("name", org.getName());
-		node.setProperty("ownedPrivateRepoCount", org.getOwnedPrivateRepoCount());
+		setProperty(node, PropertyName.BILLING_EMAIL, org.getBillingEmail());
+		setProperty(node, PropertyName.BLOG, org.getBlog());
+		setProperty(node, PropertyName.COMPANY, org.getCompany());
+		setProperty(node, PropertyName.CREATED_AT, org.getCreatedAt());
+		setProperty(node, PropertyName.EMAIL, org.getEmail());
+		setProperty(node, PropertyName.FOLLOWERS, org.getFollowersCount());
+		setProperty(node, PropertyName.FOLLOWING, org.getFollowingCount());
+		setProperty(node, PropertyName.GRAVATAR_ID, org.getGravatarId());
+		setProperty(node, PropertyName.ID_NUM, org.getId()); // note name change
+		setProperty(node, PropertyName.LOCATION, org.getLocation());
+		setProperty(node, PropertyName.LOGIN, org.getLogin());
+		setProperty(node, PropertyName.NAME, org.getName());
+		setProperty(node, PropertyName.OWNED_PRIVATE_REPO_COUNT, org.getOwnedPrivateRepoCount());
 		// getPermission
-		node.setProperty("privateGistCount", org.getPrivateGistCount());
-		node.setProperty("publicGistCount", org.getPublicGistCount());
-		node.setProperty("publicRepoCount", org.getPublicRepoCount());
-		node.setProperty("totalPrivateRepoCount", org.getTotalPrivateRepoCount());
-		node.setProperty("orgType", org.getType().toString()); // not certain if this is what we really want
+		setProperty(node, PropertyName.PRIVATE_GIST_COUNT, org.getPrivateGistCount());
+		setProperty(node, PropertyName.PUBLIC_GIST_COUNT, org.getPublicGistCount());
+		setProperty(node, PropertyName.PUBLIC_REPO_COUNT, org.getPublicRepoCount());
+		setProperty(node, PropertyName.TOTAL_PRIVATE_REPO_COUNT, org.getTotalPrivateRepoCount());
+		setProperty(node, PropertyName.ORG_TYPE, org.getType().toString()); // not certain if this is what we really want
 		return node;
 	}
 
 	public Vertex saveTeam(Team team) {
 		Vertex node = getOrCreateTeam(team.getId());
-		if (team.getName() != null) node.setProperty("name", team.getName());
+		setProperty(node, PropertyName.NAME, team.getName());
 		// getPermission
 		// getRepoNames
 		return node;
@@ -453,14 +439,14 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
 	protected Vertex saveCommentHelper(Comment comment, EdgeType edgetype) {
 		Vertex node = getOrCreateComment(comment.getId());
-		setProperty(node, "body", comment.getBody());
-		setProperty(node, "createdAt", dateFormatter.format(comment.getCreatedAt()));
+		setProperty(node, PropertyName.BODY, comment.getBody());
+		setProperty(node, PropertyName.CREATED_AT, comment.getCreatedAt());
 		// FIXME: perhaps gravatarId should be another node?
-		setProperty(node, "gravatarId", comment.getGravatarId());
-		setProperty(node, "updatedAt", dateFormatter.format(comment.getUpdatedAt()));
+		setProperty(node, PropertyName.GRAVATAR_ID, comment.getGravatarId());
+		setProperty(node, PropertyName.UPDATED_AT, comment.getUpdatedAt());
 		if (comment.getUser() != null) {
 			Vertex user = getOrCreateUser(comment.getUser());
-			createEdgeIfNotExist(null, user, node, edgetype);
+			createEdgeIfNotExist(user, node, edgetype);
 		}
 		return node;
 	}
@@ -490,16 +476,16 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		Vertex node = getOrCreateGist(gist.getRepo());
 		for (Comment comment : gist.getComments()) {
 			Vertex commentnode = saveGistComment(comment);
-			createEdgeIfNotExist(null, node, commentnode, EdgeType.GISTCOMMENT);
+			createEdgeIfNotExist(node, commentnode, EdgeType.GISTCOMMENT);
 		}
-		if (gist.getCreatedAt() != null) node.setProperty("createdAt", dateFormatter.format(gist.getCreatedAt()));
-		if (gist.getDescription() != null) node.setProperty("description", gist.getDescription());
+		setProperty(node, PropertyName.CREATED_AT, gist.getCreatedAt());
+		setProperty(node, PropertyName.DESCRIPTION, gist.getDescription());
 		for (String file : gist.getFiles()) {
 			Vertex filenode = saveGistFile(gist.getRepo(), file);
 			createEdgeIfNotExist(null, node, filenode, EdgeType.GISTFILE);
 		}
-		if (gist.getOwner() != null) node.setProperty("owner", gist.getOwner());
-		if (gist.getRepo() != null) node.setProperty("repo", gist.getRepo());
+		setProperty(node, PropertyName.OWNER, gist.getOwner());
+		setProperty(node, PropertyName.REPO, gist.getRepo());
 		return node;
 	}
 	
@@ -508,7 +494,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
 		for (User owner : owners) {
 			Vertex usernode = saveUser(owner);
-			createEdgeIfNotExist(null, usernode, org, edgetype);
+			createEdgeIfNotExist(usernode, org, edgetype);
 			mapper.put(owner.getLogin(), usernode);
 		}
 		return mapper;
@@ -535,7 +521,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		for (Repository repo : repositories) {
 			String projectFullName = repo.getUsername() + "/" + repo.getName();
 			Vertex reponode = saveRepository(repo);
-			createEdgeIfNotExist(null, source, reponode, EdgeType.REPOOWNER);
+			createEdgeIfNotExist(source, reponode, EdgeType.REPOOWNER);
 			mapper.put(projectFullName, reponode);
 		}
 		return mapper;
@@ -546,7 +532,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
 		for (Team team: teams) {
 			Vertex teamnode = saveTeam(team);
-			createEdgeIfNotExist(null, org, teamnode, EdgeType.ORGANIZATIONTEAM);
+			createEdgeIfNotExist(org, teamnode, EdgeType.ORGANIZATIONTEAM);
 			mapper.put(team.getId(), teamnode);
 		}
 		return mapper;
@@ -557,7 +543,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
 		for (User user : users) {
 			Vertex usernode = saveUser(user);
-			createEdgeIfNotExist(null, usernode, teamnode, EdgeType.TEAMMEMBER);
+			createEdgeIfNotExist(usernode, teamnode, EdgeType.TEAMMEMBER);
 			mapper.put(user.getLogin(), usernode);
 		}
 		return mapper;
@@ -569,7 +555,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		for (Repository repo : repos) {
 			String projectFullName = repo.getUsername() + "/" + repo.getName();
 			Vertex reponode = saveRepository(repo);
-			createEdgeIfNotExist(null, teamnode, reponode, EdgeType.REPOOWNER);
+			createEdgeIfNotExist(teamnode, reponode, EdgeType.REPOOWNER);
 			mapper.put(projectFullName, reponode);
 		}
 		return mapper;
@@ -580,7 +566,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
 		for (Gist gist : gists) {
 			Vertex gistnode = saveGist(gist);
-			createEdgeIfNotExist(null, usernode, gistnode, EdgeType.GISTOWNER);
+			createEdgeIfNotExist(usernode, gistnode, EdgeType.GISTOWNER);
 			mapper.put(gist.getRepo(),gistnode);
 		}
 		return mapper;
@@ -597,27 +583,27 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	 */
 	public Vertex saveIssue(String project, Issue issue) {
 		Vertex issuenode = getOrCreateIssue(project, issue);
-		if (issue.getBody() != null) setProperty(issuenode, "body", issue.getBody());
-		if (issue.getClosedAt() != null) setProperty(issuenode, "closedAt", dateFormatter.format(issue.getClosedAt()));
-		setProperty(issuenode, "comments", issue.getComments());
-		if (issue.getCreatedAt() != null) setProperty(issuenode, "createdAt", dateFormatter.format(issue.getCreatedAt()));
-		if (issue.getGravatarId() != null) setProperty(issuenode, "gravatarId", issue.getGravatarId());
+		setProperty(issuenode, PropertyName.BODY, issue.getBody());
+		setProperty(issuenode, PropertyName.CLOSED_AT, issue.getClosedAt());
+		setProperty(issuenode, PropertyName.COMMENTS, issue.getComments());
+		setProperty(issuenode, PropertyName.CREATED_AT, issue.getCreatedAt());
+		setProperty(issuenode, PropertyName.GRAVATAR_ID, issue.getGravatarId());
 		for (String label : issue.getLabels()) {
 			Vertex labelnode = getOrCreateIssueLabel(label);
-			createEdgeIfNotExist(null, issuenode, labelnode, EdgeType.ISSUELABEL);
+			createEdgeIfNotExist(issuenode, labelnode, EdgeType.ISSUELABEL);
 		}
-		setProperty(issuenode, "number", issue.getNumber());
-		setProperty(issuenode, "position", issue.getPosition());
-		if (issue.getState() != null) setProperty(issuenode, "state", issue.getState().toString());
-		if (issue.getTitle() != null) setProperty(issuenode, "title", issue.getTitle());
-		if (issue.getUpdatedAt() != null) setProperty(issuenode, "updatedAt", issue.getUpdatedAt());
+		setProperty(issuenode, PropertyName.NUMBER, issue.getNumber());
+		setProperty(issuenode, PropertyName.POSITION, issue.getPosition());
+		setProperty(issuenode, PropertyName.STATE, issue.getState().toString());
+		setProperty(issuenode, PropertyName.TITLE, issue.getTitle());
+		setProperty(issuenode, PropertyName.UPDATED_AT, issue.getUpdatedAt());
 		if (issue.getUser() != null) {
-			setProperty(issuenode, "user", issue.getUser());
+			setProperty(issuenode, PropertyName.USER, issue.getUser());
 			Vertex userNode = getOrCreateUser(issue.getUser());
-			createEdgeIfNotExist(null, userNode, issuenode, EdgeType.ISSUEOWNER);
+			createEdgeIfNotExist(userNode, issuenode, EdgeType.ISSUEOWNER);
 		}
-		setProperty(issuenode, "votes", issue.getVotes());
-		setProperty(issuenode, "updated_at", new Date());
+		setProperty(issuenode, PropertyName.VOTES, issue.getVotes());
+		setProperty(issuenode, PropertyName.UPDATED_AT, new Date());
 		return issuenode;
 	}
 	
@@ -638,17 +624,16 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		HashMap<Long,Vertex> mapper = new HashMap<Long,Vertex>();
 		for (Comment comment : comments) {
 			Vertex commentnode = saveIssueComment(comment);
-			createEdgeIfNotExist(null, issuenode, commentnode, EdgeType.ISSUECOMMENT);
+			createEdgeIfNotExist(issuenode, commentnode, EdgeType.ISSUECOMMENT);
 			mapper.put(new Long(comment.getId()), commentnode);
 			
 		}
-		setProperty(issuenode, "sys:comments_added", new Date());
+		setProperty(issuenode, PropertyName.SYS_COMMENTS_ADDED.toString(), new Date());
 		return mapper;
 	}
 	
 	// FIXME: this code does not look like it functions properly
 	public void saveRepositoryPullRequests(String project, Collection<PullRequest> requests) {
-		Vertex projectnode = getOrCreateRepository(project);
 		for (PullRequest request : requests) {
 			saveRepositoryPullRequest(project, request);
 		}
@@ -662,45 +647,45 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		// commit.getAdded()
 		if (commit.getAuthor() != null) {
 			Vertex author = saveUser(commit.getAuthor());
-			createEdgeIfNotExist(null, author, node, EdgeType.COMMITAUTHOR);
+			createEdgeIfNotExist(author, node, EdgeType.COMMITAUTHOR);
 		}
-		setProperty(node, "authoredDate", commit.getAuthoredDate());
-		setProperty(node, "committedDate", commit.getCommittedDate());
+		setProperty(node, PropertyName.AUTHORED_DATE, commit.getAuthoredDate());
+		setProperty(node, PropertyName.COMMITTED_DATE, commit.getCommittedDate());
 		if (commit.getCommitter() != null) {
 			Vertex committer = saveUser(commit.getCommitter());
-			createEdgeIfNotExist(null, committer, node, EdgeType.COMMITTER);
+			createEdgeIfNotExist(committer, node, EdgeType.COMMITTER);
 		}
-		setProperty(node, "date", commit.getDate());
-		setProperty(node, "gravatar", commit.getGravatar());
-		setProperty(node, "commit_id", commit.getId());
-		setProperty(node, "login", commit.getLogin());
-		setProperty(node, "message", commit.getMessage());
+		setProperty(node, PropertyName.DATE, commit.getDate());
+		setProperty(node, PropertyName.GRAVATAR_ID, commit.getGravatar());
+		setProperty(node, PropertyName.COMMIT_ID, commit.getId());
+		setProperty(node, PropertyName.LOGIN, commit.getLogin());
+		setProperty(node, PropertyName.MESSAGE, commit.getMessage());
 		// modified
 		for (Id id : commit.getParents()) {
 			Vertex parent = getOrCreateCommit(id.getId());
-			createEdgeIfNotExist(null, node, parent, EdgeType.COMMITPARENT);
+			createEdgeIfNotExist(node, parent, EdgeType.COMMITPARENT);
 		}
 		// removed
-		setProperty(node, "space", commit.getSpace());
-		setProperty(node, "time", commit.getTime());
-		setProperty(node, "tree", commit.getTree());
-		setProperty(node, "url", commit.getUrl());
+		setProperty(node, PropertyName.SPACE, commit.getSpace());
+		setProperty(node, PropertyName.TIME, commit.getTime());
+		setProperty(node, PropertyName.TREE, commit.getTree());
+		setProperty(node, PropertyName.URL, commit.getUrl());
 		log.trace("saveCommit: exit");
 		return node;
 	}
 	
 	public Vertex savePullRequestReviewComment(PullRequestReviewComment comment) {
 		log.trace("savePullRequestReviewComment: enter");
-		String commentId = comment.getCommitId() + ":" + dateFormatter.format(comment.getCreatedAt());
+		String commentId = comment.getCommitId() + ":" + comment.getCreatedAt()==null?"UNKNOWNDATE":dateFormatter.format(comment.getCreatedAt());
 		Vertex node = getOrCreatePullRequestReviewComment(commentId);
-		setProperty(node, "body", comment.getBody());
-		setProperty(node, "commitId", comment.getCommitId());
-		setProperty(node, "createdAt", comment.getCreatedAt());
-		setProperty(node, "diffHunk", comment.getDiffHunk());
-		setProperty(node, "originalCommitId", comment.getOriginalCommitId());
-		setProperty(node, "path", comment.getPath());
-		setProperty(node, "position", comment.getPosition());
-		setProperty(node, "updatedAt", comment.getUpdatedAt());
+		setProperty(node, PropertyName.BODY, comment.getBody());
+		setProperty(node, PropertyName.COMMIT_ID, comment.getCommitId());
+		setProperty(node, PropertyName.CREATED_AT, comment.getCreatedAt());
+		setProperty(node, PropertyName.DIFF_HUNK, comment.getDiffHunk());
+		setProperty(node, PropertyName.ORIGINAL_COMMIT_ID, comment.getOriginalCommitId());
+		setProperty(node, PropertyName.PATH, comment.getPath());
+		setProperty(node, PropertyName.POSITION, comment.getPosition());
+		setProperty(node, PropertyName.UPDATED_AT, comment.getUpdatedAt());
 		if (comment.getUser() != null) {
 			Vertex user = saveUser(comment.getUser());
 			createEdgeIfNotExist(user, node, EdgeType.PULLREQUESTREVIEWCOMMENTOWNER);
@@ -795,7 +780,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	}
 	
 	/**
-	 * Helper function to save an indivdual pull request
+	 * Helper function to save an individual pull request
 	 * 
 	 * This function assumes that the pull request is not the full information,
 	 * thus it does not set all of the properties, such as sys:discussions_added
@@ -823,44 +808,44 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		Vertex reponode = getOrCreateRepository(reponame);
 		Vertex pullnode = getOrCreatePullRequest(reponame + ":" + request.getNumber());
 		// getBase()
-		setProperty(pullnode, "body", request.getBody());
-		setProperty(pullnode, "comments", request.getComments());
-		setProperty(pullnode, "createdAt", request.getCreatedAt());
-		setProperty(pullnode, "diffUrl", request.getDiffUrl());
+		setProperty(pullnode, PropertyName.BODY, request.getBody());
+		setProperty(pullnode, PropertyName.COMMENTS, request.getComments());
+		setProperty(pullnode, PropertyName.CREATED_AT, request.getCreatedAt());
+		setProperty(pullnode, PropertyName.DIFF_URL, request.getDiffUrl());
 
 		for (Discussion discussion : request.getDiscussion()) {
 			Vertex discussionnode = saveDiscussion(discussion);
 			log.trace("Created discussion node");
 			createEdgeIfNotExist(null, pullnode, discussionnode, EdgeType.PULLREQUESTDISCUSSION);
 		}
-		setProperty(pullnode, "gravatarId", request.getGravatarId());
+		setProperty(pullnode, PropertyName.GRAVATAR_ID, request.getGravatarId());
 		// request.getHead()
-		setProperty(pullnode, "htmlUrl", request.getHtmlUrl());
-		setProperty(pullnode, "issueCreatedAt", request.getIssueCreatedAt());
-		setProperty(pullnode, "issueUpdatedAt", request.getIssueUpdatedAt());
+		setProperty(pullnode, PropertyName.HTML_URL, request.getHtmlUrl());
+		setProperty(pullnode, PropertyName.ISSUE_CREATED_AT, request.getIssueCreatedAt());
+		setProperty(pullnode, PropertyName.ISSUE_UPDATED_AT, request.getIssueUpdatedAt());
 		if (request.getIssueUser() != null) {
 			Vertex usernode = saveUser(request.getIssueUser());
-			createEdgeIfNotExist(null, usernode, pullnode, EdgeType.PULLREQUESTISSUEUSER);
+			createEdgeIfNotExist(usernode, pullnode, EdgeType.PULLREQUESTISSUEUSER);
 		}
 		for (String label : request.getLabels()) {
 			Vertex labelnode = getOrCreateIssueLabel(label);
 			createEdgeIfNotExist(null, pullnode, labelnode, EdgeType.PULLREQUESTLABEL);
 		}
-		setProperty(pullnode, "number", request.getNumber());
-		setProperty(pullnode, "patchUrl", request.getPatchUrl());
-		setProperty(pullnode, "position", request.getPosition());
-		setProperty(pullnode, "state", request.getState().toString());
-		setProperty(pullnode, "title", request.getTitle());
+		setProperty(pullnode, PropertyName.NUMBER, request.getNumber());
+		setProperty(pullnode, PropertyName.PATCH_URL, request.getPatchUrl());
+		setProperty(pullnode, PropertyName.POSITION, request.getPosition());
+		setProperty(pullnode, PropertyName.STATE, request.getState().toString());
+		setProperty(pullnode, PropertyName.TITLE, request.getTitle());
 		if (request.getUser() != null) {
 			Vertex usernode = saveUser(request.getUser());
-			createEdgeIfNotExist(null, usernode, pullnode, EdgeType.PULLREQUESTOWNER);
+			createEdgeIfNotExist(usernode, pullnode, EdgeType.PULLREQUESTOWNER);
 		}
-		setProperty(pullnode, "votes", request.getVotes());
-		createEdgeIfNotExist(null, reponode, pullnode, EdgeType.PULLREQUEST);
+		setProperty(pullnode, PropertyName.VOTES, request.getVotes());
+		createEdgeIfNotExist(reponode, pullnode, EdgeType.PULLREQUEST);
 
 		if (full == true) {
-			setProperty(pullnode, "sys:discussions_added", new Date());
-			setProperty(pullnode, "sys:update_complete", new Date());
+			setProperty(pullnode, PropertyName.SYS_DISCUSSIONS_ADDED.toString(), new Date());
+			setProperty(pullnode, PropertyName.SYS_UPDATE_COMPLETE.toString(), new Date());
 		}
 		log.trace("saveRepositoryPullRequest: exit");
 		return pullnode;
@@ -895,18 +880,21 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		Vertex node = getOrCreateRepository(reponame);
 		HashMap<Integer, Date> m = new HashMap<Integer, Date>();
 		
-		ScriptEngine engine = new GremlinScriptEngine();
-		List<Vertex> list = new ArrayList<Vertex>();
-		engine.put("g", this.graph);
-		engine.put("list", list);		
-		engine.put("node", node);
+		GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
+		pipe.start(node).out(EdgeType.ISSUE.toString());
+				
+//		ScriptEngine engine = new GremlinScriptEngine();
+//		List<Vertex> list = new ArrayList<Vertex>();
+//		engine.put("g", this.graph);
+//		engine.put("list", list);		
+//		engine.put("node", node);
 
-		try {
-			engine.eval("node._().out('" + EdgeType.ISSUE + "') >> list");
-			addValuesFromIterable(list, m, "number", "sys:coments_added");
-		} catch (ScriptException e) {
-			log.error("ScriptException encountered in getIssueCommentsAddedAt");
-		}
+		// try {
+			// engine.eval("node._().out('" + EdgeType.ISSUE + "') >> list");
+		addValuesFromIterable(pipe, m, PropertyName.NUMBER, PropertyName.SYS_COMMENTS_ADDED);
+//		} catch (ScriptException e) {
+//			log.error("ScriptException encountered in getIssueCommentsAddedAt");
+//		}
 		return m;
 	}
 
@@ -945,19 +933,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Map<Integer, Date> getPullRequestDiscussionsAddedAt(String reponame) {
 		Vertex node = getOrCreateRepository(reponame);
 		HashMap<Integer, Date> m = new HashMap<Integer, Date>();
-		
-		ScriptEngine engine = new GremlinScriptEngine();
-		List<Vertex> list = new ArrayList<Vertex>();
-		engine.put("g", this.graph);
-		engine.put("list", list);		
-		engine.put("node", node);
 
-		try {
-			engine.eval("node._().out('" + EdgeType.PULLREQUEST + "') >> list");
-			addValuesFromIterable(list, m, "number", "sys:discussions_added");
-		} catch (ScriptException e) {
-			log.error("ScriptException encountered in getPullRequestDiscussionsAddedAt");
-		}
+		GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
+		pipe.start(node).out(EdgeType.PULLREQUEST.toString());
+		addValuesFromIterable(pipe, m, PropertyName.NUMBER, PropertyName.SYS_DISCUSSIONS_ADDED);
 		return m;
 	}
 
@@ -996,6 +975,14 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		}
 		return m;
 	}
+
+	private <T, I extends Element> Map<T, Date> addValuesFromIterable(Iterable<I> it, Map<T, Date> m, String idkey, StringableEnum datekey) {
+		return addValuesFromIterable(it, m, idkey, datekey.toString());
+	}
+
+	private <T, I extends Element> Map<T, Date> addValuesFromIterable(Iterable<I> it, Map<T, Date> m, StringableEnum idkey, StringableEnum datekey) {
+		return addValuesFromIterable(it, m, idkey.toString(), datekey.toString());
+	}
 	
 	/**
 	 * An aggressive method that attempts to get the last date that ALL the users
@@ -1013,45 +1000,45 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Map<String, Date> getProjectUsersLastFullUpdate(String reponame) {
 		Vertex node = getOrCreateRepository(reponame);
 		HashMap<String, Date> m = new HashMap<String, Date>();
+		GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
 		
-		ScriptEngine engine = new GremlinScriptEngine();
-		List<Vertex> list = new ArrayList<Vertex>();
-		engine.put("g", this.graph);
-		engine.put("list", list);		
-		engine.put("node", node);
+		// first: get all the users watching the project
+		pipe.start(node).in(EdgeType.REPOWATCHED.toString());
+		addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
 		
-		try {
-			// first: get all the users watching the project
-			engine.eval("node._().in('" + EdgeType.REPOWATCHED + "') >> list");
-			addValuesFromIterable(list, m, "login", "sys:last_full_update");
-			
-			// add the collaborators
-			engine.eval("node._().in('" + EdgeType.REPOCOLLABORATOR + "') >> list");
-			addValuesFromIterable(list, m, "login", "sys:last_full_update");	
+		// add the collaborators
+		pipe = new GremlinPipeline<Vertex, Vertex>();
+		pipe.start(node).out(EdgeType.REPOCOLLABORATOR.toString());
+		addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
-			// add the contributors
-			engine.eval("node._().in('" + EdgeType.REPOCONTRIBUTOR + "') >> list");
-			addValuesFromIterable(list, m, "login", "sys:last_full_update");	
+		// add the contributors
+		pipe = new GremlinPipeline<Vertex, Vertex>();
+		pipe.start(node).out(EdgeType.REPOCONTRIBUTOR.toString());
+		addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
-			// add the issue owners
-			engine.eval("node._().out('" + EdgeType.ISSUE + "').in('" + EdgeType.ISSUEOWNER + "').unique() >> list");
-			addValuesFromIterable(list, m, "login", "sys:last_full_update");	
+		// add the issue owners
+		pipe = new GremlinPipeline<Vertex, Vertex>();
+		pipe.start(node).out(EdgeType.ISSUE.toString()).in(EdgeType.ISSUEOWNER.toString()).dedup();
+		addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
-			// add the individuals who commented on the issues
-			engine.eval("node._().out('" + EdgeType.ISSUE + "').out('" + EdgeType.ISSUECOMMENT + "').in('" + EdgeType.ISSUECOMMENTOWNER + "').unique() >> list");
-			addValuesFromIterable(list, m, "login", "sys:last_full_update");	
+		// add the individuals who commented on the issues
+		pipe = new GremlinPipeline<Vertex, Vertex>();
+		pipe.start(node).out(EdgeType.ISSUE.toString()).out(EdgeType.ISSUECOMMENT.toString()).in(EdgeType.ISSUECOMMENTOWNER.toString()).dedup();
+		addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
-			// add the pull request owners
-			engine.eval("node._().out('" + EdgeType.PULLREQUEST + "').inE.outV{it.type=='" + VertexType.USER + "'}.unique() >> list");
-			addValuesFromIterable(list, m, "login", "sys:last_full_update");	
+		// add the pull request owners
+		pipe = new GremlinPipeline<Vertex, Vertex>();
+		pipe.start(node).out(EdgeType.PULLREQUEST.toString()).in(EdgeType.PULLREQUESTOWNER.toString()).dedup();
+		addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
-			// add the pull request commenters
-			engine.eval("node._().out('" + EdgeType.PULLREQUEST + "').out('" + EdgeType.PULLREQUESTDISCUSSION + "').in{it.type=='" + VertexType.USER + "'}.unique() >> list");
-			addValuesFromIterable(list, m, "login", "sys:last_full_update");	
-
-		} catch (ScriptException e) {
-			log.error("Script exception thrown processing project users: ");
-		}
+		// add the pull request commenters
+		pipe = new GremlinPipeline<Vertex, Vertex>();
+		pipe.start(node).out(EdgeType.PULLREQUEST.toString()).out(EdgeType.PULLREQUESTDISCUSSION.toString()).in().filter(new PipeFunction<Vertex, Boolean>() {
+			public Boolean compute(Vertex argument) {
+				return (argument.getProperty(PropertyName.TYPE.toString()).equals(VertexType.USER.toString()));
+			}
+		}).dedup();
+		addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 		
 		return m;
 	}

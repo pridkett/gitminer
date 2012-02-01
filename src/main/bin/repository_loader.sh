@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2011 IBM Corporation
+# Copyright 2011 University of Nebraska, Lincoln
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ fi
 
 # Set Java options
 if [ "$JAVA_OPTIONS" = "" ] ; then
-    JAVA_OPTIONS="-Xms32M -Xmx512M"
+    JAVA_OPTIONS="-Xms64M -Xmx1536M"
 fi
 
 $JAVA $JAVA_OPTIONS -cp $CP edu.unl.cse.git.App $@

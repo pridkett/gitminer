@@ -27,7 +27,7 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 	ApiThrottle throttle;
 	private Logger log;
 	private static final long SLEEP_DELAY = 5000;
-	private static final long MAX_SLEEP_DELAY = SLEEP_DELAY * 10;
+	private static final long MAX_SLEEP_DELAY = SLEEP_DELAY * 5;
 	
 	private long failSleepDelay = SLEEP_DELAY;
 	// this acts as a shared white list of methods that don't get throttled
@@ -68,10 +68,13 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 			log.warn("GitHub returned Not Found: Method: {}, Args: {}", method.getName(), args);
 			return null;
 		} else if (e.getCause() instanceof ConnectException) {
-			if (e.getMessage().trim().toLowerCase().equals("operation timed out")) {
-				failSleep();
-				return invoke(proxy, method, args);
-			}
+			log.error("Connection exception: Method: {}, Args: {}", method.getName(), args);
+			failSleep();
+			return invoke(proxy, method, args);
+		} else if (e.getCause() != null && e.getCause().getCause() instanceof ConnectException) {
+			log.error("Connection exception (deep): Method: {}, Args: {}", method.getName(), args);
+			failSleep();
+			return invoke(proxy, method, args);			
 		}
 
 		log.error("Unhandled exception: Method: {} Args: {}", method.getName(), args);

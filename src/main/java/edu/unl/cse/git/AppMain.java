@@ -1,6 +1,9 @@
 package edu.unl.cse.git;
 
+import java.util.HashMap;
 import java.util.Properties;
+
+import net.wagstrom.research.github.GithubProperties;
 
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
@@ -27,11 +30,20 @@ public class AppMain {
 		String dbengine = getProperty( p, "edu.unl.cse.git.dbengine");
 		String dburl = getProperty( p, "edu.unl.cse.git.dburl");
 		
-		return new BlueprintsDriver(dbengine, dburl);
+		// pass through all the db.XYZ properties to the database
+		HashMap<String, String> dbprops = new HashMap<String, String>();
+        for (Object o : p.keySet()) {
+            String s = (String) o;
+            if (s.startsWith("db.")) {
+                dbprops.put(s.substring(3), p.getProperty(s));
+            }
+        }
+		
+		return new BlueprintsDriver(dbengine, dburl, dbprops);
 	}
 	
 	public void main() {
-		Properties p = GitProperties.props();
+		Properties p = GithubProperties.props();
 		
 		BlueprintsDriver bp = connectToGraph(p);
 		
