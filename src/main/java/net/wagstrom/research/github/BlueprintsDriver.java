@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.eclipse.egit.github.core.Label;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,6 +118,56 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		return saveUser(user, false);
 	}
 	
+
+	private Vertex saveUser(org.eclipse.egit.github.core.User user) {
+		return saveUser(user, false);
+	}
+
+
+	private Vertex saveUser(org.eclipse.egit.github.core.User user,
+			boolean overwrite) {
+		Vertex node = getOrCreateUser(user.getLogin());
+		log.debug("Saving User: {}", user.toString());
+
+		setProperty(node, PropertyName.BLOG, user.getBlog());
+		setProperty(node, PropertyName.COMPANY, user.getCompany());
+		setProperty(node, PropertyName.CREATED_AT, user.getCreatedAt());
+		if (user.getEmail() != null) {
+			setProperty(node, PropertyName.EMAIL, user.getEmail());
+			Vertex email = getOrCreateEmail(user.getEmail());
+			createEdgeIfNotExist(node, email, EdgeType.EMAIL);
+		}
+		// these are all properties that tend to be 0 when non-full information is passed
+		// thus we need to ignore them unless we're doing a full update
+		if (overwrite) {
+			setProperty(node, PropertyName.DISK_USAGE, user.getDiskUsage());
+			setProperty(node, PropertyName.COLLABORATORS, user.getCollaborators());
+			setProperty(node, PropertyName.FOLLOWERS, user.getFollowers());
+			setProperty(node, PropertyName.FOLLOWING, user.getFollowing());
+			setProperty(node, PropertyName.OWNED_PRIVATE_REPO_COUNT, user.getOwnedPrivateRepos());
+			setProperty(node, PropertyName.PRIVATE_GIST_COUNT, user.getPrivateGists());
+			setProperty(node, PropertyName.PUBLIC_GIST_COUNT, user.getPublicGists());
+			setProperty(node, PropertyName.PUBLIC_REPO_COUNT, user.getPublicRepos());
+			// FIXME: I don't think there is a getScore method in the v3 api
+//			setProperty(node, PropertyName.SCORE, user.getScore());
+			setProperty(node, PropertyName.TOTAL_PRIVATE_REPO_COUNT, user.getTotalPrivateRepos());
+			setProperty(node, PropertyName.SYS_LAST_FULL_UPDATE.toString(), new Date());
+		}
+		setProperty(node, PropertyName.FULLNAME, user.getName());
+		setProperty(node, PropertyName.GRAVATAR_ID, user.getAvatarUrl());
+		setProperty(node, PropertyName.GITHUB_ID, user.getId()); // note name change
+		setProperty(node, PropertyName.LOCATION, user.getLocation());
+		setProperty(node, PropertyName.LOGIN, user.getLogin());
+		setProperty(node, PropertyName.NAME, user.getName());
+		setProperty(node, PropertyName.SYS_LAST_UPDATED.toString(), new Date());
+		// getPermission
+		// getPlan
+		
+		// FIXME: I don't think there is a getUsername method in the v3 api
+//		setProperty(node, PropertyName.USERNAME, user.getUsername());
+		return node;
+	}
+
 	/**
 	 * Saves a User to the graph database
 	 * 
@@ -229,6 +280,27 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	}
 	
 	/**
+	 * {@link #saveRepositoryIssues(String, Collection)} modified for v3 api
+	 * 
+	 * @param repo
+	 * @param issues
+	 * @return
+	 */
+	public Map<String, Vertex> saveRepositoryIssues(
+			org.eclipse.egit.github.core.Repository repo,
+			Collection<org.eclipse.egit.github.core.Issue> issues) {
+		Vertex proj = getOrCreateRepository(repo.generateId());
+		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
+		for (org.eclipse.egit.github.core.Issue issue : issues) {
+			String issueId = repo.generateId() + ":" + issue.getNumber();
+			Vertex issuenode = saveIssue(repo.generateId(), issue);
+			createEdgeIfNotExist(null, proj, issuenode, EdgeType.ISSUE);
+			mapper.put(issueId, issuenode);
+		}
+		return mapper;
+	}
+
+	/**
 	 * Saves a list of issues to the project database and connects those issues to the
 	 * project node.
 	 * 
@@ -304,6 +376,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Vertex getOrCreateUser(String login) {
 		return getOrCreateVertexHelper("login", login, VertexType.USER, useridx);
 	}
+
+	private Vertex getOrCreateUser(org.eclipse.egit.github.core.User user) {
+		return getOrCreateVertexHelper("login", user.getLogin(), VertexType.USER, useridx);
+	}
 	
 	public Vertex getOrCreateEmail(String email) {
 		return getOrCreateVertexHelper("email", email, VertexType.EMAIL, emailidx);
@@ -339,8 +415,20 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		return getOrCreateVertexHelper("issue_id", issueId, VertexType.ISSUE, issueidx);
 	}
 	
+	private Vertex getOrCreateIssue(String project,
+			org.eclipse.egit.github.core.Issue issue) {
+		String issueId = project + ":" + issue.getNumber();
+		return getOrCreateVertexHelper("issue_id", issueId, VertexType.ISSUE, issueidx);
+	}
+
+
 	public Vertex getOrCreateIssueLabel(String label) {
 		return getOrCreateVertexHelper("label", label, VertexType.LABEL, issuelabelidx);
+	}
+	
+	// FIXME: labels vary by projects, so this may require an additional identifier
+	private Vertex getOrCreateIssueLabel(Label label) {
+		return getOrCreateVertexHelper("label", label.getName(), VertexType.LABEL, issuelabelidx);
 	}
 	
 	public Vertex getOrCreatePullRequest(String idval) {
@@ -607,6 +695,42 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		return issuenode;
 	}
 	
+	private Vertex saveIssue(String project,
+			org.eclipse.egit.github.core.Issue issue) {
+		Vertex issuenode = getOrCreateIssue(project, issue);
+		setProperty(issuenode, PropertyName.BODY, issue.getBody());
+		setProperty(issuenode, PropertyName.CLOSED_AT, issue.getClosedAt());
+		setProperty(issuenode, PropertyName.COMMENTS, issue.getComments());
+		setProperty(issuenode, PropertyName.CREATED_AT, issue.getCreatedAt());
+		
+		// TODO: is there an equivalent of this value anymore?
+		// setProperty(issuenode, PropertyName.GRAVATAR_ID, issue.getGravatarId());
+		
+		for (Label label : issue.getLabels()) {
+			Vertex labelnode = getOrCreateIssueLabel(label);
+			createEdgeIfNotExist(issuenode, labelnode, EdgeType.ISSUELABEL);
+		}
+		setProperty(issuenode, PropertyName.NUMBER, issue.getNumber());
+		
+		// TODO: is there an equivalent v3 property?
+		// setProperty(issuenode, PropertyName.POSITION, issue.getPosition());
+		
+		setProperty(issuenode, PropertyName.STATE, issue.getState().toString());
+		setProperty(issuenode, PropertyName.TITLE, issue.getTitle());
+		setProperty(issuenode, PropertyName.UPDATED_AT, issue.getUpdatedAt());
+		if (issue.getUser() != null) {
+			setProperty(issuenode, PropertyName.USER, issue.getUser().getLogin());
+			Vertex userNode = getOrCreateUser(issue.getUser());
+			createEdgeIfNotExist(userNode, issuenode, EdgeType.ISSUEOWNER);
+		}
+		
+		// TODO: is there an equivalent v3 property?
+		// setProperty(issuenode, PropertyName.VOTES, issue.getVotes());
+		
+		setProperty(issuenode, PropertyName.UPDATED_AT, new Date());
+		return issuenode;
+	}
+
 	/**
 	 * Saves the comments that match up with a given issue
 	 * 
@@ -628,7 +752,28 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 			mapper.put(new Long(comment.getId()), commentnode);
 			
 		}
-		setProperty(issuenode, PropertyName.SYS_COMMENTS_ADDED.toString(), new Date());
+		setProperty(issuenode, PropertyName.SYS_COMMENTS_ADDED, new Date());
+		return mapper;
+	}
+	
+	/**
+	 * {@link #saveRepositoryIssueComments(String, Issue, Collection)} updated for v3 api
+	 * @param proj
+	 * @param issue
+	 * @param issueComments
+	 */
+	public Map<Long, Vertex> saveRepositoryIssueComments(String project,
+			org.eclipse.egit.github.core.Issue issue,
+			List<Comment> comments) {
+		Vertex issuenode = getOrCreateIssue(project, issue);
+		HashMap<Long,Vertex> mapper = new HashMap<Long,Vertex>();
+		for (Comment comment : comments) {
+			Vertex commentnode = saveIssueComment(comment);
+			createEdgeIfNotExist(issuenode, commentnode, EdgeType.ISSUECOMMENT);
+			mapper.put(new Long(comment.getId()), commentnode);
+			
+		}
+		setProperty(issuenode, PropertyName.SYS_COMMENTS_ADDED, new Date());
 		return mapper;
 	}
 	
@@ -636,6 +781,20 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public void saveRepositoryPullRequests(String project, Collection<PullRequest> requests) {
 		for (PullRequest request : requests) {
 			saveRepositoryPullRequest(project, request);
+		}
+	}
+	
+	/**
+	 * {@link #saveRepositoryPullRequests(String, Collection)} updated for v3 api
+	 * 
+	 * @param repo
+	 * @param requests3
+	 */
+	public void saveRepositoryPullRequests(
+			org.eclipse.egit.github.core.Repository repo,
+			Collection<org.eclipse.egit.github.core.PullRequest> requests3) {
+		for (org.eclipse.egit.github.core.PullRequest request : requests3) {
+			saveRepositoryPullRequest(repo, request);
 		}
 	}
 	
@@ -792,7 +951,86 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Vertex saveRepositoryPullRequest(String reponame, PullRequest request) {
 		return saveRepositoryPullRequest(reponame, request, false);
 	}
+
+	private Vertex saveRepositoryPullRequest(
+			org.eclipse.egit.github.core.Repository repo,
+			org.eclipse.egit.github.core.PullRequest request) {
+		return saveRepositoryPullRequest(repo, request, false);
+	}
 	
+	/**
+	 * {@link #saveRepositoryPullRequest(String, PullRequest, boolean)} updated for v3 api
+	 * @param repo
+	 * @param request
+	 * @param full
+	 * @return
+	 */
+	private Vertex saveRepositoryPullRequest(
+			org.eclipse.egit.github.core.Repository repo,
+			org.eclipse.egit.github.core.PullRequest request, boolean full) {
+		log.trace("saveRepositoryPullRequest: enter");
+		log.trace("Saving pull request {}", request.getNumber());
+		log.trace(request.toString());
+		String reponame = repo.generateId();
+		
+		Vertex reponode = getOrCreateRepository(reponame);
+		Vertex pullnode = getOrCreatePullRequest(reponame + ":" + request.getNumber());
+		// getBase()
+		setProperty(pullnode, PropertyName.BODY, request.getBody());
+		setProperty(pullnode, PropertyName.COMMENTS, request.getComments());
+		setProperty(pullnode, PropertyName.CREATED_AT, request.getCreatedAt());
+		setProperty(pullnode, PropertyName.DIFF_URL, request.getDiffUrl());
+
+		// FIXME: it does not appear that getDiscussions exists in the v3 api
+//		for (Discussion discussion : request.getDiscussion()) {
+//			Vertex discussionnode = saveDiscussion(discussion);
+//			log.trace("Created discussion node");
+//			createEdgeIfNotExist(null, pullnode, discussionnode, EdgeType.PULLREQUESTDISCUSSION);
+//		}
+		
+		// FIXME: it does not appear that getGravatarId exists in the v3 api
+//		setProperty(pullnode, PropertyName.GRAVATAR_ID, request.getGravatarId());
+		
+		// request.getHead()
+		setProperty(pullnode, PropertyName.HTML_URL, request.getHtmlUrl());
+		setProperty(pullnode, PropertyName.ISSUE_CREATED_AT, request.getCreatedAt());
+		setProperty(pullnode, PropertyName.ISSUE_UPDATED_AT, request.getUpdatedAt());
+		
+		// FIXME: it does not appear that getIssueUser exists in the v3 api
+//		if (request.getIssueUser() != null) {
+//			Vertex usernode = saveUser(request.getIssueUser());
+//			createEdgeIfNotExist(usernode, pullnode, EdgeType.PULLREQUESTISSUEUSER);
+//		}
+	
+		// FIXME: it does not appear that getLabels exists in the v3 api
+//		for (Label label : request.getLabels()) {
+//			Vertex labelnode = getOrCreateIssueLabel(label);
+//			createEdgeIfNotExist(null, pullnode, labelnode, EdgeType.PULLREQUESTLABEL);
+//		}
+		
+		setProperty(pullnode, PropertyName.NUMBER, request.getNumber());
+		setProperty(pullnode, PropertyName.PATCH_URL, request.getPatchUrl());
+		// FIXME: it does not appear that getPosition exists in the v3 api
+//		setProperty(pullnode, PropertyName.POSITION, request.getPosition());
+		setProperty(pullnode, PropertyName.STATE, request.getState().toString());
+		setProperty(pullnode, PropertyName.TITLE, request.getTitle());
+		if (request.getUser() != null) {
+			Vertex usernode = saveUser(request.getUser());
+			createEdgeIfNotExist(usernode, pullnode, EdgeType.PULLREQUESTOWNER);
+		}
+		
+		// FIXME: it does not appear that getVotes exists in the v3 api
+//		setProperty(pullnode, PropertyName.VOTES, request.getVotes());
+		createEdgeIfNotExist(reponode, pullnode, EdgeType.PULLREQUEST);
+
+		if (full == true) {
+			setProperty(pullnode, PropertyName.SYS_DISCUSSIONS_ADDED.toString(), new Date());
+			setProperty(pullnode, PropertyName.SYS_UPDATE_COMPLETE.toString(), new Date());
+		}
+		log.trace("saveRepositoryPullRequest: exit");
+		return pullnode;
+	}
+
 	/**
 	 * Main function to save an individual pull request
 	 * 
@@ -1042,4 +1280,5 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		
 		return m;
 	}
+
 }

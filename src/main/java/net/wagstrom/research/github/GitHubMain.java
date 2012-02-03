@@ -23,6 +23,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import net.wagstrom.research.github.v3.IssueMinerV3;
+import net.wagstrom.research.github.v3.PullMinerV3;
+import net.wagstrom.research.github.v3.RepositoryMinerV3;
+
+import org.eclipse.egit.github.core.client.GitHubClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -120,8 +125,14 @@ public class GitHubMain {
 		gsh.addShutdownHandler(bp);
 		Runtime.getRuntime().addShutdownHook(gsh);
 		
+		GitHubClient ghc = new GitHubClient();
+		IssueMinerV3 imv3 = new IssueMinerV3(ghc);
+		PullMinerV3 pmv3 = new PullMinerV3(ghc);
+		RepositoryMinerV3 rmv3 = new RepositoryMinerV3(ghc);
+		
 		RepositoryMiner rm = new RepositoryMiner(ThrottledGitHubInvocationHandler.createThrottledRepositoryService(factory.createRepositoryService(), throttle));
 		IssueMiner im = new IssueMiner(ThrottledGitHubInvocationHandler.createThrottledIssueService(factory.createIssueService(), throttle));
+		
 		PullMiner pm = new PullMiner(ThrottledGitHubInvocationHandler.createThrottledPullRequestService(factory.createPullRequestService(), throttle));
 		UserMiner um = new UserMiner(ThrottledGitHubInvocationHandler.createThrottledUserService(factory.createUserService(), throttle));
 		GistMiner gm = new GistMiner(ThrottledGitHubInvocationHandler.createThrottledGistService(factory.createGistService(), throttle));
@@ -131,6 +142,9 @@ public class GitHubMain {
 			for (String proj : projects) {
 				String [] projsplit = proj.split("/");
 
+				// yay! full declarations! they're AWESOME!
+				org.eclipse.egit.github.core.Repository repo = rmv3.getRepository(projsplit[0], projsplit[1]);
+				
 				bp.saveRepository(rm.getRepositoryInformation(projsplit[0], projsplit[1]));
 
 				if (p.getProperty("net.wagstrom.research.github.miner.repositories.collaborators", "true").equals("true"))
@@ -143,13 +157,16 @@ public class GitHubMain {
 					bp.saveRepositoryForks(proj, rm.getForks(projsplit[0], projsplit[1]));
 				
 				if (p.getProperty("net.wagstrom.research.github.miner.issues","true").equals("true")) {
-					Collection<Issue> issues = im.getAllIssues(projsplit[0], projsplit[1]);
-					bp.saveRepositoryIssues(proj, issues);
+					Collection<org.eclipse.egit.github.core.Issue> issues3 = imv3.getAllIssues(projsplit[0], projsplit[1]);
+					bp.saveRepositoryIssues(repo, issues3);
+					
+					// Collection<Issue> issues = im.getAllIssues(projsplit[0], projsplit[1]);
+					// bp.saveRepositoryIssues(proj, issues);
 					
 					Map<Integer, Date> savedIssues = bp.getIssueCommentsAddedAt(proj);
 					log.trace("SavedIssues Keys: {}", savedIssues.keySet());
 
-					for (Issue issue : issues) {
+					for (org.eclipse.egit.github.core.Issue issue : issues3) {
 						// if an issue doesn't appear in the set, we always save it
 						if (!needsUpdate(savedIssues.get(issue.getNumber()))) {
 							log.debug("Skipping fetching issue {} - recently updated", issue.getNumber());
@@ -164,13 +181,17 @@ public class GitHubMain {
 				}
 				
 				if (p.getProperty("net.wagstrom.research.github.miner.repositories.pullrequests", "true").equals("true")) {
-					Collection<PullRequest> requests = pm.getAllPullRequests(projsplit[0], projsplit[1]);
-					log.debug("Saving repository pull requests");
-					bp.saveRepositoryPullRequests(proj, requests);
-					log.debug("Pull requests saved");
+					Collection<org.eclipse.egit.github.core.PullRequest> requests3 = pmv3.getAllPullRequests(repo);
+					bp.saveRepositoryPullRequests(repo, requests3);
+					
+//					Collection<PullRequest> requests = pm.getAllPullRequests(projsplit[0], projsplit[1]);
+//					log.debug("Saving repository pull requests");
+//					bp.saveRepositoryPullRequests(proj, requests);
+//					log.debug("Pull requests saved");
+
 					Map<Integer, Date> savedRequests = bp.getPullRequestDiscussionsAddedAt(proj);
 					log.debug("SavedPullRequest Keys: {}", savedRequests.keySet());
-					for (PullRequest request : requests) {
+					for (org.eclipse.egit.github.core.PullRequest request : requests3) {
 						if (savedRequests.containsKey(request.getNumber())) {
 							if (!needsUpdate(savedRequests.get(request.getNumber()), true)) {
 								log.debug("Skipping fetching pull request {} - recently updated {}", request.getNumber(), savedRequests.get(request.getNumber()));
