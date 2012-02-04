@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.egit.github.core.Label;
+import org.eclipse.egit.github.core.PullRequestMarker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,6 +74,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	private Index <Vertex> commitidx = null;
 	private Index <Vertex> pullrequestreviewcommentidx = null;
 	private Index <Vertex> emailidx = null;
+	private Index <Vertex> markeridx = null;
 	
 	/**
 	 * Base constructor for BlueprintsDriver
@@ -102,6 +104,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		commitidx = getOrCreateIndex(IndexNames.INDEX_COMMIT);
 		pullrequestreviewcommentidx = getOrCreateIndex(IndexNames.INDEX_PULLREQUESTREVIEWCOMMENT);
 		emailidx = getOrCreateIndex(IndexNames.INDEX_EMAIL);
+		markeridx = getOrCreateIndex(IndexNames.INDEX_PULLREQUESTMARKER);
 	}	
 	
 	/**
@@ -372,7 +375,11 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		}
 		return mapper;
 	}
-		
+	
+	private Vertex getOrCreatePullRequestMarker(PullRequestMarker head) {
+		return getOrCreateVertexHelper("sha", head.getSha(), VertexType.PULLREQUESTMARKER, markeridx);
+	}
+	
 	public Vertex getOrCreateUser(String login) {
 		return getOrCreateVertexHelper("login", login, VertexType.USER, useridx);
 	}
@@ -450,6 +457,73 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		return getOrCreateVertexHelper("comment_id", commentId, VertexType.PULLREQUESTREVIEWCOMMENT, pullrequestreviewcommentidx);
 	}
 	
+	/**
+	 * {@link #saveRepository(Repository)} modified to V3 api
+	 * @param repo
+	 * @return
+	 */
+	private Vertex saveRepository(org.eclipse.egit.github.core.Repository repo) {
+		Vertex node = getOrCreateRepository(repo.generateId());
+
+		setProperty(node, PropertyName.FULLNAME, repo.generateId());
+
+		setProperty(node, PropertyName.NAME, repo.getName());
+		
+		// FIXME: does getActions exist in v3?
+//		setProperty(node, PropertyName.ACTIONS, repo.getActions());
+		setProperty(node, PropertyName.CREATED_AT, repo.getCreatedAt());
+		setProperty(node, PropertyName.DESCRIPTION, repo.getDescription());
+		// FIXME: followers are different in v3
+//		setProperty(node, PropertyName.FOLLOWERS, repo.getFollowers());
+		setProperty(node, PropertyName.FORKS, repo.getForks());
+		setProperty(node, PropertyName.HOMEPAGE, repo.getHomepage());
+		// FIXME: need to see what this maps to
+//		setProperty(node, PropertyName.GITHUB_ID, repo.getId()); // note name change
+		setProperty(node, PropertyName.LANGUAGE, repo.getLanguage());
+		setProperty(node, PropertyName.OPEN_ISSUES, repo.getOpenIssues());
+		// FIXME: need to see about fixing this
+//		setProperty(node, PropertyName.ORGANIZATION, repo.getOrganization());
+		org.eclipse.egit.github.core.User user = repo.getOwner();
+		if (user != null) {
+			Vertex owner = saveUser(user);
+			createEdgeIfNotExist(owner, node, EdgeType.REPOOWNER);
+		}
+		setProperty(node, PropertyName.GIT_URL, repo.getGitUrl());
+		setProperty(node, PropertyName.CLONE_URL, repo.getCloneUrl());
+		setProperty(node, PropertyName.DESCRIPTION, repo.getDescription());
+		setProperty(node, PropertyName.MASTER_BRANCH, repo.getMasterBranch());
+		setProperty(node, PropertyName.MIRROR_URL, repo.getMirrorUrl());
+		setProperty(node, PropertyName.PARENT, repo.getParent());
+		setProperty(node, PropertyName.SSH_URL, repo.getSshUrl());
+		setProperty(node, PropertyName.SVN_URL, repo.getSvnUrl());
+		// getPermission
+		setProperty(node, PropertyName.PUSHED_AT, repo.getPushedAt()); 
+		// FIXME: get score?
+//		setProperty(node, PropertyName.SCORE, repo.getScore());
+		setProperty(node, PropertyName.SIZE, repo.getSize());
+		setProperty(node, PropertyName.SOURCE, repo.getSource());
+		// FIXME: seems problematic
+//		setProperty(node, PropertyName.REPO_TYPE, repo.getType()); // note name change
+		setProperty(node, PropertyName.URL, repo.getUrl());
+		// FIXME: more problems?
+//		setProperty(node, PropertyName.USERNAME, repo.getUsername());
+	
+		org.eclipse.egit.github.core.Repository altrepo = repo.getParent();
+		if (altrepo != null) {
+			Vertex parentNode = saveRepository(altrepo);
+			createEdgeIfNotExist(node, parentNode, EdgeType.REPOPARENT);
+		}
+		altrepo = repo.getSource();
+		if (altrepo != null) {
+			Vertex sourceNode = saveRepository(altrepo);
+			createEdgeIfNotExist(node, sourceNode, EdgeType.REPOSOURCE);
+		}
+		// getVisibility
+		setProperty(node, PropertyName.WATCHERS, repo.getWatchers());
+		setProperty(node, PropertyName.SYS_LAST_UPDATED, new Date());
+	
+		return node;
+	}
 	/**
 	 * Saves a repository to the graph database.
 	 * 
@@ -965,7 +1039,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	 * @param full
 	 * @return
 	 */
-	private Vertex saveRepositoryPullRequest(
+	public Vertex saveRepositoryPullRequest(
 			org.eclipse.egit.github.core.Repository repo,
 			org.eclipse.egit.github.core.PullRequest request, boolean full) {
 		log.trace("saveRepositoryPullRequest: enter");
@@ -978,9 +1052,15 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		// getBase()
 		setProperty(pullnode, PropertyName.BODY, request.getBody());
 		setProperty(pullnode, PropertyName.COMMENTS, request.getComments());
+		setProperty(pullnode, PropertyName.COMMITS, request.getCommits());
 		setProperty(pullnode, PropertyName.CREATED_AT, request.getCreatedAt());
+		setProperty(pullnode, PropertyName.CLOSED_AT, request.getClosedAt());
 		setProperty(pullnode, PropertyName.DIFF_URL, request.getDiffUrl());
-
+		setProperty(pullnode, PropertyName.PATCH_URL, request.getPatchUrl());
+		setProperty(pullnode, PropertyName.ADDITIONS, request.getAdditions());
+		setProperty(pullnode, PropertyName.DELETIONS, request.getDeletions());
+		setProperty(pullnode, PropertyName.UPDATED_AT, request.getUpdatedAt());
+		
 		// FIXME: it does not appear that getDiscussions exists in the v3 api
 //		for (Discussion discussion : request.getDiscussion()) {
 //			Vertex discussionnode = saveDiscussion(discussion);
@@ -1018,17 +1098,54 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 			Vertex usernode = saveUser(request.getUser());
 			createEdgeIfNotExist(usernode, pullnode, EdgeType.PULLREQUESTOWNER);
 		}
-		
+	
+		if (request.getMergedBy() != null) {
+			Vertex usernode = saveUser(request.getMergedBy());
+			createEdgeIfNotExist(pullnode, usernode, EdgeType.PULLREQUESTMERGEDBY);
+		}
+		setProperty(pullnode, PropertyName.MERGED_AT, request.getMergedAt());
+
 		// FIXME: it does not appear that getVotes exists in the v3 api
 //		setProperty(pullnode, PropertyName.VOTES, request.getVotes());
 		createEdgeIfNotExist(reponode, pullnode, EdgeType.PULLREQUEST);
 
+		PullRequestMarker head = request.getHead();
+		if (head != null) {
+			Vertex headnode = savePullRequestMarker(head);
+			createEdgeIfNotExist(pullnode, headnode, EdgeType.PULLREQUESTHEAD);
+		}
+		PullRequestMarker base = request.getBase();
+		if (base != null) {
+			Vertex basenode = savePullRequestMarker(base);
+			createEdgeIfNotExist(pullnode, basenode, EdgeType.PULLREQUESTBASE);
+		}
+		
 		if (full == true) {
 			setProperty(pullnode, PropertyName.SYS_DISCUSSIONS_ADDED.toString(), new Date());
 			setProperty(pullnode, PropertyName.SYS_UPDATE_COMPLETE.toString(), new Date());
 		}
+	
 		log.trace("saveRepositoryPullRequest: exit");
 		return pullnode;
+	}
+
+
+	private Vertex savePullRequestMarker(PullRequestMarker head) {
+		Vertex markernode = getOrCreatePullRequestMarker(head);
+		setProperty(markernode, PropertyName.LABEL, head.getLabel());
+		setProperty(markernode, PropertyName.SHA, head.getSha());
+		setProperty(markernode, PropertyName.REF, head.getRef());
+		org.eclipse.egit.github.core.User user = head.getUser();
+		if (user != null) {
+			Vertex usernode = saveUser(user);
+			createEdgeIfNotExist(markernode, usernode, EdgeType.PULLREQUESTMARKERUSER);
+		}
+		org.eclipse.egit.github.core.Repository repo = head.getRepo();
+		if (repo != null) {
+			Vertex reponode = saveRepository(repo);
+			createEdgeIfNotExist(markernode, reponode, EdgeType.REPOSITORY);
+		}
+		return markernode;
 	}
 
 	/**

@@ -199,7 +199,9 @@ public class GitHubMain {
 							}						
 						}
 						try {
+							// Fetch it BOTH ways
 							bp.saveRepositoryPullRequest(proj, pm.getPullRequest(projsplit[0], projsplit[1], request.getNumber()), true);
+							bp.saveRepositoryPullRequest(repo, pmv3.getPullRequest(repo, request.getNumber()), true);
 						} catch (NullPointerException e) {
 							log.error("NullPointerException saving pull request: {}:{}", proj, request.getNumber());
 						}
