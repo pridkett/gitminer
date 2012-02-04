@@ -10,11 +10,13 @@ import org.eclipse.egit.github.core.Comment;
 import org.eclipse.egit.github.core.IRepositoryIdProvider;
 import org.eclipse.egit.github.core.Issue;
 import org.eclipse.egit.github.core.client.GitHubClient;
+import org.eclipse.egit.github.core.client.RequestException;
 import org.eclipse.egit.github.core.service.IssueService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class IssueMinerV3 {
+	private static final String ISSUES_DISABLED_MESSAGE = "Issues are disabled for this repo";
 	private IssueService service;
 	
 	private Logger log;
@@ -23,27 +25,32 @@ public class IssueMinerV3 {
 		service = new IssueService(ghc);
 		log = LoggerFactory.getLogger(IssueMinerV3.class);
 	}
-	
-	public Collection<Issue> getOpenIssues(String username, String reponame) {
+
+	public Collection<Issue> getIssues(String username, String reponame, String state) {
 		HashMap<String, String> params = new HashMap<String, String>();
-		params.put(IssueService.FILTER_STATE, IssueService.STATE_OPEN);
+		params.put(IssueService.FILTER_STATE, state);
 		try {
 			return service.getIssues(username, reponame, params);
+		} catch (RequestException r) {
+			if (r.getError().getMessage().equals(ISSUES_DISABLED_MESSAGE)) {
+				log.warn("Issues disabled for repository {}/{}", username, reponame);
+				return null;
+			}
+			log.error("Request exception in getIssues {}/{}", new Object[]{username, reponame, r});
+			log.warn("Message: {}", r.getError().getMessage());
+			return null;
 		} catch (IOException e) {
-			log.error("IOException in getOpenIssues {} {}", new Object[]{username, reponame, e});
+			log.error("IOException in getIssues {}/{}", new Object[]{username, reponame, e});
 			return null;
 		}
 	}
+
+	public Collection<Issue> getOpenIssues(String username, String reponame) {
+		return getIssues(username, reponame, IssueService.STATE_OPEN);
+	}
 	
 	public Collection<Issue> getClosedIssues(String username, String reponame) {
-		HashMap<String, String> params = new HashMap<String, String>();
-		params.put(IssueService.FILTER_STATE, IssueService.STATE_CLOSED);
-		try {
-			return service.getIssues(username, reponame, params);
-		} catch (IOException e) {
-			log.error("IOException in getOpenIssues {} {}", new Object[]{username, reponame, e});
-			return null;
-		}
+		return getIssues(username, reponame, IssueService.STATE_CLOSED);
 	}
 	
 	public Collection<Issue> getAllIssues(String username, String reponame) {

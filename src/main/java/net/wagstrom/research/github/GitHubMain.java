@@ -158,25 +158,26 @@ public class GitHubMain {
 				
 				if (p.getProperty("net.wagstrom.research.github.miner.issues","true").equals("true")) {
 					Collection<org.eclipse.egit.github.core.Issue> issues3 = imv3.getAllIssues(projsplit[0], projsplit[1]);
-					bp.saveRepositoryIssues(repo, issues3);
-					
-					// Collection<Issue> issues = im.getAllIssues(projsplit[0], projsplit[1]);
-					// bp.saveRepositoryIssues(proj, issues);
-					
-					Map<Integer, Date> savedIssues = bp.getIssueCommentsAddedAt(proj);
-					log.trace("SavedIssues Keys: {}", savedIssues.keySet());
-
-					for (org.eclipse.egit.github.core.Issue issue : issues3) {
-						// if an issue doesn't appear in the set, we always save it
-						if (!needsUpdate(savedIssues.get(issue.getNumber()))) {
-							log.debug("Skipping fetching issue {} - recently updated", issue.getNumber());
-							continue;
+					if (issues3 != null) {
+						bp.saveRepositoryIssues(repo, issues3);
+						
+						Map<Integer, Date> savedIssues = bp.getIssueCommentsAddedAt(proj);
+						log.trace("SavedIssues Keys: {}", savedIssues.keySet());
+	
+						for (org.eclipse.egit.github.core.Issue issue : issues3) {
+							// if an issue doesn't appear in the set, we always save it
+							if (!needsUpdate(savedIssues.get(issue.getNumber()))) {
+								log.debug("Skipping fetching issue {} - recently updated", issue.getNumber());
+								continue;
+							}
+							try {
+								bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(projsplit[0], projsplit[1], issue.getNumber()));
+							} catch (NullPointerException e) {
+								log.error("NullPointerException saving issue comments: {}:{}", proj, issue);
+							}
 						}
-						try {
-							bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(projsplit[0], projsplit[1], issue.getNumber()));
-						} catch (NullPointerException e) {
-							log.error("NullPointerException saving issue comments: {}:{}", proj, issue);
-						}
+					} else {
+						log.warn("No issues for repository {}/{} - probably disabled", projsplit[0], projsplit[1]);
 					}
 				}
 				
