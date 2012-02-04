@@ -64,6 +64,7 @@
     <pipes.version>0.9</pipes.version>
     <gremlin.version>1.4</gremlin.version>
     <jgit.version>1.1.0.201109151100-r</jgit.version>
+    <mylyn.github.version>1.2.0</mylyn.github.version>
   </properties>
 
   <dependencies>
@@ -127,6 +128,11 @@
       <groupId>org.eclipse.jgit</groupId>
       <artifactId>org.eclipse.jgit</artifactId>
       <version>${jgit.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.mylyn.github</groupId>
+      <artifactId>org.eclipse.egit.github.core</artifactId>
+      <version>${mylyn.github.version}</version>
     </dependency>
   </dependencies>
 
