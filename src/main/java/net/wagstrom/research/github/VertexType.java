@@ -31,6 +31,7 @@ public enum VertexType implements StringableEnum {
 	GIST("GIST"),
 	ISSUE("ISSUE"),
 	LABEL("LABEL"),
+	MILESTONE("MILESTONE"),
 	COMMENT("COMMENT"),
 	GISTFILE("GISTFILE"),
 	PULLREQUEST("PULLREQUEST"),

@@ -74,11 +74,11 @@ public class IssueMinerV3 {
 		}
 	}
 	
-	public List<Comment> getIssueComments(String username, String reponame, int issueId) {
+	public List<Comment> getIssueComments(IRepositoryIdProvider repo, Issue issue) {
 		try {
-			return service.getComments(username, reponame, issueId);
+			return service.getComments(repo, issue.getNumber());
 		} catch (IOException e) {
-			log.error("IO Exception fetching comments on issue {}/{}:{}", new Object[]{username, reponame, issueId, e});
+			log.error("Exception fetching comments for issue {}:{}", new Object[]{repo.generateId(), issue.getNumber(), e});
 			return null;
 		}
 	}

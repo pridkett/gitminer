@@ -171,7 +171,9 @@ public class GitHubMain {
 								continue;
 							}
 							try {
+								// Fetch comments BOTH ways -- using the v2 and the v3 apis
 								bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(projsplit[0], projsplit[1], issue.getNumber()));
+								bp.saveIssueComments(repo, issue, imv3.getIssueComments(repo, issue));
 							} catch (NullPointerException e) {
 								log.error("NullPointerException saving issue comments: {}:{}", proj, issue);
 							}
@@ -183,29 +185,28 @@ public class GitHubMain {
 				
 				if (p.getProperty("net.wagstrom.research.github.miner.repositories.pullrequests", "true").equals("true")) {
 					Collection<org.eclipse.egit.github.core.PullRequest> requests3 = pmv3.getAllPullRequests(repo);
-					bp.saveRepositoryPullRequests(repo, requests3);
-					
-//					Collection<PullRequest> requests = pm.getAllPullRequests(projsplit[0], projsplit[1]);
-//					log.debug("Saving repository pull requests");
-//					bp.saveRepositoryPullRequests(proj, requests);
-//					log.debug("Pull requests saved");
+					if (requests3 != null) {
+						bp.saveRepositoryPullRequests(repo, requests3);
 
-					Map<Integer, Date> savedRequests = bp.getPullRequestDiscussionsAddedAt(proj);
-					log.debug("SavedPullRequest Keys: {}", savedRequests.keySet());
-					for (org.eclipse.egit.github.core.PullRequest request : requests3) {
-						if (savedRequests.containsKey(request.getNumber())) {
-							if (!needsUpdate(savedRequests.get(request.getNumber()), true)) {
-								log.debug("Skipping fetching pull request {} - recently updated {}", request.getNumber(), savedRequests.get(request.getNumber()));
-								continue;								
-							}						
+						Map<Integer, Date> savedRequests = bp.getPullRequestDiscussionsAddedAt(proj);
+						log.debug("SavedPullRequest Keys: {}", savedRequests.keySet());
+						for (org.eclipse.egit.github.core.PullRequest request : requests3) {
+							if (savedRequests.containsKey(request.getNumber())) {
+								if (!needsUpdate(savedRequests.get(request.getNumber()), true)) {
+									log.debug("Skipping fetching pull request {} - recently updated {}", request.getNumber(), savedRequests.get(request.getNumber()));
+									continue;								
+								}						
+							}
+							try {
+								// Fetch it BOTH ways -- using v2 and v3 api as they provide different information
+								bp.saveRepositoryPullRequest(proj, pm.getPullRequest(projsplit[0], projsplit[1], request.getNumber()), true);
+								bp.saveRepositoryPullRequest(repo, pmv3.getPullRequest(repo, request.getNumber()), true);
+							} catch (NullPointerException e) {
+								log.error("NullPointerException saving pull request: {}:{}", proj, request.getNumber());
+							}
 						}
-						try {
-							// Fetch it BOTH ways
-							bp.saveRepositoryPullRequest(proj, pm.getPullRequest(projsplit[0], projsplit[1], request.getNumber()), true);
-							bp.saveRepositoryPullRequest(repo, pmv3.getPullRequest(repo, request.getNumber()), true);
-						} catch (NullPointerException e) {
-							log.error("NullPointerException saving pull request: {}:{}", proj, request.getNumber());
-						}
+					} else {
+						log.warn("No pull requests for repository {} - probably disabled", repo.generateId());
 					}
 				}
 				

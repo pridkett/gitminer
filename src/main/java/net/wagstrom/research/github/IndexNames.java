@@ -20,4 +20,5 @@ public final class IndexNames {
 	public static final String INDEX_GIT_USER = "git-user-idx";
 	public static final String INDEX_NAME = "name-idx";
 	public static final String INDEX_PULLREQUESTMARKER = "pullrequestmarker-idx";
+	public static final String INDEX_MILESTONE = "milestone-idx";
 }
