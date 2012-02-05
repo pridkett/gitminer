@@ -30,6 +30,7 @@ public enum VertexType implements StringableEnum {
 	TEAM("TEAM"),
 	GIST("GIST"),
 	ISSUE("ISSUE"),
+	ISSUE_EVENT("ISSUE_EVENT"),
 	LABEL("LABEL"),
 	MILESTONE("MILESTONE"),
 	COMMENT("COMMENT"),

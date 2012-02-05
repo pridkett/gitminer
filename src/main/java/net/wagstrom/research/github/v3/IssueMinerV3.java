@@ -9,6 +9,7 @@ import java.util.List;
 import org.eclipse.egit.github.core.Comment;
 import org.eclipse.egit.github.core.IRepositoryIdProvider;
 import org.eclipse.egit.github.core.Issue;
+import org.eclipse.egit.github.core.IssueEvent;
 import org.eclipse.egit.github.core.client.GitHubClient;
 import org.eclipse.egit.github.core.client.RequestException;
 import org.eclipse.egit.github.core.service.IssueService;
@@ -79,6 +80,15 @@ public class IssueMinerV3 {
 			return service.getComments(repo, issue.getNumber());
 		} catch (IOException e) {
 			log.error("Exception fetching comments for issue {}:{}", new Object[]{repo.generateId(), issue.getNumber(), e});
+			return null;
+		}
+	}
+	
+	public Collection<IssueEvent> getIssueEvents(IRepositoryIdProvider repo, Issue issue) {
+		try {
+			return service.getIssueEvents(repo, issue);
+		} catch (IOException e) {
+			log.error("Exception fetching events for issue {}:{}", new Object[]{repo.generateId(), issue.getNumber(), e});
 			return null;
 		}
 	}

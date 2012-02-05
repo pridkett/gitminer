@@ -27,6 +27,7 @@ import net.wagstrom.research.github.v3.IssueMinerV3;
 import net.wagstrom.research.github.v3.PullMinerV3;
 import net.wagstrom.research.github.v3.RepositoryMinerV3;
 
+import org.eclipse.egit.github.core.IssueEvent;
 import org.eclipse.egit.github.core.client.GitHubClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -177,6 +178,16 @@ public class GitHubMain {
 							} catch (NullPointerException e) {
 								log.error("NullPointerException saving issue comments: {}:{}", proj, issue);
 							}
+						}
+						
+						savedIssues = bp.getIssueEventsAddedAt(repo);
+						for (org.eclipse.egit.github.core.Issue issue : issues3) {
+							if (!needsUpdate(savedIssues.get(issue.getNumber()), true)) {
+								log.debug("Skipping fetching events for issue {} - recently updated", issue.getNumber(), savedIssues.get(issue.getNumber()));
+							}
+							Collection<IssueEvent> evts = imv3.getIssueEvents(repo, issue);
+							log.info("issue {}:{} events: {}", new Object[]{repo.generateId(), issue.getNumber(), evts.size()});
+							bp.saveIssueEvents(repo, issue, imv3.getIssueEvents(repo, issue));
 						}
 					} else {
 						log.warn("No issues for repository {}/{} - probably disabled", projsplit[0], projsplit[1]);

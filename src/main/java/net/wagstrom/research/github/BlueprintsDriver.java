@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.eclipse.egit.github.core.IRepositoryIdProvider;
+import org.eclipse.egit.github.core.IssueEvent;
 import org.eclipse.egit.github.core.Label;
 import org.eclipse.egit.github.core.Milestone;
 import org.eclipse.egit.github.core.PullRequestMarker;
@@ -76,6 +78,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	private Index <Vertex> emailidx = null;
 	private Index <Vertex> markeridx = null;
 	private Index <Vertex> milestoneidx = null;
+	private Index <Vertex> issueeventidx = null;
 	
 	/**
 	 * Base constructor for BlueprintsDriver
@@ -107,6 +110,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		emailidx = getOrCreateIndex(IndexNames.INDEX_EMAIL);
 		markeridx = getOrCreateIndex(IndexNames.INDEX_PULLREQUESTMARKER);
 		milestoneidx = getOrCreateIndex(IndexNames.INDEX_MILESTONE);
+		issueeventidx = getOrCreateIndex(IndexNames.INDEX_ISSUE_EVENT);
 	}	
 	
 	/**
@@ -226,7 +230,26 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
 		return m;
 	}
-	
+
+	/**
+	 * Get a map of date when events were added to each issue
+	 * 
+	 * In the case that sys_events_added is not set null is inserted into the map.
+	 * 
+	 * @param reponame the name of the repository to mine
+	 * @return a Map that maps issue_ids to the date that the events were downloaded
+	 */
+	public Map<Integer, Date> getIssueEventsAddedAt(IRepositoryIdProvider repo) {
+		Vertex node = getOrCreateRepository(repo.generateId());
+		HashMap<Integer, Date> m = new HashMap<Integer, Date>();
+		
+		GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
+		pipe.start(node).out(EdgeType.ISSUE.toString());
+
+		addValuesFromIterable(pipe, m, PropertyName.NUMBER, PropertyName.SYS_EVENTS_ADDED);
+
+		return m;
+	}
 	/**
 	 * Similar to getIssueCommentsAddedAt except it infers missing values
 	 * 
@@ -270,6 +293,9 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		return getOrCreateVertexHelper("email", email, VertexType.EMAIL, emailidx);
 	}
 	
+	private Vertex getOrCreateEvent(long id) {
+		return getOrCreateVertexHelper("event_id", id, VertexType.ISSUE_EVENT, issueeventidx);
+	}
 	
 	public Vertex getOrCreateGist(String repoId) {
 		return getOrCreateVertexHelper("gist_id", repoId, VertexType.GIST, gistidx);
@@ -660,6 +686,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	private Vertex saveIssueComment(org.eclipse.egit.github.core.Repository repo,
 			org.eclipse.egit.github.core.Issue issue,
 			org.eclipse.egit.github.core.Comment comment) {
+		// FIXME: this shouldn't be saveIssue, should just be a fetch
 		Vertex issuenode = saveIssue(repo, issue);
 		Vertex commentnode = this.getOrCreateComment(comment.getId());
 		createEdgeIfNotExist(issuenode, commentnode, EdgeType.ISSUECOMMENT);
@@ -676,7 +703,42 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		}
 		return commentnode;
 	}
+
+	public void saveIssueEvents(org.eclipse.egit.github.core.Repository repo,
+			org.eclipse.egit.github.core.Issue issue,
+			Collection<IssueEvent> issueEvents) {
+		for (IssueEvent event : issueEvents) {
+			saveIssueEvent(repo, issue, event);
+		}
+	}
 	
+	private Vertex saveIssueEvent(org.eclipse.egit.github.core.Repository repo,
+			org.eclipse.egit.github.core.Issue issue,
+			IssueEvent event) {
+		// FIXME: this shouldn't be saveIssue, should just be a fetch
+		Vertex issuenode = saveIssue(repo, issue);
+		Vertex eventnode = getOrCreateEvent(event.getId());
+		createEdgeIfNotExist(issuenode, eventnode, EdgeType.ISSUEEVENT);
+		if (event.getActor() != null) {
+			Vertex usernode = saveUser(event.getActor());
+			createEdgeIfNotExist(usernode, eventnode, EdgeType.ISSUEEVENTACTOR);
+		}
+		if (event.getCommitId() != null) {
+			setProperty(eventnode, PropertyName.COMMIT_ID, event.getCommitId());
+			Vertex commit = this.getOrCreateCommit(event.getCommitId());
+			createEdgeIfNotExist(eventnode, commit, EdgeType.EVENTCOMMIT);
+		}
+		setProperty(eventnode, PropertyName.CREATED_AT, event.getCreatedAt());
+		setProperty(eventnode, PropertyName.EVENT, event.getEvent());
+		setProperty(eventnode, PropertyName.GITHUB_ID, event.getId());
+		if (event.getIssue() != null) {
+			Vertex altissuenode = saveIssue(repo, event.getIssue());
+			createEdgeIfNotExist(eventnode, altissuenode, EdgeType.ISSUEALTEVENT);
+		}
+		setProperty(eventnode, PropertyName.URL, event.getUrl());
+		return null;
+	}
+
 	private Vertex saveMilestone(org.eclipse.egit.github.core.Repository repo,
 			Milestone m) {
 		Vertex msnode = getOrCreateMilestone(repo.generateId() + ":" + m.getNumber());

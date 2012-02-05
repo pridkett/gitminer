@@ -21,4 +21,5 @@ public final class IndexNames {
 	public static final String INDEX_NAME = "name-idx";
 	public static final String INDEX_PULLREQUESTMARKER = "pullrequestmarker-idx";
 	public static final String INDEX_MILESTONE = "milestone-idx";
+	public static final String INDEX_ISSUE_EVENT = "issueevent-idx";
 }
