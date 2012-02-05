@@ -221,19 +221,9 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		
 		GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
 		pipe.start(node).out(EdgeType.ISSUE.toString());
-				
-//		ScriptEngine engine = new GremlinScriptEngine();
-//		List<Vertex> list = new ArrayList<Vertex>();
-//		engine.put("g", this.graph);
-//		engine.put("list", list);		
-//		engine.put("node", node);
 
-		// try {
-			// engine.eval("node._().out('" + EdgeType.ISSUE + "') >> list");
 		addValuesFromIterable(pipe, m, PropertyName.NUMBER, PropertyName.SYS_COMMENTS_ADDED);
-//		} catch (ScriptException e) {
-//			log.error("ScriptException encountered in getIssueCommentsAddedAt");
-//		}
+
 		return m;
 	}
 	
