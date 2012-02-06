@@ -28,6 +28,7 @@ import net.wagstrom.research.github.v3.PullMinerV3;
 import net.wagstrom.research.github.v3.RepositoryMinerV3;
 
 import org.eclipse.egit.github.core.IssueEvent;
+import org.eclipse.egit.github.core.client.IGitHubClient;
 import org.eclipse.egit.github.core.client.GitHubClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,12 +53,14 @@ import com.ibm.research.govsci.graph.GraphShutdownHandler;
 public class GitHubMain {
 	Logger log = null;
 	ApiThrottle throttle = null;
+	ApiThrottle v3throttle = null;
 	long refreshTime = 0; // minimum age of a resource in milliseconds
 	Properties p;
 	
 	public GitHubMain() {
 		log = LoggerFactory.getLogger(this.getClass());		
         throttle = new ApiThrottle();
+        v3throttle = new ApiThrottle();
 	}
 	
 	public void main() {
@@ -76,7 +79,16 @@ public class GitHubMain {
         	log.info("Setting Max Call Rate: {}/{}", maxCalls, maxCallsInterval);
         	throttle.setMaxRate(maxCalls, maxCallsInterval);
         }
+        throttle.setId("v2");
         
+		int v3MaxCalls = Integer.parseInt(p.getProperty("net.wagstrom.research.github.apiThrottle.maxCalls.v3", "0"));
+		int v3MaxCallsInterval = Integer.parseInt(p.getProperty("net.wagstrom.research.github.apiThrottle.maxCallsInterval.v3", "0"));
+		if (v3MaxCalls >0 && v3MaxCallsInterval > 0) {
+        	log.info("Setting v3 Max Call Rate: {}/{}", v3MaxCalls, v3MaxCallsInterval);			
+			v3throttle.setMaxRate(v3MaxCalls, v3MaxCallsInterval);
+		}
+		v3throttle.setId("v3");
+		
         // set the minimum age for an artifact in milliseconds
         double minAgeDouble = Double.parseDouble(p.getProperty("net.wagstrom.research.github.refreshTime", "0.0"));
         refreshTime = (long)minAgeDouble * 86400 * 1000;
@@ -127,9 +139,9 @@ public class GitHubMain {
 		Runtime.getRuntime().addShutdownHook(gsh);
 		
 		GitHubClient ghc = new GitHubClient();
-		IssueMinerV3 imv3 = new IssueMinerV3(ghc);
-		PullMinerV3 pmv3 = new PullMinerV3(ghc);
-		RepositoryMinerV3 rmv3 = new RepositoryMinerV3(ghc);
+		IssueMinerV3 imv3 = new IssueMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+		PullMinerV3 pmv3 = new PullMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+		RepositoryMinerV3 rmv3 = new RepositoryMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
 		
 		RepositoryMiner rm = new RepositoryMiner(ThrottledGitHubInvocationHandler.createThrottledRepositoryService(factory.createRepositoryService(), throttle));
 		IssueMiner im = new IssueMiner(ThrottledGitHubInvocationHandler.createThrottledIssueService(factory.createIssueService(), throttle));
@@ -187,7 +199,11 @@ public class GitHubMain {
 							}
 							Collection<IssueEvent> evts = imv3.getIssueEvents(repo, issue);
 							log.info("issue {}:{} events: {}", new Object[]{repo.generateId(), issue.getNumber(), evts.size()});
-							bp.saveIssueEvents(repo, issue, imv3.getIssueEvents(repo, issue));
+							try {
+								bp.saveIssueEvents(repo, issue, imv3.getIssueEvents(repo, issue));
+							} catch (NullPointerException e) {
+								log.error("NullPointer exception saving issue events: {}:{}", proj, issue);
+							}
 						}
 					} else {
 						log.warn("No issues for repository {}/{} - probably disabled", projsplit[0], projsplit[1]);

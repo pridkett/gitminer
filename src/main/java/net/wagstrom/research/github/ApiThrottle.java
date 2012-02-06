@@ -27,6 +27,7 @@ public class ApiThrottle {
 	private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
 	private SimpleDateFormat dateFormatter = null;
 	private long internalMaxRate = -1;
+	private String idstr = "";
 	
 	public ApiThrottle() {
 		limit = -1;
@@ -45,28 +46,28 @@ public class ApiThrottle {
 	 */
 	public void callWait() throws InterruptedException {
 		if (lastReset != null)
-			log.debug("API Estimates: Limit: {} Remaining: {} Last Reset: {}", new Object[] {limit, limitRemaining, dateFormatter.format(lastReset.getTime())});
+			log.debug("[{}] API Estimates: Limit: {} Remaining: {} Last Reset: {}", new Object[] {idstr, limit, limitRemaining, dateFormatter.format(lastReset.getTime())});
 		if (limitRemaining < 1 && limit != -1) {
 			Calendar sleepEnd = (Calendar)lastReset.clone();
 			int timeDiff = 3600;
 			if (limit == 60) {
 				timeDiff = 65;
 			} else if (limit == 5000) {
-				timeDiff = 86460;
+				timeDiff = 3610;
 			}
 			sleepEnd.add(Calendar.SECOND, timeDiff);
 			long sleepTime = sleepEnd.getTimeInMillis() - Calendar.getInstance().getTimeInMillis();
 			if (sleepTime > 0) {
-				log.info("Sleeping for {}ms", sleepTime);
+				log.info("[{}] Sleeping for {}ms", idstr, sleepTime);
 				Thread.sleep(sleepTime);
 			} else {
-				log.info("Should be no reason to sleep");
+				log.info("[{}] Should be no reason to sleep", idstr);
 			}
 		}
 		if (internalMaxRate != -1 && lastCall != null) {
 			long sleepTime = internalMaxRate - (Calendar.getInstance().getTimeInMillis() - lastCall.getTimeInMillis());
 			if (sleepTime > 0) {
-				log.trace("Exceeded internal rate. Sleeping for {}ms", sleepTime);
+				log.trace("[{}] Exceeded internal rate. Sleeping for {}ms", idstr, sleepTime);
 				Thread.sleep(sleepTime);
 			}
 		}
@@ -97,6 +98,16 @@ public class ApiThrottle {
 	 */
 	public void setMaxRate(int calls, int seconds) {
 		internalMaxRate = (long)(((double) seconds / (double)calls)*1000);
-		log.trace("Internal maximum rate set to: {}ms", internalMaxRate);
+		log.trace("[{}] Internal maximum rate set to: {}ms", idstr, internalMaxRate);
+	}
+
+
+	public String getId() {
+		return idstr;
+	}
+
+
+	public void setId(String idstr) {
+		this.idstr = idstr;
 	}
 }

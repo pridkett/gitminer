@@ -11,20 +11,30 @@ import org.eclipse.egit.github.core.IRepositoryIdProvider;
 import org.eclipse.egit.github.core.Issue;
 import org.eclipse.egit.github.core.IssueEvent;
 import org.eclipse.egit.github.core.client.GitHubClient;
+import org.eclipse.egit.github.core.client.IGitHubClient;
 import org.eclipse.egit.github.core.client.RequestException;
 import org.eclipse.egit.github.core.service.IssueService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class IssueMinerV3 {
+public class IssueMinerV3 extends V3Miner {
 	private static final String ISSUES_DISABLED_MESSAGE = "Issues are disabled for this repo";
 	private IssueService service;
 	
 	private Logger log;
 	
-	public IssueMinerV3(GitHubClient ghc) {
+	private IssueMinerV3() {
+		log = LoggerFactory.getLogger(IssueMinerV3.class);		
+	}
+	
+	public IssueMinerV3(IssueService service) {
+		this();
+		this.service = service;
+	}
+	
+	public IssueMinerV3(IGitHubClient ghc) {
+		this();
 		service = new IssueService(ghc);
-		log = LoggerFactory.getLogger(IssueMinerV3.class);
 	}
 
 	public Collection<Issue> getIssues(String username, String reponame, String state) {
@@ -42,6 +52,9 @@ public class IssueMinerV3 {
 			return null;
 		} catch (IOException e) {
 			log.error("IOException in getIssues {}/{}", new Object[]{username, reponame, e});
+			return null;
+		} catch (NullPointerException e) {
+			log.error("NullPointerException in getIssues {}/{}", new Object[]{username, reponame, e});
 			return null;
 		}
 	}

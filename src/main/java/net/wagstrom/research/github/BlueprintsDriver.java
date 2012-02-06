@@ -317,6 +317,15 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		String issueId = project + ":" + issue.getNumber();
 		return getOrCreateVertexHelper("issue_id", issueId, VertexType.ISSUE, issueidx);
 	}
+	
+	private Vertex getOrCreateIssue(
+			org.eclipse.egit.github.core.Repository repo,
+			org.eclipse.egit.github.core.Issue issue) {
+		String issueId = repo.generateId() + ":" + issue.getNumber();
+		return getOrCreateVertexHelper("issue_id", issueId, VertexType.ISSUE, issueidx);
+	}
+
+
 
 	// FIXME: labels vary by projects, so this may require an additional identifier
 	private Vertex getOrCreateIssueLabel(Label label) {
@@ -707,16 +716,16 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public void saveIssueEvents(org.eclipse.egit.github.core.Repository repo,
 			org.eclipse.egit.github.core.Issue issue,
 			Collection<IssueEvent> issueEvents) {
+		Vertex issuenode = getOrCreateIssue(repo, issue);
 		for (IssueEvent event : issueEvents) {
-			saveIssueEvent(repo, issue, event);
+			saveIssueEvent(repo, issuenode, event);
 		}
+		setProperty(issuenode, PropertyName.SYS_EVENTS_ADDED, new Date());
 	}
 	
 	private Vertex saveIssueEvent(org.eclipse.egit.github.core.Repository repo,
-			org.eclipse.egit.github.core.Issue issue,
+			Vertex issuenode,
 			IssueEvent event) {
-		// FIXME: this shouldn't be saveIssue, should just be a fetch
-		Vertex issuenode = saveIssue(repo, issue);
 		Vertex eventnode = getOrCreateEvent(event.getId());
 		createEdgeIfNotExist(issuenode, eventnode, EdgeType.ISSUEEVENT);
 		if (event.getActor() != null) {

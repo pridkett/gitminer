@@ -3,17 +3,17 @@ package net.wagstrom.research.github.v3;
 import java.io.IOException;
 
 import org.eclipse.egit.github.core.Repository;
-import org.eclipse.egit.github.core.client.GitHubClient;
+import org.eclipse.egit.github.core.client.IGitHubClient;
 import org.eclipse.egit.github.core.service.RepositoryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RepositoryMinerV3 {
+public class RepositoryMinerV3 extends V3Miner {
 	private RepositoryService service;
 	
 	private Logger log;
 	
-	public RepositoryMinerV3(GitHubClient ghc) {
+	public RepositoryMinerV3(IGitHubClient ghc) {
 		service = new RepositoryService(ghc);
 		log = LoggerFactory.getLogger(RepositoryMinerV3.class);
 	}
