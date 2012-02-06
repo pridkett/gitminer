@@ -11,18 +11,18 @@ import org.eclipse.egit.github.core.CommitComment;
 import org.eclipse.egit.github.core.IRepositoryIdProvider;
 import org.eclipse.egit.github.core.Issue;
 import org.eclipse.egit.github.core.PullRequest;
-import org.eclipse.egit.github.core.client.GitHubClient;
+import org.eclipse.egit.github.core.client.IGitHubClient;
 import org.eclipse.egit.github.core.service.IssueService;
 import org.eclipse.egit.github.core.service.PullRequestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class PullMinerV3 {
+public class PullMinerV3 extends V3Miner {
 	private PullRequestService service;
 	
 	private Logger log;
 	
-	public PullMinerV3(GitHubClient ghc) {
+	public PullMinerV3(IGitHubClient ghc) {
 		service = new PullRequestService(ghc);
 		log = LoggerFactory.getLogger(PullMinerV3.class);
 	}

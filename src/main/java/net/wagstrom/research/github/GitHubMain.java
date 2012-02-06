@@ -27,6 +27,8 @@ import net.wagstrom.research.github.v3.IssueMinerV3;
 import net.wagstrom.research.github.v3.PullMinerV3;
 import net.wagstrom.research.github.v3.RepositoryMinerV3;
 
+import org.eclipse.egit.github.core.IssueEvent;
+import org.eclipse.egit.github.core.client.IGitHubClient;
 import org.eclipse.egit.github.core.client.GitHubClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,12 +53,14 @@ import com.ibm.research.govsci.graph.GraphShutdownHandler;
 public class GitHubMain {
 	Logger log = null;
 	ApiThrottle throttle = null;
+	ApiThrottle v3throttle = null;
 	long refreshTime = 0; // minimum age of a resource in milliseconds
 	Properties p;
 	
 	public GitHubMain() {
 		log = LoggerFactory.getLogger(this.getClass());		
         throttle = new ApiThrottle();
+        v3throttle = new ApiThrottle();
 	}
 	
 	public void main() {
@@ -75,7 +79,16 @@ public class GitHubMain {
         	log.info("Setting Max Call Rate: {}/{}", maxCalls, maxCallsInterval);
         	throttle.setMaxRate(maxCalls, maxCallsInterval);
         }
+        throttle.setId("v2");
         
+		int v3MaxCalls = Integer.parseInt(p.getProperty("net.wagstrom.research.github.apiThrottle.maxCalls.v3", "0"));
+		int v3MaxCallsInterval = Integer.parseInt(p.getProperty("net.wagstrom.research.github.apiThrottle.maxCallsInterval.v3", "0"));
+		if (v3MaxCalls >0 && v3MaxCallsInterval > 0) {
+        	log.info("Setting v3 Max Call Rate: {}/{}", v3MaxCalls, v3MaxCallsInterval);			
+			v3throttle.setMaxRate(v3MaxCalls, v3MaxCallsInterval);
+		}
+		v3throttle.setId("v3");
+		
         // set the minimum age for an artifact in milliseconds
         double minAgeDouble = Double.parseDouble(p.getProperty("net.wagstrom.research.github.refreshTime", "0.0"));
         refreshTime = (long)minAgeDouble * 86400 * 1000;
@@ -126,9 +139,9 @@ public class GitHubMain {
 		Runtime.getRuntime().addShutdownHook(gsh);
 		
 		GitHubClient ghc = new GitHubClient();
-		IssueMinerV3 imv3 = new IssueMinerV3(ghc);
-		PullMinerV3 pmv3 = new PullMinerV3(ghc);
-		RepositoryMinerV3 rmv3 = new RepositoryMinerV3(ghc);
+		IssueMinerV3 imv3 = new IssueMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+		PullMinerV3 pmv3 = new PullMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+		RepositoryMinerV3 rmv3 = new RepositoryMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
 		
 		RepositoryMiner rm = new RepositoryMiner(ThrottledGitHubInvocationHandler.createThrottledRepositoryService(factory.createRepositoryService(), throttle));
 		IssueMiner im = new IssueMiner(ThrottledGitHubInvocationHandler.createThrottledIssueService(factory.createIssueService(), throttle));
@@ -158,53 +171,69 @@ public class GitHubMain {
 				
 				if (p.getProperty("net.wagstrom.research.github.miner.issues","true").equals("true")) {
 					Collection<org.eclipse.egit.github.core.Issue> issues3 = imv3.getAllIssues(projsplit[0], projsplit[1]);
-					bp.saveRepositoryIssues(repo, issues3);
-					
-					// Collection<Issue> issues = im.getAllIssues(projsplit[0], projsplit[1]);
-					// bp.saveRepositoryIssues(proj, issues);
-					
-					Map<Integer, Date> savedIssues = bp.getIssueCommentsAddedAt(proj);
-					log.trace("SavedIssues Keys: {}", savedIssues.keySet());
-
-					for (org.eclipse.egit.github.core.Issue issue : issues3) {
-						// if an issue doesn't appear in the set, we always save it
-						if (!needsUpdate(savedIssues.get(issue.getNumber()))) {
-							log.debug("Skipping fetching issue {} - recently updated", issue.getNumber());
-							continue;
+					if (issues3 != null) {
+						bp.saveRepositoryIssues(repo, issues3);
+						
+						Map<Integer, Date> savedIssues = bp.getIssueCommentsAddedAt(proj);
+						log.trace("SavedIssues Keys: {}", savedIssues.keySet());
+	
+						for (org.eclipse.egit.github.core.Issue issue : issues3) {
+							// if an issue doesn't appear in the set, we always save it
+							if (!needsUpdate(savedIssues.get(issue.getNumber()), true)) {
+								log.debug("Skipping fetching issue {} - recently updated {}", issue.getNumber(), savedIssues.get(issue.getNumber()));
+								continue;
+							}
+							try {
+								// Fetch comments BOTH ways -- using the v2 and the v3 apis
+								bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(projsplit[0], projsplit[1], issue.getNumber()));
+								bp.saveIssueComments(repo, issue, imv3.getIssueComments(repo, issue));
+							} catch (NullPointerException e) {
+								log.error("NullPointerException saving issue comments: {}:{}", proj, issue);
+							}
 						}
-						try {
-							bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(projsplit[0], projsplit[1], issue.getNumber()));
-						} catch (NullPointerException e) {
-							log.error("NullPointerException saving issue comments: {}:{}", proj, issue);
+						
+						savedIssues = bp.getIssueEventsAddedAt(repo);
+						for (org.eclipse.egit.github.core.Issue issue : issues3) {
+							if (!needsUpdate(savedIssues.get(issue.getNumber()), true)) {
+								log.debug("Skipping fetching events for issue {} - recently updated", issue.getNumber(), savedIssues.get(issue.getNumber()));
+							}
+							Collection<IssueEvent> evts = imv3.getIssueEvents(repo, issue);
+							log.info("issue {}:{} events: {}", new Object[]{repo.generateId(), issue.getNumber(), evts.size()});
+							try {
+								bp.saveIssueEvents(repo, issue, evts);
+							} catch (NullPointerException e) {
+								log.error("NullPointer exception saving issue events: {}:{}", proj, issue);
+							}
 						}
+					} else {
+						log.warn("No issues for repository {}/{} - probably disabled", projsplit[0], projsplit[1]);
 					}
 				}
 				
 				if (p.getProperty("net.wagstrom.research.github.miner.repositories.pullrequests", "true").equals("true")) {
 					Collection<org.eclipse.egit.github.core.PullRequest> requests3 = pmv3.getAllPullRequests(repo);
-					bp.saveRepositoryPullRequests(repo, requests3);
-					
-//					Collection<PullRequest> requests = pm.getAllPullRequests(projsplit[0], projsplit[1]);
-//					log.debug("Saving repository pull requests");
-//					bp.saveRepositoryPullRequests(proj, requests);
-//					log.debug("Pull requests saved");
+					if (requests3 != null) {
+						bp.saveRepositoryPullRequests(repo, requests3);
 
-					Map<Integer, Date> savedRequests = bp.getPullRequestDiscussionsAddedAt(proj);
-					log.debug("SavedPullRequest Keys: {}", savedRequests.keySet());
-					for (org.eclipse.egit.github.core.PullRequest request : requests3) {
-						if (savedRequests.containsKey(request.getNumber())) {
-							if (!needsUpdate(savedRequests.get(request.getNumber()), true)) {
-								log.debug("Skipping fetching pull request {} - recently updated {}", request.getNumber(), savedRequests.get(request.getNumber()));
-								continue;								
-							}						
+						Map<Integer, Date> savedRequests = bp.getPullRequestDiscussionsAddedAt(proj);
+						log.debug("SavedPullRequest Keys: {}", savedRequests.keySet());
+						for (org.eclipse.egit.github.core.PullRequest request : requests3) {
+							if (savedRequests.containsKey(request.getNumber())) {
+								if (!needsUpdate(savedRequests.get(request.getNumber()), true)) {
+									log.debug("Skipping fetching pull request {} - recently updated {}", request.getNumber(), savedRequests.get(request.getNumber()));
+									continue;								
+								}						
+							}
+							try {
+								// Fetch it BOTH ways -- using v2 and v3 api as they provide different information
+								bp.saveRepositoryPullRequest(proj, pm.getPullRequest(projsplit[0], projsplit[1], request.getNumber()), true);
+								bp.saveRepositoryPullRequest(repo, pmv3.getPullRequest(repo, request.getNumber()), true);
+							} catch (NullPointerException e) {
+								log.error("NullPointerException saving pull request: {}:{}", proj, request.getNumber());
+							}
 						}
-						try {
-							// Fetch it BOTH ways
-							bp.saveRepositoryPullRequest(proj, pm.getPullRequest(projsplit[0], projsplit[1], request.getNumber()), true);
-							bp.saveRepositoryPullRequest(repo, pmv3.getPullRequest(repo, request.getNumber()), true);
-						} catch (NullPointerException e) {
-							log.error("NullPointerException saving pull request: {}:{}", proj, request.getNumber());
-						}
+					} else {
+						log.warn("No pull requests for repository {} - probably disabled", repo.generateId());
 					}
 				}
 				
