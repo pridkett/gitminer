@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import net.wagstrom.research.github.EdgeType;
+import net.wagstrom.research.github.IdCols;
 import net.wagstrom.research.github.VertexType;
 import net.wagstrom.research.github.PropertyName;
 import net.wagstrom.research.github.IndexNames;
@@ -147,28 +148,28 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	
 	public Vertex getOrCreateCommit( String hash ) {
 		//log.info( "Get or Create Commit: " + hash );
-		return getOrCreateVertexHelper("hash", hash, VertexType.COMMIT, commitidx);
+		return getOrCreateVertexHelper(IdCols.COMMIT, hash, VertexType.COMMIT, commitidx);
 	}
 	
 	public Vertex getOrCreateRepository( String reponame ) {
-		return getOrCreateVertexHelper("reponame", reponame, VertexType.REPOSITORY, repoidx);
+		return getOrCreateVertexHelper(IdCols.REPOSITORY, reponame, VertexType.REPOSITORY, repoidx);
 	}
 	
 	public Vertex getOrCreateFile( String token ) {
-		return getOrCreateVertexHelper("token", token, VertexType.FILE, fileidx);
+		return getOrCreateVertexHelper(IdCols.FILE, token, VertexType.FILE, fileidx);
 	}
 	
 	public Vertex getOrCreateGitUser( String name, String email ) {
 		String key = name + " <" + email + ">";
-		return getOrCreateVertexHelper("string", key, VertexType.GIT_USER, gituseridx);
+		return getOrCreateVertexHelper(IdCols.GIT_USER, key, VertexType.GIT_USER, gituseridx);
 	}
 	
 	public Vertex getOrCreateName( String name ) {
-		return getOrCreateVertexHelper("name", name, VertexType.NAME, nameidx);
+		return getOrCreateVertexHelper(IdCols.NAME, name, VertexType.NAME, nameidx);
 	}
 	
 	public Vertex getOrCreateEmail( String email ) {
-		return getOrCreateVertexHelper("email", email, VertexType.EMAIL, emailidx);
+		return getOrCreateVertexHelper(IdCols.EMAIL, email, VertexType.EMAIL, emailidx);
 	}
 	
 	/*

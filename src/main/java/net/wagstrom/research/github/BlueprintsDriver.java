@@ -276,101 +276,101 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	}
 	
 	public Vertex getOrCreateComment(long commentId) {
-		return getOrCreateVertexHelper("comment_id", commentId, VertexType.COMMENT, commentidx);
+		return getOrCreateVertexHelper(IdCols.COMMENT, commentId, VertexType.COMMENT, commentidx);
 	}
 	
 	public Vertex getOrCreateCommit(String commitId) {
 		log.debug("Fetching or creating commit: {}", commitId);
 		// FIXME: update current database to replace commit_id with hash
-		return getOrCreateVertexHelper("hash", commitId, VertexType.COMMIT, commitidx);
+		return getOrCreateVertexHelper(IdCols.COMMIT, commitId, VertexType.COMMIT, commitidx);
 	}
 	
 	public Vertex getOrCreateDiscussion(String discussionId) {
-		return getOrCreateVertexHelper("discussion_id", discussionId, VertexType.DISCUSSION, discussionidx);
+		return getOrCreateVertexHelper(IdCols.DISCUSSION, discussionId, VertexType.DISCUSSION, discussionidx);
 	}
 
 	public Vertex getOrCreateEmail(String email) {
-		return getOrCreateVertexHelper("email", email, VertexType.EMAIL, emailidx);
+		return getOrCreateVertexHelper(IdCols.EMAIL, email, VertexType.EMAIL, emailidx);
 	}
 	
 	private Vertex getOrCreateEvent(long id) {
-		return getOrCreateVertexHelper("event_id", id, VertexType.ISSUE_EVENT, issueeventidx);
+		return getOrCreateVertexHelper(IdCols.EVENT, id, VertexType.ISSUE_EVENT, issueeventidx);
 	}
 	
 	public Vertex getOrCreateGist(String repoId) {
-		return getOrCreateVertexHelper("gist_id", repoId, VertexType.GIST, gistidx);
+		return getOrCreateVertexHelper(IdCols.GIST, repoId, VertexType.GIST, gistidx);
 	}
 	
 	public Vertex getOrCreateGistFile(String repoid, String filename) {
 		String gistFileId = repoid + "/" + filename;
-		return getOrCreateVertexHelper("gistfile_id",  gistFileId, VertexType.GISTFILE, gistfileidx);
+		return getOrCreateVertexHelper(IdCols.GISTFILE,  gistFileId, VertexType.GISTFILE, gistfileidx);
 	}
 	
 	
 	public Vertex getOrCreateIssue(String repoid, Issue issue) {
 		String issueId = repoid + ":" + issue.getNumber();
-		return getOrCreateVertexHelper("issue_id", issueId, VertexType.ISSUE, issueidx);
+		return getOrCreateVertexHelper(IdCols.ISSUE, issueId, VertexType.ISSUE, issueidx);
 	}
 	
 	private Vertex getOrCreateIssue(String project,
 			org.eclipse.egit.github.core.Issue issue) {
 		String issueId = project + ":" + issue.getNumber();
-		return getOrCreateVertexHelper("issue_id", issueId, VertexType.ISSUE, issueidx);
+		return getOrCreateVertexHelper(IdCols.ISSUE, issueId, VertexType.ISSUE, issueidx);
 	}
 	
 	private Vertex getOrCreateIssue(
 			org.eclipse.egit.github.core.Repository repo,
 			org.eclipse.egit.github.core.Issue issue) {
 		String issueId = repo.generateId() + ":" + issue.getNumber();
-		return getOrCreateVertexHelper("issue_id", issueId, VertexType.ISSUE, issueidx);
+		return getOrCreateVertexHelper(IdCols.ISSUE, issueId, VertexType.ISSUE, issueidx);
 	}
 
 
 
 	// FIXME: labels vary by projects, so this may require an additional identifier
 	private Vertex getOrCreateIssueLabel(Label label) {
-		return getOrCreateVertexHelper("label", label.getName(), VertexType.LABEL, issuelabelidx);
+		return getOrCreateVertexHelper(IdCols.LABEL, label.getName(), VertexType.LABEL, issuelabelidx);
 	}
 	
 	public Vertex getOrCreateIssueLabel(String label) {
-		return getOrCreateVertexHelper("label", label, VertexType.LABEL, issuelabelidx);
+		return getOrCreateVertexHelper(IdCols.LABEL, label, VertexType.LABEL, issuelabelidx);
 	}
 	
 	private Vertex getOrCreateMilestone(String string) {
-		return getOrCreateVertexHelper("milestone", string, VertexType.MILESTONE, milestoneidx);
+		return getOrCreateVertexHelper(IdCols.MILESTONE, string, VertexType.MILESTONE, milestoneidx);
 	}
 	
 	public Vertex getOrCreateOrganization(String login) {
-		return getOrCreateVertexHelper("login", login, VertexType.ORGANIZATION, orgidx);
+		return getOrCreateVertexHelper(IdCols.ORGANIZATION, login, VertexType.ORGANIZATION, orgidx);
 	}
 
 	public Vertex getOrCreatePullRequest(String idval) {
-		return getOrCreateVertexHelper("pullrequest_id", idval, VertexType.PULLREQUEST, pullrequestidx);
+		return getOrCreateVertexHelper(IdCols.PULLREQUEST, idval, VertexType.PULLREQUEST, pullrequestidx);
 	}
 	
 	private Vertex getOrCreatePullRequestMarker(PullRequestMarker head) {
-		return getOrCreateVertexHelper("sha", head.getSha(), VertexType.PULLREQUESTMARKER, markeridx);
+		return getOrCreateVertexHelper(IdCols.PULLREQUESTMARKER, head.getSha(), VertexType.PULLREQUESTMARKER, markeridx);
 	}
 	
 	public Vertex getOrCreatePullRequestReviewComment(String commentId) {
 		log.debug("Fetching or creating PullRequestReviewComment: {}", commentId);
-		return getOrCreateVertexHelper("comment_id", commentId, VertexType.PULLREQUESTREVIEWCOMMENT, pullrequestreviewcommentidx);
+		return getOrCreateVertexHelper(IdCols.PULLREQUESTREVIEWCOMMENT, commentId, VertexType.PULLREQUESTREVIEWCOMMENT, pullrequestreviewcommentidx);
 	}
 	
 	public Vertex getOrCreateRepository(String reponame) {
-		return getOrCreateVertexHelper("reponame", reponame, VertexType.REPOSITORY, repoidx);
+		return getOrCreateVertexHelper(IdCols.REPOSITORY, reponame, VertexType.REPOSITORY, repoidx);
 	}
 
 	public Vertex getOrCreateTeam(String teamId) {
-		return getOrCreateVertexHelper("team_id", teamId, VertexType.TEAM, teamidx);
+		return getOrCreateVertexHelper(IdCols.TEAM, teamId, VertexType.TEAM, teamidx);
 	}
 	
 	private Vertex getOrCreateUser(org.eclipse.egit.github.core.User user) {
-		return getOrCreateVertexHelper("login", user.getLogin(), VertexType.USER, useridx);
+		return getOrCreateVertexHelper(IdCols.USER, user.getLogin(), VertexType.USER, useridx);
 	}
 	
 	public Vertex getOrCreateUser(String login) {
-		return getOrCreateVertexHelper("login", login, VertexType.USER, useridx);
+		return getOrCreateVertexHelper(IdCols.USER, login, VertexType.USER, useridx);
 	}
 	
 	/**
