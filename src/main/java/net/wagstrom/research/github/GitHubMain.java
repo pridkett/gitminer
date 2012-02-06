@@ -200,7 +200,7 @@ public class GitHubMain {
 							Collection<IssueEvent> evts = imv3.getIssueEvents(repo, issue);
 							log.info("issue {}:{} events: {}", new Object[]{repo.generateId(), issue.getNumber(), evts.size()});
 							try {
-								bp.saveIssueEvents(repo, issue, imv3.getIssueEvents(repo, issue));
+								bp.saveIssueEvents(repo, issue, evts);
 							} catch (NullPointerException e) {
 								log.error("NullPointer exception saving issue events: {}:{}", proj, issue);
 							}
