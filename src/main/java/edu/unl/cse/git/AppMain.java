@@ -64,6 +64,8 @@ public class AppMain {
 				}
 				bp.saveCommitFiles( cmt, commitFiles );
 			}
+            // refresh the iterator otherwise it will be empty
+            cmts = RepositoryLoader.getCommits( reponame );
 			bp.saveRepositoryCommits( reponame, cmts );
 		}
 		
