@@ -58,6 +58,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Vertex saveCommit( RevCommit cmt ) {
 		log.info( "Save Commit: " + gitHash( cmt) );
 		Vertex node = getOrCreateCommit( gitHash( cmt ) );
+		setProperty( node, PropertyName.DATE, cmt.getCommitTime());
 		setProperty( node, PropertyName.MESSAGE, cmt.getFullMessage() );
 		setProperty( node, PropertyName.IS_MERGE, cmt.getParentCount() > 1 );
 		return node;
@@ -85,6 +86,9 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		Vertex vEmail = getOrCreateEmail( sEmail );
 		createEdgeIfNotExist( gitUser, vName, EdgeType.NAME );
 		createEdgeIfNotExist( gitUser, vEmail, EdgeType.EMAIL );
+		setProperty(gitUser, PropertyName.TIMEZONE_OFFSET, person.getTimeZoneOffset());
+		setProperty(gitUser, PropertyName.TIMEZONE, person.getTimeZone().toString());
+		setProperty(gitUser, PropertyName.DATE, person.getWhen());
 		return gitUser;
 	}
 

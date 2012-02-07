@@ -93,6 +93,8 @@ public enum PropertyName implements StringableEnum {
 	TOTAL_PRIVATE_REPO_COUNT("totalPrivateRepoCount"),
 	TIME("time"),
 	TITLE("title"),
+	TIMEZONE("timezone"),
+	TIMEZONE_OFFSET("timezoneOffset"),
 	TREE("tree"),
 	TYPE("type"),
 	UPDATED_AT("updatedAt"),
