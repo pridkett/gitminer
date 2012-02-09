@@ -82,8 +82,13 @@ public class UserMiner extends BaseMiner {
 	
 	public List<Repository> getWatchedRepositories (String username) {
 		log.trace("Fetching watched repositories: {}", username);
-		List <Repository> rv = service.getWatchedRepositories(username);
-		log.debug("Fetched watched repositories: {} number: {}", username, rv==null?"null":rv.size());
-		return rv;
+		try {
+			List <Repository> rv = service.getWatchedRepositories(username);
+			log.debug("Fetched watched repositories: {} number: {}", username, rv==null?"null":rv.size());
+			return rv;
+		} catch (NullPointerException e) {
+			log.error("Null pointer fetching repositories for user: {}", username, e);
+			return null;
+		}
 	}
 }

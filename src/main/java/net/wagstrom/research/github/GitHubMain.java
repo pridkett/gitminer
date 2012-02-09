@@ -102,8 +102,7 @@ public class GitHubMain {
 				}
 			}
 		} catch (NullPointerException e) {
-			log.error("property net.wagstrom.research.github.projects undefined");
-			System.exit(1);
+			log.warn("property net.wagstrom.research.github.projects undefined - no projects will be mined");
 		}
 		
 		// get the list of users
@@ -114,8 +113,7 @@ public class GitHubMain {
 				}
 			}
 		} catch (NullPointerException e) {
-			log.error("property net.wagstrom.research.github.users undefined");
-			System.exit(1);
+			log.warn("property net.wagstrom.research.github.users undefined - no extra users will be mined");
 		}
 		
 		// get the list of organizations
@@ -126,8 +124,7 @@ public class GitHubMain {
 				}
 			}
 		} catch (NullPointerException e) {
-			log.error("property net.wagstrom.research.github.organizations undefined");
-			System.exit(1);
+			log.warn("property net.wagstrom.research.github.organizations undefined - no extra organizations will be mined");
 		}
 
 
@@ -169,7 +166,7 @@ public class GitHubMain {
 				if (p.getProperty("net.wagstrom.research.github.miner.repositories.forks", "true").equals("true"))
 					bp.saveRepositoryForks(proj, rm.getForks(projsplit[0], projsplit[1]));
 				
-				if (p.getProperty("net.wagstrom.research.github.miner.issues","true").equals("true")) {
+				if (p.getProperty("net.wagstrom.research.github.miner.repositories.issues","true").equals("true")) {
 					Collection<org.eclipse.egit.github.core.Issue> issues3 = imv3.getAllIssues(projsplit[0], projsplit[1]);
 					if (issues3 != null) {
 						bp.saveRepositoryIssues(repo, issues3);
