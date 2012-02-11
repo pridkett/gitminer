@@ -27,6 +27,9 @@ public class GistMiner {
 		} catch (GitHubException e) {
 			log.error("Received GitHub Exception attempting to fetch gists for user: {}", user);
 			return null;
+		} catch (NullPointerException e) {
+			log.error("Received null pointer exception attempting to fetch gists for user: {}", user, e);
+			return null;
 		}
 	}
 	
