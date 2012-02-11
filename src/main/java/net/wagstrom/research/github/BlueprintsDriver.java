@@ -93,24 +93,24 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		setMaxBufferSize(100000);
 		log = LoggerFactory.getLogger(this.getClass());
 
-		useridx = getOrCreateIndex(IndexNames.INDEX_USER);
-		repoidx = getOrCreateIndex(IndexNames.INDEX_REPO);
-		typeidx = getOrCreateIndex(IndexNames.INDEX_TYPE);
-		orgidx = getOrCreateIndex(IndexNames.INDEX_ORGANIZATION);
-		teamidx = getOrCreateIndex(IndexNames.INDEX_TEAM);
-		gistidx = getOrCreateIndex(IndexNames.INDEX_GIST);
-		commentidx = getOrCreateIndex(IndexNames.INDEX_COMMENT);
-		gistfileidx = getOrCreateIndex(IndexNames.INDEX_GISTFILE);
-		issueidx = getOrCreateIndex(IndexNames.INDEX_ISSUE);
-		issuelabelidx = getOrCreateIndex(IndexNames.INDEX_ISSUELABEL);
-		pullrequestidx = getOrCreateIndex(IndexNames.INDEX_PULLREQUEST);
-		discussionidx = getOrCreateIndex(IndexNames.INDEX_DISCUSSION);
-		commitidx = getOrCreateIndex(IndexNames.INDEX_COMMIT);
-		pullrequestreviewcommentidx = getOrCreateIndex(IndexNames.INDEX_PULLREQUESTREVIEWCOMMENT);
-		emailidx = getOrCreateIndex(IndexNames.INDEX_EMAIL);
-		markeridx = getOrCreateIndex(IndexNames.INDEX_PULLREQUESTMARKER);
-		milestoneidx = getOrCreateIndex(IndexNames.INDEX_MILESTONE);
-		issueeventidx = getOrCreateIndex(IndexNames.INDEX_ISSUE_EVENT);
+		useridx = getOrCreateIndex(IndexNames.USER);
+		repoidx = getOrCreateIndex(IndexNames.REPOSITORY);
+		typeidx = getOrCreateIndex(IndexNames.TYPE);
+		orgidx = getOrCreateIndex(IndexNames.ORGANIZATION);
+		teamidx = getOrCreateIndex(IndexNames.TEAM);
+		gistidx = getOrCreateIndex(IndexNames.GIST);
+		commentidx = getOrCreateIndex(IndexNames.COMMENT);
+		gistfileidx = getOrCreateIndex(IndexNames.GISTFILE);
+		issueidx = getOrCreateIndex(IndexNames.ISSUE);
+		issuelabelidx = getOrCreateIndex(IndexNames.ISSUELABEL);
+		pullrequestidx = getOrCreateIndex(IndexNames.PULLREQUEST);
+		discussionidx = getOrCreateIndex(IndexNames.DISCUSSION);
+		commitidx = getOrCreateIndex(IndexNames.COMMIT);
+		pullrequestreviewcommentidx = getOrCreateIndex(IndexNames.PULLREQUESTREVIEWCOMMENT);
+		emailidx = getOrCreateIndex(IndexNames.EMAIL);
+		markeridx = getOrCreateIndex(IndexNames.PULLREQUESTMARKER);
+		milestoneidx = getOrCreateIndex(IndexNames.MILESTONE);
+		issueeventidx = getOrCreateIndex(IndexNames.ISSUEEVENT);
 	}	
 	
 	/**
@@ -458,7 +458,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	 * @return 
 	 */
 	public Set<String> getRepos(double age) {
-		return getVertexHelper(age, IndexNames.INDEX_REPO, VertexType.REPOSITORY, "fullname");
+		return getVertexHelper(age, IndexNames.REPOSITORY, VertexType.REPOSITORY, "fullname");
 	}
 
 
@@ -485,7 +485,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	 * @return a set of the users that have not been updated
 	 */
 	public Set<String> getUsers(double age) {
-		return getVertexHelper(age, IndexNames.INDEX_USER, VertexType.USER, "username");
+		return getVertexHelper(age, IndexNames.USER, VertexType.USER, "username");
 	}
 
 	protected Vertex saveCommentHelper(Comment comment, EdgeType edgetype) {
@@ -510,13 +510,13 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		// commit.getAdded()
 		if (commit.getAuthor() != null) {
 			Vertex author = saveUser(commit.getAuthor());
-			createEdgeIfNotExist(author, node, EdgeType.COMMITAUTHOR);
+			createEdgeIfNotExist(node, author, EdgeType.COMMITAUTHOR);
 		}
 		setProperty(node, PropertyName.AUTHORED_DATE, commit.getAuthoredDate());
 		setProperty(node, PropertyName.COMMITTED_DATE, commit.getCommittedDate());
 		if (commit.getCommitter() != null) {
 			Vertex committer = saveUser(commit.getCommitter());
-			createEdgeIfNotExist(committer, node, EdgeType.COMMITTER);
+			createEdgeIfNotExist(node, committer, EdgeType.COMMITTER);
 		}
 		setProperty(node, PropertyName.DATE, commit.getDate());
 		setProperty(node, PropertyName.GRAVATAR_ID, commit.getGravatar());

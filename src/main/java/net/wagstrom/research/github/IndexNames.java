@@ -1,25 +1,25 @@
 package net.wagstrom.research.github;
 
 public final class IndexNames {
-	public static final String INDEX_USER = "user-idx";
-	public static final String INDEX_REPO = "repo-idx";
-	public static final String INDEX_TYPE = "type-idx";
-	public static final String INDEX_ORGANIZATION = "org-idx";
-	public static final String INDEX_TEAM = "team-idx";
-	public static final String INDEX_GIST = "gist-idx";
-	public static final String INDEX_GISTFILE = "gistfile-idx";
-	public static final String INDEX_ISSUE = "issue-idx";
-	public static final String INDEX_COMMENT = "comment-idx";
-	public static final String INDEX_ISSUELABEL = "issuelabel-idx";
-	public static final String INDEX_PULLREQUEST = "pullrequest-idx";
-	public static final String INDEX_PULLREQUESTREVIEWCOMMENT = "pullrequestreviewcomment-idx";
-	public static final String INDEX_DISCUSSION = "discussion-idx";
-	public static final String INDEX_COMMIT = "commit-idx";
-	public static final String INDEX_EMAIL = "email-idx";
-	public static final String INDEX_FILE = "file-idx";
-	public static final String INDEX_GIT_USER = "git-user-idx";
-	public static final String INDEX_NAME = "name-idx";
-	public static final String INDEX_PULLREQUESTMARKER = "pullrequestmarker-idx";
-	public static final String INDEX_MILESTONE = "milestone-idx";
-	public static final String INDEX_ISSUE_EVENT = "issueevent-idx";
+	public static final String USER = "user-idx";
+	public static final String REPOSITORY = "repo-idx";
+	public static final String TYPE = "type-idx";
+	public static final String ORGANIZATION = "org-idx";
+	public static final String TEAM = "team-idx";
+	public static final String GIST = "gist-idx";
+	public static final String GISTFILE = "gistfile-idx";
+	public static final String ISSUE = "issue-idx";
+	public static final String COMMENT = "comment-idx";
+	public static final String ISSUELABEL = "issuelabel-idx";
+	public static final String PULLREQUEST = "pullrequest-idx";
+	public static final String PULLREQUESTREVIEWCOMMENT = "pullrequestreviewcomment-idx";
+	public static final String DISCUSSION = "discussion-idx";
+	public static final String COMMIT = "commit-idx";
+	public static final String EMAIL = "email-idx";
+	public static final String FILE = "file-idx";
+	public static final String GITUSER = "git-user-idx";
+	public static final String NAME = "name-idx";
+	public static final String PULLREQUESTMARKER = "pullrequestmarker-idx";
+	public static final String MILESTONE = "milestone-idx";
+	public static final String ISSUEEVENT = "issueevent-idx";
 }

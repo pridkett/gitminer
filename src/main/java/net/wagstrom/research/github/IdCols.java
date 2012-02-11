@@ -9,7 +9,7 @@ public final class IdCols {
 	public static final String FILE = "token";
 	public static final String GIST = "gist_id";
 	public static final String GISTFILE = "gistfile_id";
-	public static final String GIT_USER = "string";
+	public static final String GITUSER = "string";
 	public static final String ISSUE = "issue_id";
 	public static final String LABEL = "label";
 	public static final String MILESTONE = "milestone";

@@ -41,13 +41,13 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		super(dbengine, dburl, config);
 		log = LoggerFactory.getLogger(this.getClass());
 		
-		typeidx = getOrCreateIndex(IndexNames.INDEX_TYPE);
-		commitidx = getOrCreateIndex(IndexNames.INDEX_COMMIT);
-		fileidx = getOrCreateIndex(IndexNames.INDEX_FILE);
-		repoidx = getOrCreateIndex(IndexNames.INDEX_REPO);
-		gituseridx = getOrCreateIndex(IndexNames.INDEX_GIT_USER);
-		nameidx = getOrCreateIndex(IndexNames.INDEX_NAME);
-		emailidx = getOrCreateIndex(IndexNames.INDEX_EMAIL);
+		typeidx = getOrCreateIndex(IndexNames.TYPE);
+		commitidx = getOrCreateIndex(IndexNames.COMMIT);
+		fileidx = getOrCreateIndex(IndexNames.FILE);
+		repoidx = getOrCreateIndex(IndexNames.REPOSITORY);
+		gituseridx = getOrCreateIndex(IndexNames.GITUSER);
+		nameidx = getOrCreateIndex(IndexNames.NAME);
+		emailidx = getOrCreateIndex(IndexNames.EMAIL);
 		setMaxBufferSize(100000);
 	}
 		
@@ -133,7 +133,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 		if ( author == null ) { return null; }
 		Vertex cmt_node = getOrCreateCommit( gitHash( cmt ) );
 		Vertex author_node = saveGitUser( author );
-		Edge edge = createEdgeIfNotExist( null, cmt_node, author_node, EdgeType.COMMITAUTHOR );
+		Edge edge = createEdgeIfNotExist( cmt_node, author_node, EdgeType.COMMITAUTHOR );
 		setProperty( edge, PropertyName.WHEN, author.getWhen() );
 		return author_node;
 	}
@@ -141,7 +141,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Vertex saveCommitCommitter( RevCommit cmt, PersonIdent committer ) {
 		Vertex cmt_node = getOrCreateCommit( gitHash( cmt ) );
 		Vertex committer_node = saveGitUser( committer );
-		Edge edge = createEdgeIfNotExist( null, cmt_node, committer_node, EdgeType.COMMITTER );
+		Edge edge = createEdgeIfNotExist( cmt_node, committer_node, EdgeType.COMMITTER );
 		setProperty( edge, PropertyName.WHEN, committer.getWhen() );
 		return committer_node;
 	}
@@ -165,7 +165,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	
 	public Vertex getOrCreateGitUser( String name, String email ) {
 		String key = name + " <" + email + ">";
-		return getOrCreateVertexHelper(IdCols.GIT_USER, key, VertexType.GIT_USER, gituseridx);
+		return getOrCreateVertexHelper(IdCols.GITUSER, key, VertexType.GIT_USER, gituseridx);
 	}
 	
 	public Vertex getOrCreateName( String name ) {

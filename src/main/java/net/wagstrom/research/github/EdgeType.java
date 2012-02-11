@@ -5,13 +5,13 @@ import com.ibm.research.govsci.graph.StringableEnum;
 public enum EdgeType implements StringableEnum {
 	// FIXME: refactor in the existing database and rename edge type
 	CHANGED("CHANGED"), // used by RepositoryLoader
-	COMMITAUTHOR("AUTHOR"), // also used by RepositoryLoader
+	COMMITAUTHOR("AUTHOR"), // COMMIT->USER also used by RepositoryLoader
 	COMMITPARENT("COMMIT_PARENT"), // also used by RepositoryLoader
-	COMMITTER("COMMITTER"), // also used by RepositoryLoader
+	COMMITTER("COMMITTER"), // COMMIT->USER also used by RepositoryLoader
 	CREATOR("CREATOR"),
 	DISCUSSIONCOMMIT("DISCUSSION_COMMIT"),
 	DISCUSSIONUSER("DISCUSSION_USER"),
-	EMAIL("EMAIL"), // also used by RepositoryLoader
+	EMAIL("EMAIL"), // USER->EMAIL also used by RepositoryLoader
 	EVENTCOMMENT("EVENT_COMMIT"),
 	EVENTCOMMIT("EVENT_COMMIT"),
 	FOLLOWER("FOLLOWER"),
