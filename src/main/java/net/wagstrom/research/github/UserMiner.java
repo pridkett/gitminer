@@ -67,10 +67,15 @@ public class UserMiner extends BaseMiner {
 			log.warn("empty string passed into getUserFollowers");
 			return null;
 		}
-		log.trace("Fetching user followers: {}", username);
-		List<String> rv = service.getUserFollowers(username);
-		log.debug("Fetched users followers: {} number: {}", username, rv==null?"null":rv.size());
-		return rv;
+		try {
+			log.trace("Fetching user followers: {}", username);
+			List<String> rv = service.getUserFollowers(username);
+			log.debug("Fetched users followers: {} number: {}", username, rv==null?"null":rv.size());
+			return rv;
+		} catch (NullPointerException e) {
+			log.error("Error fetching followers for user: {}", username, e);
+			return null;
+		}
 	}
 	
 	public List<String> getUserFollowing(String username) {
