@@ -175,11 +175,12 @@ public class GitHubMain {
 						log.trace("SavedIssues Keys: {}", savedIssues.keySet());
 	
 						for (org.eclipse.egit.github.core.Issue issue : issues3) {
-							// if an issue doesn't appear in the set, we always save it
+							String issueId = repo.generateId() + ":" + issue.getNumber();
 							if (!needsUpdate(savedIssues.get(issue.getNumber()), true)) {
-								log.debug("Skipping fetching issue {} - recently updated {}", issue.getNumber(), savedIssues.get(issue.getNumber()));
+								log.debug("Skipping fetching comments for issue {} - recently updated {}", issueId, savedIssues.get(issue.getNumber()));
 								continue;
 							}
+							log.debug("Pulling comments for issue: {} - {}", issueId, savedIssues.get(issue.getNumber()));
 							try {
 								// Fetch comments BOTH ways -- using the v2 and the v3 apis
 								bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(projsplit[0], projsplit[1], issue.getNumber()));
@@ -191,15 +192,18 @@ public class GitHubMain {
 						
 						savedIssues = bp.getIssueEventsAddedAt(repo);
 						for (org.eclipse.egit.github.core.Issue issue : issues3) {
+							String issueId = repo.generateId() + ":" + issue.getNumber();
 							if (!needsUpdate(savedIssues.get(issue.getNumber()), true)) {
-								log.debug("Skipping fetching events for issue {} - recently updated", issue.getNumber(), savedIssues.get(issue.getNumber()));
+								log.debug("Skipping fetching events for issue {} - recently updated - {}", new Object[]{issueId, savedIssues.get(issue.getNumber())});
+								continue;
 							}
+							log.debug("Pulling events for issue: {} - {}", new Object[]{issueId, savedIssues.get(issue.getNumber())});
 							Collection<IssueEvent> evts = imv3.getIssueEvents(repo, issue);
-							log.info("issue {}:{} events: {}", new Object[]{repo.generateId(), issue.getNumber(), evts.size()});
+							log.trace("issue {} events: {}", new Object[]{issueId, evts.size()});
 							try {
 								bp.saveIssueEvents(repo, issue, evts);
 							} catch (NullPointerException e) {
-								log.error("NullPointer exception saving issue events: {}:{}", proj, issue);
+								log.error("NullPointer exception saving issue events: {}", issueId);
 							}
 						}
 					} else {
@@ -213,7 +217,7 @@ public class GitHubMain {
 						bp.saveRepositoryPullRequests(repo, requests3);
 
 						Map<Integer, Date> savedRequests = bp.getPullRequestDiscussionsAddedAt(proj);
-						log.debug("SavedPullRequest Keys: {}", savedRequests.keySet());
+						log.trace("SavedPullRequest Keys: {}", savedRequests.keySet());
 						for (org.eclipse.egit.github.core.PullRequest request : requests3) {
 							if (savedRequests.containsKey(request.getNumber())) {
 								if (!needsUpdate(savedRequests.get(request.getNumber()), true)) {
@@ -235,9 +239,9 @@ public class GitHubMain {
 				}
 				
 				if (p.getProperty("net.wagstrom.research.github.miner.repositories.users", "true").equals("true")) {
-					log.info("calling getProjectUsersLastFullUpdate");
+					log.trace("calling getProjectUsersLastFullUpdate");
 					Map<String, Date> allProjectUsers = bp.getProjectUsersLastFullUpdate(proj);
-					log.info("keyset: {}", allProjectUsers.keySet());
+					log.trace("keyset: {}", allProjectUsers.keySet());
 					int ctr = 1;
 					int numUsers = allProjectUsers.size();
 					for (Map.Entry<String, Date> entry : allProjectUsers.entrySet()) {
