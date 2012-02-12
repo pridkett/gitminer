@@ -1,0 +1,78 @@
+/**
+ * provide summary information about a github dataset
+ *
+ * this script is mainly intended to provide an overview of how to access
+ * the data and also to generate document summaries
+ */
+
+import net.wagstrom.research.github.VertexType
+import net.wagstrom.research.github.EdgeType
+import net.wagstrom.research.github.IndexNames
+
+/**
+ * simple helper function to do a pretty print of a map
+ * 
+ * @param inmap an key/value pair map
+ */
+def printSortedMap(Map inmap) {
+    for (p in inmap.sort{a,b -> a.key <=> b.key}) {
+        println "==>" + p.key + "=" + p.value
+    }
+}
+
+DBPATH="/users/pwagstro/Documents/workspace/github/graph.20120125.db"
+g = new Neo4jGraph(DBPATH)
+typeidx = g.idx(IndexNames.TYPE)
+
+println "Generating summary information. Please wait."
+
+println "\nVertex Types: "
+vertexTypes = [:]
+g.V.type.groupCount(vertexTypes).iterate()
+printSortedMap(vertexTypes)
+
+println "\n\nDistribution of Properties by Type:"
+allProps = [:].withDefault{0}
+for (vt in vertexTypes.keySet().sort()) {
+	elems = []
+	typeidx[["type": vt]].fill(elems)
+	props = [:].withDefault{0}
+	elems._().map.sideEffect{it.keySet().each{props[it] += 1; allProps[it] += 1}}.iterate()
+	props.sort{a,b -> a.key <=> b.key}
+	println "\n\n***********************************************"
+	println "Vertex Type: " + vt
+	println "Number of Vertices: " + elems.size()
+	println "Properties:"
+	printSortedMap(props)
+
+	inEdgeLabels = [:]
+	outEdgeLabels = [:]
+	elems._().inE.label.groupCount(inEdgeLabels).iterate()
+	elems._().outE.label.groupCount(outEdgeLabels).iterate()
+	inEdgeLabels.sort{a,b -> a.key <=> b.key}
+	outEdgeLabels.sort{a,b -> a.key <=> b.key}
+	
+	println "In Edges:"
+	printSortedMap(inEdgeLabels)
+	
+	println "Out Edges:"
+	printSortedMap(outEdgeLabels)
+}
+
+println "\nEdge Types: "
+inEdges = [:].withDefault{[:].withDefault{0}}
+outEdges = [:].withDefault{[:].withDefault{0}}
+edgeLabels = [:]
+g.E.sideEffect{inEdges[it.label][it.inV.type.next()] += 1; outEdges[it.label][it.outV.type.next()] += 1}.label.groupCount(edgeLabels).iterate()
+println "\n\nDistribution of Edges Sources by Type"
+for (et in edgeLabels.keySet()) {
+	println "\n\n***********************************************"
+	println "Edge Label: " + et
+	println "Number of Edges: " + edgeLabels[et]
+	println "In Vertices:"
+	printSortedMap(inEdges[et])
+	println "Out Vertices:"
+	printSortedMap(outEdges[et])
+}
+
+g.shutdown()
