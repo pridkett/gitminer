@@ -17,7 +17,7 @@ public enum PropertyName implements StringableEnum {
 	CLOSED_ISSUES("closedIssues"),
 	COLLABORATORS("collaborators"),
 	COMMENTS("comments"),
-	COMMITTED_DATE("commitedDate"),
+	COMMITED_DATE("commitedDate"),
 	COMMIT_ID("commitId"),
 	COMMITS("commits"),
 	COMPANY("company"),

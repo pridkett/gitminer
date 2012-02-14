@@ -513,7 +513,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 			createEdgeIfNotExist(node, author, EdgeType.COMMITAUTHOR);
 		}
 		setProperty(node, PropertyName.AUTHORED_DATE, commit.getAuthoredDate());
-		setProperty(node, PropertyName.COMMITTED_DATE, commit.getCommittedDate());
+		setProperty(node, PropertyName.COMMITED_DATE, commit.getCommittedDate());
 		if (commit.getCommitter() != null) {
 			Vertex committer = saveUser(commit.getCommitter());
 			createEdgeIfNotExist(node, committer, EdgeType.COMMITTER);

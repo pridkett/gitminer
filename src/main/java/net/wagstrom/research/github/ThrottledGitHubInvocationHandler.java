@@ -68,17 +68,18 @@ public class ThrottledGitHubInvocationHandler implements InvocationHandler {
 			log.warn("GitHub returned Not Found: Method: {}, Args: {}", method.getName(), args);
 			return null;
 		} else if (e.getCause() instanceof ConnectException) {
-			log.error("Connection exception: Method: {}, Args: {}", method.getName(), args);
+			log.error("Connection exception: Method: {}, Args: {}", new Object[]{method.getName(), args, e});
 			failSleep();
 			return invoke(proxy, method, args);
 		} else if (e.getCause() != null && e.getCause().getCause() instanceof ConnectException) {
-			log.error("Connection exception (deep): Method: {}, Args: {}", method.getName(), args);
+			log.error("Connection exception (deep): Method: {}, Args: {}", new Object[]{method.getName(), args, e});
 			failSleep();
 			return invoke(proxy, method, args);			
-		}
+		} 
 
-		log.error("Unhandled exception: Method: {} Args: {}", method.getName(), args);
-		throw e.getCause();
+		log.error("Unhandled exception: Method: {} Args: {}", new Object[]{method.getName(), args, e});
+		failSleep();
+		return invoke(proxy, method, args);	
 	}
 	
 	public Object invoke(Object proxy, Method method, Object[] args)
