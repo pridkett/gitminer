@@ -1004,6 +1004,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Map<String,Vertex> saveRepositoryCollaborators(String reponame, List<String> collabs) {
 		HashMap<String, Vertex> mapper = new HashMap<String, Vertex>();
 		Vertex repo = getOrCreateRepository(reponame);
+		if (collabs == null) {
+			log.warn("saveRepositoryCollaborators collabs are null");
+			return mapper;
+		}
 		for (String username : collabs) {
 			Vertex user = getOrCreateUser(username);
 			createEdgeIfNotExist(null, repo, user, EdgeType.REPOCOLLABORATOR);
@@ -1015,6 +1019,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Map<String,Vertex> saveRepositoryContributors(String reponame, List<User> contributors) {
 		HashMap<String, Vertex> mapper = new HashMap<String, Vertex>();
 		Vertex repo = getOrCreateRepository(reponame);
+		if (contributors == null) {
+			log.warn("saveRepositoryContributors contributors are null");
+			return mapper;
+		}
 		for (User user : contributors) {
 			Vertex usernode = saveUser(user);
 			createEdgeIfNotExist(null, repo, usernode, EdgeType.REPOCONTRIBUTOR);
@@ -1026,6 +1034,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 	public Map<String, Vertex> saveRepositoryForks(String project, List<Repository> forks) {
 		Vertex proj = getOrCreateRepository(project);
 		HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
+		if (forks == null) {
+			log.warn("saveRepositoryForks forks are null");
+			return mapper;
+		}
 		for (Repository repo : forks) {
 			String projectFullName = repo.getUsername() + "/" + repo.getName();
 			Vertex repoVertex = saveRepository(repo);
