@@ -14,7 +14,7 @@ def printSortedMap(Map inmap) {
 	}
 }
 
-DBPATH="/users/pwagstro/Documents/workspace/github/graph.20120125.db"
+DBPATH="/users/pwagstro/Documents/workspace/github/graph.20120210.db"
 g = new Neo4jGraph(DBPATH)
 
 repos = ["ruby/ruby", "rails/rails", "mojombo/jekyll", "defunkt/resque", "mxcl/homebrew", "lifo/docrails", "puppetlabs/puppet", "tinkerpop/gremlin", "tinkerpop/blueprints", "tinkerpop/pipes", "tinkerpop/rexster", "tinkerpop/frames", "rack/rack", "sinatra/sinatra"]

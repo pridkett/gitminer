@@ -250,30 +250,6 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
 		return m;
 	}
-	/**
-	 * Similar to getIssueCommentsAddedAt except it infers missing values
-	 * 
-	 * The method is pretty simple, find the largest value obtained from
-	 * getIssueCommentsAt and insert null values for all of the values going
-	 * up to that point.
-	 * 
-	 * This function is needed because there are times that GitHub chokes on
-	 * getting the issues for a particular project. In particular this happens
-	 * with mxcl/homebrew which has about 7000 closed issues.
-	 * 
-	 * @param reponame name of the repository to mine
-	 * @return a Map that maps issue_ids to the date that the comments were downloaded
-	 */
-	public Map<Integer, Date> getIssueCommentsAddedAtBruteForce(String reponame) {
-		Map<Integer, Date> m = getIssueCommentsAddedAt(reponame);
-		int max = Collections.max(m.keySet());
-		for (int i=1; i < max; i ++) {
-			if (!m.containsKey(i)) {
-				m.put(i, null);
-			}
-		}
-		return m;
-	}
 	
 	public Vertex getOrCreateComment(long commentId) {
 		return getOrCreateVertexHelper(IdCols.COMMENT, commentId, VertexType.COMMENT, commentidx);

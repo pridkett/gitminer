@@ -20,8 +20,7 @@ def printSortedMap(Map inmap) {
     }
 }
 
-DBPATH="/users/pwagstro/Documents/workspace/github/graph.20120125.db"
-g = new Neo4jGraph(DBPATH)
+g = new Neo4jGraph(Defaults.DBPATH)
 typeidx = g.idx(IndexNames.TYPE)
 
 println "Generating summary information. Please wait."

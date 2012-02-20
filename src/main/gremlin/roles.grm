@@ -1,0 +1,68 @@
+/**
+ * produce information about roles in the community by mining the graph
+ * database
+ */
+import net.wagstrom.research.github.IndexNames
+import net.wagstrom.research.github.IdCols
+import net.wagstrom.research.github.EdgeType
+import net.wagstrom.research.github.VertexType
+
+g = new Neo4jGraph(Defaults.DBPATH)
+projects = ["tinkerpop/gremlin"]
+
+for (project in projects) {
+	repo = g.idx(IndexNames.REPOSITORY).get(IdCols.REPOSITORY, project).next()
+	println "\n\n******************************************"
+	println repo.name
+	
+	watchers = repo.in(EdgeType.REPOWATCHED.toString()).toList()
+	collaborators = repo.out(EdgeType.REPOCOLLABORATOR.toString()).toList()
+	contributors = repo.out(EdgeType.REPOCONTRIBUTOR.toString()).toList() + repo.in(EdgeType.REPOOWNER.toString()).dedup().toList()
+	issueOwners = repo.out(EdgeType.ISSUE.toString()).in(EdgeType.ISSUEOWNER.toString()).dedup().toList()
+	issueCommenters = repo.out(EdgeType.ISSUE.toString()).out(EdgeType.ISSUECOMMENT.toString()).in(EdgeType.ISSUECOMMENTOWNER.toString()).dedup().toList()
+	pullRequestOwners = repo.out(EdgeType.PULLREQUEST.toString()).in(EdgeType.PULLREQUESTOWNER.toString()).dedup().toList()
+	openPullRequestOwners = repo.out(EdgeType.PULLREQUEST.toString()).filter{it.closedAt==null}.in(EdgeType.PULLREQUESTOWNER.toString()).dedup().toList()
+	closedPullRequestOwners = repo.out(EdgeType.PULLREQUEST.toString()).filter{it.closedAt!=null}.in(EdgeType.PULLREQUESTOWNER.toString()).dedup().toList()
+	pullRequestCommenters = repo.out(EdgeType.PULLREQUEST.toString()).out(EdgeType.PULLREQUESTDISCUSSION.toString()).filter{it.type==VertexType.USER.toString()}.dedup().toList()
+	forkOwners = repo.out(EdgeType.REPOFORK.toString()).in(EdgeType.REPOOWNER.toString()).dedup().toList()
+	
+	allActive = (collaborators + contributors + issueOwners + \
+	            issueCommenters + pullRequestOwners + \
+				openPullRequestOwners + closedPullRequestOwners + \
+				pullRequestCommenters).unique()
+	allRounders = (collaborators as Set) + contributors
+
+	/*
+	 * Lurkers - only watching the repo, no forks, issues, etc
+	 */
+	println "Lurkers"
+	println Helpers.setDifferenceLeft(watchers, allActive).login.sort{a,b -> a <=> b}
+	/*
+	 * Independent - forked the repo, but no pull requests
+	 */
+	println "Independent"
+	println Helpers.setDifferenceLeft(forkOwners, pullRequestOwners).login.sort{a,b -> a <=> b}
+	/*
+	 * Wannabes - created a pull request, but never accepted
+	 */
+	println "Wannabes"
+	println Helpers.setDifferenceLeft(openPullRequestOwners, closedPullRequestOwners).login.sort{a,b -> a <=> b}
+	
+	/*
+	 * External Contributors - created a pull request, pull request
+	 * has been merged. No direct access.
+	 */
+	println "External Contributors"
+	println Helpers.setDifferenceLeft(closedPullRequestOwners, collaborators).login.sort{a,b -> a <=> b}
+	
+	/*
+	 * All Rounder - have direct access to push to the main repo
+	 */
+	println "All Rounders"
+	println allRounders.login.sort{a,b -> a <=> b}
+	
+	/*
+	 * FIXME: what about people the role of issues? Is that orthogonal
+	 * to these roles?
+	 */
+}

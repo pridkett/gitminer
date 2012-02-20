@@ -92,7 +92,7 @@ public class RepositoryMiner {
 		log.trace("Fetching forks for repository: {}/{}", username, reponame);
 		try {
 			List<Repository> forks = service.getForks(username, reponame);
-			log.debug("Fetched forks for repository: {}/{} number: {}", new Object[] {username, reponame, forks==null?"null":forks.size()});
+			log.warn("Fetched forks for repository: {}/{} number: {}", new Object[] {username, reponame, forks==null?"null":forks.size()});
 			return forks;
 		} catch (NullPointerException e) {
 			log.error("Null pointer fetching forks for: {}/{}", new Object[]{username, reponame, e});

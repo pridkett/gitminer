@@ -260,9 +260,6 @@ public class GitHubMain {
 					}
 				}
 			}
-			
-			// this iterates over the projects by itself
-			bruteForceIssueComments(im, bp, p);
 		}
 
 		// FIXME: this should check for when the user was last updated
@@ -300,44 +297,6 @@ public class GitHubMain {
 
 		log.info("Shutting down graph");
 		bp.shutdown();
-	}
-	
-	private void bruteForceIssueComments(IssueMiner im, BlueprintsDriver bp, Properties p) {
-		ArrayList<String> projects = new ArrayList<String>();
-		if (p.getProperty("net.wagstrom.research.github.miner.issues.bruteforce","true").equals("true")) {
-	        // get the list of projects
-			try {
-				for (String proj : p.getProperty("net.wagstrom.research.github.projects.bruteforce").split(",")) {
-					if (!proj.trim().equals("")) {
-						projects.add(proj.trim());
-					}
-				}
-			} catch (NullPointerException e) {
-				log.error("property net.wagstrom.research.github.projects.bruteforce undefined");
-				System.exit(1);
-			}	
-		}
-		
-		for (String proj : projects) {
-			Map<Integer, Date> issues = bp.getIssueCommentsAddedAtBruteForce(proj);
-			for (Map.Entry<Integer, Date> entry : issues.entrySet()) {
-			    int issueID = entry.getKey();
-				Date date = entry.getValue();
-				if (needsUpdate(date, true)) {
-					try {
-						Issue issue = im.getIssue(proj, issueID);
-						if (issue != null) {
-							bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(proj, issue.getNumber()));					
-						}
-					} catch (GitHubException e) {
-						log.error("Error fetching issue {}:{}", proj, issueID);
-					} catch (NullPointerException e) {
-						log.error("Somehow got a null pointer exception on issue {}:{}", proj, issueID);
-					}
-				}
-			}
-		}
-		return;
 	}
 	
 	/**
