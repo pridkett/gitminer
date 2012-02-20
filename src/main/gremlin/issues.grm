@@ -2,6 +2,7 @@ import net.wagstrom.research.github.IndexNames
 import net.wagstrom.research.github.IdCols
 import net.wagstrom.research.github.VertexType
 import net.wagstrom.research.github.PropertyName
+import net.wagstrom.research.github.EdgeType
 
 /**
  * simple helper function to do a pretty print of a map

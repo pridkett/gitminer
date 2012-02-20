@@ -16,44 +16,25 @@
 
 package net.wagstrom.research.github;
 
-import com.ibm.research.govsci.graph.StringableEnum;
-
-public enum VertexType implements StringableEnum {
-    COMMIT("COMMIT"), // also used by RepositoryLoader
-    FILE("FILE"), // used for RepositoryLoader
-    GIT_USER("GIT_USER"), // also used by RepositoryLoader
-    EMAIL("EMAIL"), // also used by RepositoryLoader
-    NAME("NAME"), // used by RepositoryLoader
-    USER("USER"),
-    REPOSITORY("REPOSITORY"),
-    ORGANIZATION("ORGANIZATION"),
-    TEAM("TEAM"),
-    GIST("GIST"),
-    ISSUE("ISSUE"),
-    ISSUE_EVENT("ISSUE_EVENT"),
-    LABEL("LABEL"),
-    MILESTONE("MILESTONE"),
-    COMMENT("COMMENT"),
-    GISTFILE("GISTFILE"),
-    PULLREQUEST("PULLREQUEST"),
-    PULLREQUESTMARKER("PULLREQUESTMARKER"),
-    PULLREQUESTREVIEWCOMMENT("PULLREQUESTREVIEWCOMMENT"),
-    DISCUSSION("DISCUSSION");
-
-    private String text;
-    VertexType(String text) {
-        this.text = text;
-    }
-    public String toString() {
-        return this.text;
-    }
-
-    public static VertexType fromString(String text) {
-        if (text != null) {
-            for (VertexType d : VertexType.values()) {
-                if (text.equals(d.text)) { return d; }
-            }
-        }
-        throw new IllegalArgumentException("VertexType: '" + text + "' not valid");
-    }
+public final class VertexType {
+    public static final String COMMIT = "COMMIT"; // also used by RepositoryLoader
+    public static final String FILE = "FILE"; // used for RepositoryLoader
+    public static final String GIT_USER = "GIT_USER"; // also used by RepositoryLoader
+    public static final String EMAIL = "EMAIL"; // also used by RepositoryLoader
+    public static final String NAME = "NAME"; // used by RepositoryLoader
+    public static final String USER = "USER";
+    public static final String REPOSITORY = "REPOSITORY";
+    public static final String ORGANIZATION = "ORGANIZATION";
+    public static final String TEAM = "TEAM";
+    public static final String GIST = "GIST";
+    public static final String ISSUE = "ISSUE";
+    public static final String ISSUE_EVENT = "ISSUE_EVENT";
+    public static final String LABEL = "LABEL";
+    public static final String MILESTONE = "MILESTONE";
+    public static final String COMMENT = "COMMENT";
+    public static final String GISTFILE = "GISTFILE";
+    public static final String PULLREQUEST = "PULLREQUEST";
+    public static final String PULLREQUESTMARKER = "PULLREQUESTMARKER";
+    public static final String PULLREQUESTREVIEWCOMMENT = "PULLREQUESTREVIEWCOMMENT";
+    public static final String DISCUSSION = "DISCUSSION";
 }

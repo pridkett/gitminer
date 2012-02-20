@@ -426,19 +426,6 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
     }
 
     /**
-     * Gets all the repositories that have not been updated in a number of days
-     * 
-     * FIXME: is this ever used?
-     * 
-     * @param age
-     * @return 
-     */
-    public Set<String> getRepos(double age) {
-        return getVertexHelper(age, IndexNames.REPOSITORY, VertexType.REPOSITORY, "fullname");
-    }
-
-
-    /**
      * Gets the date that this repository was last updated
      * 
      * @param repoId - the name of the repo, eg: defunkt/resque
@@ -455,16 +442,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         }
     }
 
-    /**
-     * Gets all of the users that have not been updated in a number of days
-     * @param age the number of days since the last update
-     * @return a set of the users that have not been updated
-     */
-    public Set<String> getUsers(double age) {
-        return getVertexHelper(age, IndexNames.USER, VertexType.USER, "username");
-    }
-
-    protected Vertex saveCommentHelper(Comment comment, EdgeType edgetype) {
+    protected Vertex saveCommentHelper(Comment comment, String edgetype) {
         Vertex node = getOrCreateComment(comment.getId());
         setProperty(node, PropertyName.BODY, comment.getBody());
         setProperty(node, PropertyName.CREATED_AT, comment.getCreatedAt());
@@ -767,7 +745,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return node;
     }
 
-    protected Map<String, Vertex> saveOrganizationMembersHelper(String organization, List<User> owners, EdgeType edgetype) {
+    protected Map<String, Vertex> saveOrganizationMembersHelper(String organization, List<User> owners, String edgetype) {
         Vertex org = getOrCreateOrganization(organization);
         HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
         for (User owner : owners) {
@@ -1475,7 +1453,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return saveUserFollowersFollowing(sourceuser, users, EdgeType.FOLLOWER);
     }
 
-    public Map<String,Vertex> saveUserFollowersFollowing(String sourceuser, List<String> users, EdgeType edgetype) {
+    public Map<String,Vertex> saveUserFollowersFollowing(String sourceuser, List<String> users, String edgetype) {
         Vertex source = getOrCreateUser(sourceuser);
         HashMap<String,Vertex> mapper= new HashMap<String,Vertex>();
         for (String user : users) {
@@ -1505,7 +1483,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return saveUserRepositoriesHelper(user, repos, EdgeType.REPOOWNER);
     }
 
-    private Map<String, Vertex> saveUserRepositoriesHelper(String user, List<Repository> repositories, EdgeType edgetype) {
+    private Map<String, Vertex> saveUserRepositoriesHelper(String user, List<Repository> repositories, String edgetype) {
         Vertex source = getOrCreateUser(user);
         HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
         for (Repository repo : repositories) {
