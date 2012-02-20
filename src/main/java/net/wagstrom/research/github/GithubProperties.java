@@ -29,44 +29,44 @@ import java.util.Properties;
  * @author patrick
  */
 public class GithubProperties {
-	static Properties _githubProperties = null;
-	
-	/**
-	 * static method that returns the configuration properties
-	 * for the file
-	 * 
-	 * @return a {java.util.Propeties} reference
-	 */
-	public static Properties props() {
-		if (_githubProperties != null) return _githubProperties;
-		_githubProperties = new Properties();
-		ClassLoader loader = Thread.currentThread().getContextClassLoader();
-		InputStream properties = loader.getResourceAsStream("configuration.properties");
-		try {
-			_githubProperties.load(properties);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return _githubProperties;
-	}
-	
-	/**
-	 * load the properties file from a filename
-	 * 
-	 * If this is called before the other props() method then it will load the properties
-	 * from the file. Otherwise we'll use the stuff in the classpath.
-	 * 
-	 * @param filename
-	 * @return
-	 */
-	public static Properties props(String filename) {
-		if (_githubProperties != null) return _githubProperties;
-		_githubProperties = new Properties();
-		try {
-			_githubProperties.load(new FileInputStream(filename));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return _githubProperties;		
-	}
+    static Properties _githubProperties = null;
+
+    /**
+     * static method that returns the configuration properties
+     * for the file
+     * 
+     * @return a {java.util.Propeties} reference
+     */
+    public static Properties props() {
+        if (_githubProperties != null) return _githubProperties;
+        _githubProperties = new Properties();
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        InputStream properties = loader.getResourceAsStream("configuration.properties");
+        try {
+            _githubProperties.load(properties);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return _githubProperties;
+    }
+
+    /**
+     * load the properties file from a filename
+     * 
+     * If this is called before the other props() method then it will load the properties
+     * from the file. Otherwise we'll use the stuff in the classpath.
+     * 
+     * @param filename
+     * @return
+     */
+    public static Properties props(String filename) {
+        if (_githubProperties != null) return _githubProperties;
+        _githubProperties = new Properties();
+        try {
+            _githubProperties.load(new FileInputStream(filename));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return _githubProperties;		
+    }
 }

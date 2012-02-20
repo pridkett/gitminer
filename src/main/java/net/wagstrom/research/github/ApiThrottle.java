@@ -19,95 +19,95 @@ import org.slf4j.LoggerFactory;
  *
  */
 public class ApiThrottle {
-	private int limit;
-	private int limitRemaining;
-	private Calendar lastReset = null;
-	private Calendar lastCall = null;
-	private Logger log;
-	private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
-	private SimpleDateFormat dateFormatter = null;
-	private long internalMaxRate = -1;
-	private String idstr = "";
-	
-	public ApiThrottle() {
-		limit = -1;
-		limitRemaining = -1;
-		log = LoggerFactory.getLogger(this.getClass());
-		dateFormatter = new SimpleDateFormat(DATE_FORMAT);
-	}
-	
-	
-	/**
-	 * 
-	 * FIXME: this method is really tied to GitHub's limits right now.
-	 * Need to implement a mechanism to better understand when limits expire
-	 * based on time or count.
-	 * 
-	 */
-	public void callWait() throws InterruptedException {
-		if (lastReset != null)
-			log.debug("[{}] API Estimates: Limit: {} Remaining: {} Last Reset: {}", new Object[] {idstr, limit, limitRemaining, dateFormatter.format(lastReset.getTime())});
-		if (limitRemaining < 1 && limit != -1) {
-			Calendar sleepEnd = (Calendar)lastReset.clone();
-			int timeDiff = 3600;
-			if (limit == 60) {
-				timeDiff = 65;
-			} else if (limit == 5000) {
-				timeDiff = 3610;
-			}
-			sleepEnd.add(Calendar.SECOND, timeDiff);
-			long sleepTime = sleepEnd.getTimeInMillis() - Calendar.getInstance().getTimeInMillis();
-			if (sleepTime > 0) {
-				log.info("[{}] Sleeping for {}ms", idstr, sleepTime);
-				Thread.sleep(sleepTime);
-			} else {
-				log.info("[{}] Should be no reason to sleep", idstr);
-			}
-		}
-		if (internalMaxRate != -1 && lastCall != null) {
-			long sleepTime = internalMaxRate - (Calendar.getInstance().getTimeInMillis() - lastCall.getTimeInMillis());
-			if (sleepTime > 0) {
-				log.trace("[{}] Exceeded internal rate. Sleeping for {}ms", idstr, sleepTime);
-				Thread.sleep(sleepTime);
-			}
-		}
-		lastCall = Calendar.getInstance();
-		return;
-	}
-	
-	public void setRateLimit(int limit) {
-		this.limit = limit;
-	}
-	
-	public void setRateLimitRemaining(int limitRemaining) {
-		this.limitRemaining = limitRemaining;
-		// assume that we just reset the time limit
-		if (this.limitRemaining == this.limit - 1) {
-			lastReset = Calendar.getInstance();
-		}
-	}
-	
-	/**
-	 * Sets the maximum rate as the number of calls in the number of seconds
-	 * 
-	 * This is external from the given API rate and is used to be nice to servers.
-	 * Internally it is stored as a long indicating the minimum wait between calls
-	 * 
-	 * @param calls
-	 * @param seconds
-	 */
-	public void setMaxRate(int calls, int seconds) {
-		internalMaxRate = (long)(((double) seconds / (double)calls)*1000);
-		log.trace("[{}] Internal maximum rate set to: {}ms", idstr, internalMaxRate);
-	}
+    private int limit;
+    private int limitRemaining;
+    private Calendar lastReset = null;
+    private Calendar lastCall = null;
+    private Logger log;
+    private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
+    private SimpleDateFormat dateFormatter = null;
+    private long internalMaxRate = -1;
+    private String idstr = "";
+
+    public ApiThrottle() {
+        limit = -1;
+        limitRemaining = -1;
+        log = LoggerFactory.getLogger(this.getClass());
+        dateFormatter = new SimpleDateFormat(DATE_FORMAT);
+    }
 
 
-	public String getId() {
-		return idstr;
-	}
+    /**
+     * 
+     * FIXME: this method is really tied to GitHub's limits right now.
+     * Need to implement a mechanism to better understand when limits expire
+     * based on time or count.
+     * 
+     */
+    public void callWait() throws InterruptedException {
+        if (lastReset != null)
+            log.debug("[{}] API Estimates: Limit: {} Remaining: {} Last Reset: {}", new Object[] {idstr, limit, limitRemaining, dateFormatter.format(lastReset.getTime())});
+        if (limitRemaining < 1 && limit != -1) {
+            Calendar sleepEnd = (Calendar)lastReset.clone();
+            int timeDiff = 3600;
+            if (limit == 60) {
+                timeDiff = 65;
+            } else if (limit == 5000) {
+                timeDiff = 3610;
+            }
+            sleepEnd.add(Calendar.SECOND, timeDiff);
+            long sleepTime = sleepEnd.getTimeInMillis() - Calendar.getInstance().getTimeInMillis();
+            if (sleepTime > 0) {
+                log.info("[{}] Sleeping for {}ms", idstr, sleepTime);
+                Thread.sleep(sleepTime);
+            } else {
+                log.info("[{}] Should be no reason to sleep", idstr);
+            }
+        }
+        if (internalMaxRate != -1 && lastCall != null) {
+            long sleepTime = internalMaxRate - (Calendar.getInstance().getTimeInMillis() - lastCall.getTimeInMillis());
+            if (sleepTime > 0) {
+                log.trace("[{}] Exceeded internal rate. Sleeping for {}ms", idstr, sleepTime);
+                Thread.sleep(sleepTime);
+            }
+        }
+        lastCall = Calendar.getInstance();
+        return;
+    }
+
+    public void setRateLimit(int limit) {
+        this.limit = limit;
+    }
+
+    public void setRateLimitRemaining(int limitRemaining) {
+        this.limitRemaining = limitRemaining;
+        // assume that we just reset the time limit
+        if (this.limitRemaining == this.limit - 1) {
+            lastReset = Calendar.getInstance();
+        }
+    }
+
+    /**
+     * Sets the maximum rate as the number of calls in the number of seconds
+     * 
+     * This is external from the given API rate and is used to be nice to servers.
+     * Internally it is stored as a long indicating the minimum wait between calls
+     * 
+     * @param calls
+     * @param seconds
+     */
+    public void setMaxRate(int calls, int seconds) {
+        internalMaxRate = (long)(((double) seconds / (double)calls)*1000);
+        log.trace("[{}] Internal maximum rate set to: {}ms", idstr, internalMaxRate);
+    }
 
 
-	public void setId(String idstr) {
-		this.idstr = idstr;
-	}
+    public String getId() {
+        return idstr;
+    }
+
+
+    public void setId(String idstr) {
+        this.idstr = idstr;
+    }
 }

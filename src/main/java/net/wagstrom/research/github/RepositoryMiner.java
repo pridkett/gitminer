@@ -25,79 +25,79 @@ import com.github.api.v2.schema.User;
 import com.github.api.v2.services.RepositoryService;
 
 public class RepositoryMiner {
-	private RepositoryService service = null;
-	private Logger log;
-	
-	public RepositoryMiner(RepositoryService service) {
-		this.service = service;
-		log = LoggerFactory.getLogger(this.getClass());
-	}
-	
-	public Repository getRepositoryInformation(String username, String reponame) {
-		log.trace("Fetching repository: {}/{}", username, reponame);
-		Repository repo = service.getRepository(username, reponame);
-		log.debug("Fetched repository: {}/{}", username, reponame);
-		return repo;
-	}
-	
-	public List<String> getRepositoryCollaborators(String username, String reponame) {
-		log.trace("Fetching collaborators: {}/{}", username, reponame);
-		try {
-			List<String> collabs = service.getCollaborators(username, reponame);
-			log.debug("Fetched collaborators: {}/{} number: {}", new Object[] {username, reponame, collabs==null?"null":collabs.size()});
-			return collabs;
-		} catch (NullPointerException e) {
-			log.error("Null pointer fetching collaborators for: {}/{}", new Object[]{username, reponame, e});
-			return null;
-		}
-	}
-	
-	public List<User> getRepositoryContributors(String username, String reponame) {
-		log.trace("Fetching contributors: {}/{}", username, reponame);
-		try {
-			List<User> contributors = service.getContributors(username, reponame);
-			log.debug("Fetched contributors: {}/{} number: {}", new Object[] {username, reponame, contributors==null?"null":contributors.size()});
-			return contributors;
-		} catch (NullPointerException e) {
-			log.error("Null pointer fetching contributors for: {}/{}", new Object[]{username, reponame, e});
-			return null;
-		}
-	}
-	
-	public List<Repository> getUserRepositories(String username) {
-		log.trace("Fetching repositories for user: {}", username);
-		try {
-			List<Repository> repos = service.getRepositories(username);
-			log.debug("Fetched repositories for user: {} number: {}", username, repos==null?"null":repos.size());
-			return repos;
-		} catch (NullPointerException e) {
-			log.error("Null pointer fetching repositories for user: {}", username, e);
-			return null;
-		}
-	}
-	
-	public List<String> getWatchers(String username, String reponame) {
-		log.trace("Fetching watchers for repository: {}/{}", username, reponame);
-		try {
-			List<String> watchers = service.getWatchers(username,  reponame);
-			log.debug("Fetched watchers for repository: {}/{} number: {}", new Object[] {username, reponame, watchers==null?"null":watchers.size()});
-			return watchers;
-		} catch (NullPointerException e) {
-			log.error("Null pointer fetching watchers for: {}/{}", new Object[]{username, reponame, e});
-			return null;
-		}
-	}
-	
-	public List<Repository> getForks(String username, String reponame) {
-		log.trace("Fetching forks for repository: {}/{}", username, reponame);
-		try {
-			List<Repository> forks = service.getForks(username, reponame);
-			log.warn("Fetched forks for repository: {}/{} number: {}", new Object[] {username, reponame, forks==null?"null":forks.size()});
-			return forks;
-		} catch (NullPointerException e) {
-			log.error("Null pointer fetching forks for: {}/{}", new Object[]{username, reponame, e});
-			return null;
-		}
-	}
-	
+    private RepositoryService service = null;
+    private Logger log;
+
+    public RepositoryMiner(RepositoryService service) {
+        this.service = service;
+        log = LoggerFactory.getLogger(this.getClass());
+    }
+
+    public Repository getRepositoryInformation(String username, String reponame) {
+        log.trace("Fetching repository: {}/{}", username, reponame);
+        Repository repo = service.getRepository(username, reponame);
+        log.debug("Fetched repository: {}/{}", username, reponame);
+        return repo;
+    }
+
+    public List<String> getRepositoryCollaborators(String username, String reponame) {
+        log.trace("Fetching collaborators: {}/{}", username, reponame);
+        try {
+            List<String> collabs = service.getCollaborators(username, reponame);
+            log.debug("Fetched collaborators: {}/{} number: {}", new Object[] {username, reponame, collabs==null?"null":collabs.size()});
+            return collabs;
+        } catch (NullPointerException e) {
+            log.error("Null pointer fetching collaborators for: {}/{}", new Object[]{username, reponame, e});
+            return null;
+        }
+    }
+
+    public List<User> getRepositoryContributors(String username, String reponame) {
+        log.trace("Fetching contributors: {}/{}", username, reponame);
+        try {
+            List<User> contributors = service.getContributors(username, reponame);
+            log.debug("Fetched contributors: {}/{} number: {}", new Object[] {username, reponame, contributors==null?"null":contributors.size()});
+            return contributors;
+        } catch (NullPointerException e) {
+            log.error("Null pointer fetching contributors for: {}/{}", new Object[]{username, reponame, e});
+            return null;
+        }
+    }
+
+    public List<Repository> getUserRepositories(String username) {
+        log.trace("Fetching repositories for user: {}", username);
+        try {
+            List<Repository> repos = service.getRepositories(username);
+            log.debug("Fetched repositories for user: {} number: {}", username, repos==null?"null":repos.size());
+            return repos;
+        } catch (NullPointerException e) {
+            log.error("Null pointer fetching repositories for user: {}", username, e);
+            return null;
+        }
+    }
+
+    public List<String> getWatchers(String username, String reponame) {
+        log.trace("Fetching watchers for repository: {}/{}", username, reponame);
+        try {
+            List<String> watchers = service.getWatchers(username,  reponame);
+            log.debug("Fetched watchers for repository: {}/{} number: {}", new Object[] {username, reponame, watchers==null?"null":watchers.size()});
+            return watchers;
+        } catch (NullPointerException e) {
+            log.error("Null pointer fetching watchers for: {}/{}", new Object[]{username, reponame, e});
+            return null;
+        }
+    }
+
+    public List<Repository> getForks(String username, String reponame) {
+        log.trace("Fetching forks for repository: {}/{}", username, reponame);
+        try {
+            List<Repository> forks = service.getForks(username, reponame);
+            log.warn("Fetched forks for repository: {}/{} number: {}", new Object[] {username, reponame, forks==null?"null":forks.size()});
+            return forks;
+        } catch (NullPointerException e) {
+            log.error("Null pointer fetching forks for: {}/{}", new Object[]{username, reponame, e});
+            return null;
+        }
+    }
+
 }

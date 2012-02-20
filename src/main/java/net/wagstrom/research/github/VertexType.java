@@ -19,41 +19,41 @@ package net.wagstrom.research.github;
 import com.ibm.research.govsci.graph.StringableEnum;
 
 public enum VertexType implements StringableEnum {
-	COMMIT("COMMIT"), // also used by RepositoryLoader
-	FILE("FILE"), // used for RepositoryLoader
-	GIT_USER("GIT_USER"), // also used by RepositoryLoader
-	EMAIL("EMAIL"), // also used by RepositoryLoader
-	NAME("NAME"), // used by RepositoryLoader
-	USER("USER"),
-	REPOSITORY("REPOSITORY"),
-	ORGANIZATION("ORGANIZATION"),
-	TEAM("TEAM"),
-	GIST("GIST"),
-	ISSUE("ISSUE"),
-	ISSUE_EVENT("ISSUE_EVENT"),
-	LABEL("LABEL"),
-	MILESTONE("MILESTONE"),
-	COMMENT("COMMENT"),
-	GISTFILE("GISTFILE"),
-	PULLREQUEST("PULLREQUEST"),
-	PULLREQUESTMARKER("PULLREQUESTMARKER"),
-	PULLREQUESTREVIEWCOMMENT("PULLREQUESTREVIEWCOMMENT"),
-	DISCUSSION("DISCUSSION");
-	
-	private String text;
-	VertexType(String text) {
-		this.text = text;
-	}
-	public String toString() {
-		return this.text;
-	}
-	
-	public static VertexType fromString(String text) {
-		if (text != null) {
-			for (VertexType d : VertexType.values()) {
-				if (text.equals(d.text)) { return d; }
-			}
-		}
-		throw new IllegalArgumentException("VertexType: '" + text + "' not valid");
-	}
+    COMMIT("COMMIT"), // also used by RepositoryLoader
+    FILE("FILE"), // used for RepositoryLoader
+    GIT_USER("GIT_USER"), // also used by RepositoryLoader
+    EMAIL("EMAIL"), // also used by RepositoryLoader
+    NAME("NAME"), // used by RepositoryLoader
+    USER("USER"),
+    REPOSITORY("REPOSITORY"),
+    ORGANIZATION("ORGANIZATION"),
+    TEAM("TEAM"),
+    GIST("GIST"),
+    ISSUE("ISSUE"),
+    ISSUE_EVENT("ISSUE_EVENT"),
+    LABEL("LABEL"),
+    MILESTONE("MILESTONE"),
+    COMMENT("COMMENT"),
+    GISTFILE("GISTFILE"),
+    PULLREQUEST("PULLREQUEST"),
+    PULLREQUESTMARKER("PULLREQUESTMARKER"),
+    PULLREQUESTREVIEWCOMMENT("PULLREQUESTREVIEWCOMMENT"),
+    DISCUSSION("DISCUSSION");
+
+    private String text;
+    VertexType(String text) {
+        this.text = text;
+    }
+    public String toString() {
+        return this.text;
+    }
+
+    public static VertexType fromString(String text) {
+        if (text != null) {
+            for (VertexType d : VertexType.values()) {
+                if (text.equals(d.text)) { return d; }
+            }
+        }
+        throw new IllegalArgumentException("VertexType: '" + text + "' not valid");
+    }
 }
