@@ -13,38 +13,38 @@ def getIndex(g, indexname) {
 }
 
 def getAllIndices(g) {
-	rv = [:]
-	for (idx in g.indices) {
-		rv[idx.indexName] = idx
-	}
-	return rv
+    rv = [:]
+    for (idx in g.indices) {
+        rv[idx.indexName] = idx
+    }
+    return rv
 }
 
 def exportFollowerSubgraph(users, outfile) {
-	to = new TinkerGraph()
+    to = new TinkerGraph()
     System.out.println("processing users")
-	for (vertex in users) {
-		System.out.println("user: " + vertex["login"]) 
-		toVertex = to.addVertex(vertex.getId()) 
-		ElementHelper.copyProperties(vertex, toVertex) 
-	} 
+    for (vertex in users) {
+        System.out.println("user: " + vertex["login"])
+        toVertex = to.addVertex(vertex.getId())
+        ElementHelper.copyProperties(vertex, toVertex)
+    }
 
-	System.out.println("processing edges")
-	for (vertex in users) {
-		System.out.println("edges for user: " + vertex["login"])
-		for (edge in vertex.outE("FOLLOWER")) {
-			if (edge == null) continue;
-			System.out.println("edge: " + edge)
-			System.out.println("edge: " + vertex["login"] + " => " + edge.getInVertex()["login"])
-			toEdge = to.addEdge(edge.getId(), to.v(vertex.getId()), 
-				to.v(edge.getInVertex().getId()), edge.getLabel()) 
-			ElementHelper.copyProperties(edge, toEdge) 
-		}
-	}
+    System.out.println("processing edges")
+    for (vertex in users) {
+        System.out.println("edges for user: " + vertex["login"])
+        for (edge in vertex.outE("FOLLOWER")) {
+            if (edge == null) continue;
+            System.out.println("edge: " + edge)
+            System.out.println("edge: " + vertex["login"] + " => " + edge.getInVertex()["login"])
+            toEdge = to.addEdge(edge.getId(), to.v(vertex.getId()),
+                to.v(edge.getInVertex().getId()), edge.getLabel())
+            ElementHelper.copyProperties(edge, toEdge)
+        }
+    }
 
-	System.out.println("Writing graphml file")
-	GraphMLWriter writer = new GraphMLWriter()
-	writer.outputGraph(to, new FileOutputStream("follower.graphml"))
+    System.out.println("Writing graphml file")
+    GraphMLWriter writer = new GraphMLWriter()
+    writer.outputGraph(to, new FileOutputStream("follower.graphml"))
 }
 
 g = new Neo4jGraph(DBPATH)

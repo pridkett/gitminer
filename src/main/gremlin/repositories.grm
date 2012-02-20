@@ -9,9 +9,9 @@ import net.wagstrom.research.github.PropertyName
  * @param inmap an key/value pair map
  */
 def printSortedMap(Map inmap) {
-	for (p in inmap.sort{a,b -> a.key <=> b.key}) {
-		println "==>" + p.key + "=" + p.value
-	}
+    for (p in inmap.sort{a,b -> a.key <=> b.key}) {
+        println "==>" + p.key + "=" + p.value
+    }
 }
 
 DBPATH="/users/pwagstro/Documents/workspace/github/graph.20120125.db"
@@ -22,24 +22,24 @@ repos = ["ruby/ruby", "rails/rails", "mojombo/jekyll", "defunkt/resque", "mxcl/h
 repoidx = g.idx(IndexNames.REPOSITORY)
 
 for (reponame in repos) {
-	println "*************************"
-	printf("Repo: %s\n", [reponame])
-	repo = repoidx.get(IdCols.REPOSITORY, reponame).next()
-	printf("Commits: %d\n", [repo.in("REPOSITORY").count()])
-	printf("Deltas: %d\n", [repo.in("REPOSITORY").out("CHANGED").count()])
-	printf("Unique Files: %d\n", [repo.in("REPOSITORY").out("CHANGED").dedup().count()])
-	
-	printf("Issues: %d\n", [repo.out("ISSUE").count()])
-	for (event in eventTypes) {
-		issueIds = [:]
-		numEvent = 0
-		repo.out("ISSUE").out("ISSUE_EVENT").filter{it.event==event}.sideEffect{numEvent +=1}.in("ISSUE_EVENT").issue_id.groupCount(issueIds).iterate()
-		issueClosedHist = [:].withDefault{0}
-		issueIds.each{k,v -> issueClosedHist[v] += 1}
-		printf("event: %s num: %d\n", [event, numEvent])
-		printSortedMap(issueClosedHist)
-	}
-	println("\n\n")
+    println "*************************"
+    printf("Repo: %s\n", [reponame])
+    repo = repoidx.get(IdCols.REPOSITORY, reponame).next()
+    printf("Commits: %d\n", [repo.in("REPOSITORY").count()])
+    printf("Deltas: %d\n", [repo.in("REPOSITORY").out("CHANGED").count()])
+    printf("Unique Files: %d\n", [repo.in("REPOSITORY").out("CHANGED").dedup().count()])
+
+    printf("Issues: %d\n", [repo.out("ISSUE").count()])
+    for (event in eventTypes) {
+        issueIds = [:]
+        numEvent = 0
+        repo.out("ISSUE").out("ISSUE_EVENT").filter{it.event==event}.sideEffect{numEvent +=1}.in("ISSUE_EVENT").issue_id.groupCount(issueIds).iterate()
+        issueClosedHist = [:].withDefault{0}
+        issueIds.each{k,v -> issueClosedHist[v] += 1}
+        printf("event: %s num: %d\n", [event, numEvent])
+        printSortedMap(issueClosedHist)
+    }
+    println("\n\n")
 }
 
 g.shutdown()

@@ -33,29 +33,29 @@ printSortedMap(vertexTypes)
 println "\n\nDistribution of Properties by Type:"
 allProps = [:].withDefault{0}
 for (vt in vertexTypes.keySet().sort()) {
-	elems = []
-	typeidx[["type": vt]].fill(elems)
-	props = [:].withDefault{0}
-	elems._().map.sideEffect{it.keySet().each{props[it] += 1; allProps[it] += 1}}.iterate()
-	props.sort{a,b -> a.key <=> b.key}
-	println "\n\n***********************************************"
-	println "Vertex Type: " + vt
-	println "Number of Vertices: " + elems.size()
-	println "Properties:"
-	printSortedMap(props)
+    elems = []
+    typeidx[["type": vt]].fill(elems)
+    props = [:].withDefault{0}
+    elems._().map.sideEffect{it.keySet().each{props[it] += 1; allProps[it] += 1}}.iterate()
+    props.sort{a,b -> a.key <=> b.key}
+    println "\n\n***********************************************"
+    println "Vertex Type: " + vt
+    println "Number of Vertices: " + elems.size()
+    println "Properties:"
+    printSortedMap(props)
 
-	inEdgeLabels = [:]
-	outEdgeLabels = [:]
-	elems._().inE.label.groupCount(inEdgeLabels).iterate()
-	elems._().outE.label.groupCount(outEdgeLabels).iterate()
-	inEdgeLabels.sort{a,b -> a.key <=> b.key}
-	outEdgeLabels.sort{a,b -> a.key <=> b.key}
-	
-	println "In Edges:"
-	printSortedMap(inEdgeLabels)
-	
-	println "Out Edges:"
-	printSortedMap(outEdgeLabels)
+    inEdgeLabels = [:]
+    outEdgeLabels = [:]
+    elems._().inE.label.groupCount(inEdgeLabels).iterate()
+    elems._().outE.label.groupCount(outEdgeLabels).iterate()
+    inEdgeLabels.sort{a,b -> a.key <=> b.key}
+    outEdgeLabels.sort{a,b -> a.key <=> b.key}
+
+    println "In Edges:"
+    printSortedMap(inEdgeLabels)
+
+    println "Out Edges:"
+    printSortedMap(outEdgeLabels)
 }
 
 println "\nEdge Types: "
@@ -65,13 +65,13 @@ edgeLabels = [:]
 g.E.sideEffect{inEdges[it.label][it.inV.type.next()] += 1; outEdges[it.label][it.outV.type.next()] += 1}.label.groupCount(edgeLabels).iterate()
 println "\n\nDistribution of Edges Sources by Type"
 for (et in edgeLabels.keySet()) {
-	println "\n\n***********************************************"
-	println "Edge Label: " + et
-	println "Number of Edges: " + edgeLabels[et]
-	println "In Vertices:"
-	printSortedMap(inEdges[et])
-	println "Out Vertices:"
-	printSortedMap(outEdges[et])
+    println "\n\n***********************************************"
+    println "Edge Label: " + et
+    println "Number of Edges: " + edgeLabels[et]
+    println "In Vertices:"
+    printSortedMap(inEdges[et])
+    println "Out Vertices:"
+    printSortedMap(outEdges[et])
 }
 
 g.shutdown()
