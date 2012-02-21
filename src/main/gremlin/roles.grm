@@ -18,7 +18,7 @@ for (project in projects) {
     watchers = repo.in(EdgeType.REPOWATCHED).toList()
     // collaborators: have admin rights on projects
     collaborators = repo.out(EdgeType.REPOCOLLABORATOR).toList()
-    // contributors: have committd code to project
+    // contributors: have committed code to project
     contributors = repo.out(EdgeType.REPOCONTRIBUTOR).toList() + \
                    repo.in(EdgeType.REPOOWNER).dedup().toList()
     issueOwners = repo.out(EdgeType.ISSUE). \
@@ -50,43 +50,51 @@ for (project in projects) {
     allActive = (collaborators + contributors + issueOwners +
                 issueCommenters + pullRequestOwners +
                 openPullRequestOwners + closedPullRequestOwners +
-                pullRequestCommenters).unique()
+                pullRequestCommenters + mergedPullRequestOwners +
+                mergers + forkOwners).unique()
     allUsers = (allActive as Set) + watchers
-    allRounders = (collaborators as Set) + contributors
+    allCollaborators = (collaborators as Set) + contributors
 
     /*
      * Lurkers - only watching the repo, no forks, issues, etc
      */
     println "Lurkers"
     println Helpers.setDifferenceLeft(watchers, allActive).login.sort{a,b -> a <=> b}
+    
+    /*
+     * Issues - people active only on issues. This clearly needs a better name.
+     */
+    println "Issues"
+    println Helpers.setDifferenceLeft((issueOwners + issueCommenters).unique(),
+                                      (collaborators + contributors +
+                                       pullRequestOwners +
+                                       openPullRequestOwners + closedPullRequestOwners +
+                                       pullRequestCommenters + mergedPullRequestOwners +
+                                       mergers + forkOwners).unique()).login.sort{a,b -> a <=> b}
     /*
      * Independent - forked the repo, but no pull requests
      */
     println "Independent"
-    println Helpers.setDifferenceLeft(forkOwners, pullRequestOwners).login.sort{a,b -> a <=> b}
+    println Helpers.setDifferenceLeft(forkOwners, \
+                                      (pullRequestOwners + allCollaborators).unique()).login.sort{a,b -> a <=> b}
     /*
      * Wannabes - created a pull request, but never accepted
      */
     println "Wannabes"
-    println Helpers.setDifferenceLeft(openPullRequestOwners, closedPullRequestOwners).login.sort{a,b -> a <=> b}
-
+    println Helpers.setDifferenceLeft(closedPullRequestOwners, mergedPullRequestOwners).login.sort{a,b -> a <=> b}
+    
     /*
      * External Contributors - created a pull request, pull request
      * has been merged. No direct access.
      */
     println "External Contributors"
-    println Helpers.setDifferenceLeft(closedPullRequestOwners, collaborators).login.sort{a,b -> a <=> b}
+    println Helpers.setDifferenceLeft(mergedPullRequestOwners, collaborators).login.sort{a,b -> a <=> b}
 
     /*
-     * All Rounder - have direct access to push to the main repo
+     * Collaborators - have direct access to push to the main repo
      */
-    println "All Rounders"
-    println allRounders.login.sort{a,b -> a <=> b}
-
-    /*
-     * FIXME: what about people the role of issues? Is that orthogonal
-     * to these roles?
-     */
+    println "Collaborators"
+    println allCollaborators.login.sort{a,b -> a <=> b}
 }
 
 g.shutdown()
