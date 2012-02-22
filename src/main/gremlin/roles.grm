@@ -7,6 +7,107 @@ import net.wagstrom.research.github.IdCols
 import net.wagstrom.research.github.EdgeType
 import net.wagstrom.research.github.VertexType
 
+ROCKSTAR_THRESHOLD=0.20; // should be in the top 20% of followed links by people in the community
+PRODDER_TIME_THRESHOLD=14*86400*1000; // number of ms that an issue should be idle before a prodder picks it up
+
+
+def getAllGitAccounts(IndexableGraph g, Vertex user) {
+    // getting all of a users git accounts is tricky because they don't make all of their email addresses
+    // public. Luckily, using these two methods we do a pretty good job of getting all of a users git_user
+    // accounts
+    gitAccounts = user.out(EdgeType.EMAIL).in(EdgeType.EMAIL).filter{it.type==VertexType.GIT_USER}.dedup().toList()
+
+
+    // this code has been superseded as it isn't always that accurate and can
+    // grab accounts that don't belong to this user
+    // gitAccounts = (gitAccounts as Set) + user.out(EdgeType.ISSUEEVENTACTOR). \
+    //                  in(EdgeType.ISSUEEVENT).in(EdgeType.ISSUE). \
+    //                  filter{it == repo}.back(3).out(EdgeType.EVENTCOMMIT). \
+    //                  out(EdgeType.COMMITTER).dedup().toList()
+    
+    // here we need to be a little careful with finding additional accounts
+    // this pipe takes all of the commits this person has tied to an issue,
+    // and filters for those email addresses which are not associated with
+    // a user yet. It assumes, and this is a big assumption, that if one of
+    // these unparented links shows up in both COMMITTERS and PARENTS then
+    // the user probably owns that account
+    // traceAccountsCommitter = user.out(EdgeType.ISSUEEVENTACTOR).out(EdgeType.EVENTCOMMIT).out(EdgeType.COMMITTER). \
+    //                          filter{it.type=="GIT_USER"}.out("EMAIL").dedup().filter{it.in("EMAIL").filter{it.type == "USER"}.count() == 0}.back(4).toList()
+    // traceAccountsAuthor = user.out(EdgeType.ISSUEEVENTACTOR).out(EdgeType.EVENTCOMMIT).out(EdgeType.COMMITAUTHOR). \
+    //                          filter{it.type=="GIT_USER"}.out("EMAIL").dedup().filter{it.in("EMAIL").filter{it.type == "USER"}.count() == 0}.back(4).toList()
+    // traceAccounts = (traceAccountsCommitter as Set) + traceAccountsAuthor
+    // a slightly more complicated but more accurate version of the above commands
+    // this version requires that the supposedly unattached commit have the same author
+    // and committer.                            
+    traceAccounts = user.out(EdgeType.ISSUEEVENTACTOR).out(EdgeType.EVENTCOMMIT). \
+         filter{it.out(EdgeType.COMMITTER).filter{it.type==VertexType.GIT_USER}.out(EdgeType.EMAIL).next() == \
+                it.out(EdgeType.COMMITAUTHOR).filter{it.type==VertexType.GIT_USER}.out(EdgeType.EMAIL).next()}. \
+         out(EdgeType.COMMITTER). \
+         filter{it.type==VertexType.GIT_USER}.out(EdgeType.EMAIL).dedup().filter{it.in(EdgeType.EMAIL).filter{it.type == VertexType.USER}.count() == 0}. \
+         back(4).dedup().toList()
+            
+    gitAccounts = (gitAccounts as Set) + traceAccounts
+     
+    allGitAccounts = [] as Set
+    for (email in gitAccounts._().out("EMAIL").email.dedup().toList()) {
+        allGitAccounts += g.idx(IndexNames.EMAIL).get(IdCols.EMAIL, email)._().in("EMAIL").filter{it.type=="GIT_USER"}.toList()
+    }
+
+    return allGitAccounts
+}
+
+def getIssueInfo(IndexableGraph g, Vertex issue) {
+    // timeline is tuple of (eventDate, event)
+    // where event can actually be any of the actual issue, issue comment, or issue event
+    timeline = [Helpers.parseDate(issue.createdAt), issue]
+    
+    // first sort all of the issue comments
+    issue.out(EdgeType.ISSUECOMMENT).sideEffect{timeline.add([Helpers.parseDate(it.createdAt), it])}.iterate()
+    
+    // next add all the issue events
+    issue.out(EdgeType.ISSUEEVENT).sideEffect{timeline.add([Helpers.parseDate(it.createdAt), it])}.iterate()
+    
+    timeline.sort{a,b -> a[0] <=> b[0]}
+    
+    lastTime = null
+    // fixme: need an index here
+    for (element in timeline) {
+    }
+}
+
+/**
+ * Provides information about secondary attributes
+ * 
+ * Prodders
+ * Stewards 
+ * Code Warrior
+ * Super Star
+ * Community Rock Stars - individuals in the top 20% of contributors and also the top 20% of followers
+ */
+def devInfo(IndexableGraph g, Vertex user, Vertex repo, Map userSet) {
+    gitAccounts = getAllGitAccounts(g, user)
+                          
+    // project rock star: following
+    communityFollowing = user.out(EdgeType.FOLLOWING).filter{userSet["allUsers"].contains(it)}.count()
+    // project rock star: coding conrtributions
+    codingContributions = gitAccounts._().in(EdgeType.COMMITAUTHOR).out(EdgeType.REPOSITORY).filter{it == repo}.count()
+    
+    // community rock star: coding contributions
+    // NOTE: this ONLY covers contributions to the projects we've pulled
+    allCodingContributions = gitAccounts._().in(EdgeType.COMMITAUTHOR).count()
+    allCodingProjects = gitAccounts._().in(EdgeType.COMMITAUTHOR).out(EdgeType.REPOSITORY).dedup().count()
+    
+    // project merged pull requests
+    projectMergedPullRequests = user.in("PULLREQUEST_MERGED_BY").in("PULLREQUEST").filter{it==repo}.count()
+    
+    printf("User: %s\n", user.login)
+    printf("  Community Following: %d\n", communityFollowing)
+    printf("    Community Commits: %d\n", codingContributions)
+    printf("          All Commits: %d\n", allCodingContributions)
+    printf("         All Projects: %d\n", allCodingProjects)
+    printf(" Pull Requests Merged: %d\n", projectMergedPullRequests)
+}
+
 g = new Neo4jGraph(Defaults.DBPATH)
 projects = ["tinkerpop/gremlin"]
 
@@ -47,10 +148,10 @@ for (project in projects) {
     // FIXME: this should be converted to constants
     committers = repo.in("REPOSITORY").out("AUTHOR").filter{it.type=="GIT_USER"}.out("EMAIL").dedup().in("EMAIL").filter{it.type=="USER"}
      
-    allActive = (collaborators + contributors + issueOwners +
-                issueCommenters + pullRequestOwners +
-                openPullRequestOwners + closedPullRequestOwners +
-                pullRequestCommenters + mergedPullRequestOwners +
+    allActive = (collaborators + contributors + issueOwners + \
+                issueCommenters + pullRequestOwners + \
+                openPullRequestOwners + closedPullRequestOwners + \
+                pullRequestCommenters + mergedPullRequestOwners + \
                 mergers + forkOwners).unique()
     allUsers = (allActive as Set) + watchers
     allCollaborators = (collaborators as Set) + contributors
@@ -95,6 +196,11 @@ for (project in projects) {
      */
     println "Collaborators"
     println allCollaborators.login.sort{a,b -> a <=> b}
+
+    userSet = ["allUsers": allUsers]
+    for (collab in allCollaborators) {
+        devInfo(g, collab, repo, userSet)
+    }
 }
 
 g.shutdown()

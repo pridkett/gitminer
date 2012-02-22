@@ -16,4 +16,8 @@ class Helpers {
     static setDifferenceLeft(Collection s1, Collection s2) {
         return s1.intersect(setDifference(s1, s2))
     }
+    
+    static int parseDate(String s) {
+        return Date.parse(Defaults.DATE_FORMAT, s).getTime()
+    }
 }
