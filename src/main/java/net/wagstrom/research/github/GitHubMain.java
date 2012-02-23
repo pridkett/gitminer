@@ -69,7 +69,6 @@ public class GitHubMain {
         ArrayList <String> users = new ArrayList<String> ();
         ArrayList <String> organizations = new ArrayList<String> ();
         GitHubServiceFactory factory = GitHubServiceFactory.newInstance();
-
         p = GithubProperties.props();
 
         // set the maximum rate as specificed in the configuration properties file
