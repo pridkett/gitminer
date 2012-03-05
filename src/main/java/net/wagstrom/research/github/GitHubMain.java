@@ -153,7 +153,6 @@ public class GitHubMain {
 
                 // yay! full declarations! they're AWESOME!
                 org.eclipse.egit.github.core.Repository repo = rmv3.getRepository(projsplit[0], projsplit[1]);
-
                 bp.saveRepository(rm.getRepositoryInformation(projsplit[0], projsplit[1]));
 
                 if (p.getProperty("net.wagstrom.research.github.miner.repositories.collaborators", "true").equals("true"))
@@ -166,47 +165,51 @@ public class GitHubMain {
                     bp.saveRepositoryForks(proj, rm.getForks(projsplit[0], projsplit[1]));
 
                 if (p.getProperty("net.wagstrom.research.github.miner.repositories.issues","true").equals("true")) {
-                    Collection<org.eclipse.egit.github.core.Issue> issues3 = imv3.getAllIssues(projsplit[0], projsplit[1]);
-                    if (issues3 != null) {
-                        bp.saveRepositoryIssues(repo, issues3);
-
-                        Map<Integer, Date> savedIssues = bp.getIssueCommentsAddedAt(proj);
-                        log.trace("SavedIssues Keys: {}", savedIssues.keySet());
-
-                        for (org.eclipse.egit.github.core.Issue issue : issues3) {
-                            String issueId = repo.generateId() + ":" + issue.getNumber();
-                            if (!needsUpdate(savedIssues.get(issue.getNumber()), true)) {
-                                log.debug("Skipping fetching comments for issue {} - recently updated {}", issueId, savedIssues.get(issue.getNumber()));
-                                continue;
+                    if (repo.isHasIssues()) {
+                        Collection<org.eclipse.egit.github.core.Issue> issues3 = imv3.getAllIssues(projsplit[0], projsplit[1]);
+                        if (issues3 != null) {
+                            bp.saveRepositoryIssues(repo, issues3);
+    
+                            Map<Integer, Date> savedIssues = bp.getIssueCommentsAddedAt(proj);
+                            log.trace("SavedIssues Keys: {}", savedIssues.keySet());
+    
+                            for (org.eclipse.egit.github.core.Issue issue : issues3) {
+                                String issueId = repo.generateId() + ":" + issue.getNumber();
+                                if (!needsUpdate(savedIssues.get(issue.getNumber()), true)) {
+                                    log.debug("Skipping fetching comments for issue {} - recently updated {}", issueId, savedIssues.get(issue.getNumber()));
+                                    continue;
+                                }
+                                log.debug("Pulling comments for issue: {} - {}", issueId, savedIssues.get(issue.getNumber()));
+                                try {
+                                    // Fetch comments BOTH ways -- using the v2 and the v3 apis
+                                    bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(projsplit[0], projsplit[1], issue.getNumber()));
+                                    bp.saveIssueComments(repo, issue, imv3.getIssueComments(repo, issue));
+                                } catch (NullPointerException e) {
+                                    log.error("NullPointerException saving issue comments: {}:{}", proj, issue);
+                                }
                             }
-                            log.debug("Pulling comments for issue: {} - {}", issueId, savedIssues.get(issue.getNumber()));
-                            try {
-                                // Fetch comments BOTH ways -- using the v2 and the v3 apis
-                                bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(projsplit[0], projsplit[1], issue.getNumber()));
-                                bp.saveIssueComments(repo, issue, imv3.getIssueComments(repo, issue));
-                            } catch (NullPointerException e) {
-                                log.error("NullPointerException saving issue comments: {}:{}", proj, issue);
+    
+                            savedIssues = bp.getIssueEventsAddedAt(repo);
+                            for (org.eclipse.egit.github.core.Issue issue : issues3) {
+                                String issueId = repo.generateId() + ":" + issue.getNumber();
+                                if (!needsUpdate(savedIssues.get(issue.getNumber()), true)) {
+                                    log.debug("Skipping fetching events for issue {} - recently updated - {}", new Object[]{issueId, savedIssues.get(issue.getNumber())});
+                                    continue;
+                                }
+                                log.debug("Pulling events for issue: {} - {}", new Object[]{issueId, savedIssues.get(issue.getNumber())});
+                                Collection<IssueEvent> evts = imv3.getIssueEvents(repo, issue);
+                                log.trace("issue {} events: {}", new Object[]{issueId, evts.size()});
+                                try {
+                                    bp.saveIssueEvents(repo, issue, evts);
+                                } catch (NullPointerException e) {
+                                    log.error("NullPointer exception saving issue events: {}", issueId);
+                                }
                             }
-                        }
-
-                        savedIssues = bp.getIssueEventsAddedAt(repo);
-                        for (org.eclipse.egit.github.core.Issue issue : issues3) {
-                            String issueId = repo.generateId() + ":" + issue.getNumber();
-                            if (!needsUpdate(savedIssues.get(issue.getNumber()), true)) {
-                                log.debug("Skipping fetching events for issue {} - recently updated - {}", new Object[]{issueId, savedIssues.get(issue.getNumber())});
-                                continue;
-                            }
-                            log.debug("Pulling events for issue: {} - {}", new Object[]{issueId, savedIssues.get(issue.getNumber())});
-                            Collection<IssueEvent> evts = imv3.getIssueEvents(repo, issue);
-                            log.trace("issue {} events: {}", new Object[]{issueId, evts.size()});
-                            try {
-                                bp.saveIssueEvents(repo, issue, evts);
-                            } catch (NullPointerException e) {
-                                log.error("NullPointer exception saving issue events: {}", issueId);
-                            }
+                        } else {
+                            log.warn("No issues for repository {}/{} - probably disabled", projsplit[0], projsplit[1]);
                         }
                     } else {
-                        log.warn("No issues for repository {}/{} - probably disabled", projsplit[0], projsplit[1]);
+                        log.warn("Repository {} does not have issues enabled", repo.generateId());
                     }
                 }
 

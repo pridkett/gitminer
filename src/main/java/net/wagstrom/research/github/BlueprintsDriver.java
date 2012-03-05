@@ -137,12 +137,12 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
                     continue;
                 }
                 if (keys.contains(datekey)) {
-                    Date d = dateFormatter.parse((String)v.getProperty(datekey));
+                    Date d = propertyToDate(v.getProperty(datekey));
                     m.put((T)v.getProperty(idkey), d);
                 } else {
                     m.put((T)v.getProperty(idkey), null);
                 }
-            } catch (ParseException e) {
+            } catch (Exception e) {
                 log.error("Invalid {} for user: {}", datekey, (String)v.getProperty(idkey));
             }
         }
@@ -169,7 +169,6 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             comment.setId(Long.parseLong(disc.getId()));
         } catch (NumberFormatException e) {
             log.debug("Discussion has a null id: {}", disc);
-            // comment.setId(null);
         }
         comment.setUpdatedAt(disc.getUpdatedAt());
         comment.setUser(disc.getUser().getLogin());
@@ -433,13 +432,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      */
     public Date getRepositoryLastUpdated(String reponame) {
         Vertex node = getOrCreateRepository(reponame);
-        try {
-            Date rv = dateFormatter.parse((String)node.getProperty("last_updated"));
-            return rv;
-        } catch (ParseException e) {
-            log.error("Error parsing last_updated date for {}: {}", reponame, node.getProperty("last_updated"));
-            return null;
-        }
+        return propertyToDate(node.getProperty("last_updated"));
     }
 
     protected Vertex saveCommentHelper(Comment comment, String edgetype) {
@@ -822,7 +815,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
     public Vertex savePullRequestReviewComment(PullRequestReviewComment comment) {
         log.trace("savePullRequestReviewComment: enter");
-        String commentId = comment.getCommitId() + ":" + comment.getCreatedAt()==null?"UNKNOWNDATE":dateFormatter.format(comment.getCreatedAt());
+        String commentId = comment.getCommitId() + ":" + comment.getCreatedAt()==null?"UNKNOWNDATE":String.valueOf(comment.getCreatedAt().getTime()/1000L);
         Vertex node = getOrCreatePullRequestReviewComment(commentId);
         setProperty(node, PropertyName.BODY, comment.getBody());
         setProperty(node, PropertyName.COMMIT_ID, comment.getCommitId());

@@ -24,7 +24,7 @@ for (projname in Defaults.PROJECTS) {
         println("issue: " + issue)
         printf("Issue: %d\n", issue.gitHubId)
         for (mentioned in issue.out(EdgeType.ISSUEEVENT).filter{it.event=="mentioned"}) {
-            mentionedDate = Date.parse(Defaults.DATE_FORMAT, mentioned.createdAt).getTime()
+            mentionedDate = Helpers.timestampToDate(mentioned.createdAt)
 
             println("Mentioned: " + mentioned)
             if (mentioned.in(EdgeType.ISSUEEVENTACTOR).count() == 0) {
@@ -64,8 +64,8 @@ for (projname in Defaults.PROJECTS) {
                     searchString = "@" + person.name
                     println "Ughh...Abusive search for: " + searchString
                     if (pr.body != null && pr.body.indexOf(searchString) != -1) {
-                        pullrequestDate = Date.parse(Defaults.DATE_FORMAT, pr.createdAt)
-                        if (Math.abs(pullrequestDate.getTime() - mentionedDate) < Defaults.MAX_DELTA) {
+                        pullrequestDate = Helpers.timestampToDate(pr.createdAt)
+                        if (Helpers.dateDifference(pullrequestDate, mentionedDate) < Defaults.MAX_DELTA) {
                             person2 = people2[pr.in(EdgeType.PULLREQUESTOWNER).login.next()]
                         }
                     }
@@ -74,20 +74,22 @@ for (projname in Defaults.PROJECTS) {
                             println(discussion)
                             if (discussion.message != null && discussion.message.indexOf(searchString) != -1) {
                                 println("a")
-                                discussionDate = Date.parse(Defaults.DATE_FORMAT, discussion.commitedDate)
+                                discussionDate = Helpers.timestampToDate(discussion.commitedDate)
                                 println("a1")
-                                if (Math.abs(discussionDate.getTime() - mentionedDate) < Defaults.MAX_DELTA) {
+                                if (Math.abs(Helpers.dateDifference(discussionDate, mentionedDate)) < Defaults.MAX_DELTA) {
                                     println("a2")
                                     person2 = people2[dicsussion.in("DISCUSSION_USER").login.next()]
                                 }
                             } else if (discussion.body != null && discussion.body.indexOf(searchString) != -1) {
                                 println("b")
-                                discussionDate = Date.parse(Defaults.DATE_FORMAT, discussion.createdAt)
                                 println("b1")
-                                if (Math.abs(discussionDate.getTime() - mentionedDate) < Defaults.MAX_DELTA) {
+                                discussionDate = Helpers.timestampToDate(discussion.createdAt)
+                                println discussionDate.metaClass
+                                if (Math.abs(Helpers.dateDifference(discussionDate, mentionedDate)) < Defaults.MAX_DELTA) {
                                     println("b2")
                                     person2 = people2[pr.in(EdgeType.PULLREQUESTOWNER).login.next()]
                                 }
+                                println("b3")
                             }
                             println("discussion checked")
                         }
@@ -99,9 +101,9 @@ for (projname in Defaults.PROJECTS) {
                 } else {
                     println("XXXX: unable to find someone within time/date boundaries")
                 }
-            } else if (issue.out(EdgeType.ISSUECOMMENT).filter{Math.abs(Date.parse(Defaults.DATE_FORMAT, it.createdAt).getTime() - mentionedDate) < Defaults.MAX_DELTA}.in(EdgeType.ISSUECOMMENTOWNER).login.count() != 0) {
+            } else if (issue.out(EdgeType.ISSUECOMMENT).filter{Math.abs(Helpers.dateDifference(Helpers.timestampToDate(it.createdAt), mentionedDate)) < Defaults.MAX_DELTA}.in(EdgeType.ISSUECOMMENTOWNER).login.count() != 0) {
                 println("issue comments (fuzzy!")
-                person2 = people2[issue.out(EdgeType.ISSUECOMMENT).filter{Math.abs(Date.parse(Defaults.DATE_FORMAT, it.createdAt).getTime() - mentionedDate) < Defaults.MAX_DELTA}.in(EdgeType.ISSUECOMMENTOWNER).login.next()]
+                person2 = people2[issue.out(EdgeType.ISSUECOMMENT).filter{Math.abs(Helpers.dateDifference(Helpers.timestampToDate(it.createdAt), mentionedDate)) < Defaults.MAX_DELTA}.in(EdgeType.ISSUECOMMENTOWNER).login.next()]
                 println("found it!")
                 g3.addEdge(person2, person, "MENTIONED")
             } else {

@@ -1,45 +1,50 @@
+/**
+ * Generate summary statistics about the number of times each event
+ * occurred on issues related to each repo.
+ * 
+ * Repo: mxcl/homebrew
+ * Commits: 1735
+ * Deltas: 0
+ * Unique Files: 0
+ * Issues: 10604
+ * event: closed num: 5768
+ * ==>1=5340
+ * ==>2=183
+ * ==>3=18
+ * ==>4=2
+ * 
+ * For example, this means there have 5768 close events. 5340 issues
+ * have only a single close event. 183 have two close events, etc.
+ */
 import net.wagstrom.research.github.IndexNames
 import net.wagstrom.research.github.IdCols
 import net.wagstrom.research.github.VertexType
 import net.wagstrom.research.github.PropertyName
+import net.wagstrom.research.github.EdgeType
 
-/**
- * simple helper function to do a pretty print of a map
- *
- * @param inmap an key/value pair map
- */
-def printSortedMap(Map inmap) {
-    for (p in inmap.sort{a,b -> a.key <=> b.key}) {
-        println "==>" + p.key + "=" + p.value
-    }
-}
-
-DBPATH="/users/pwagstro/Documents/workspace/github/graph.20120125.db"
-g = new Neo4jGraph(DBPATH)
-
-repos = ["ruby/ruby", "rails/rails", "mojombo/jekyll", "defunkt/resque", "mxcl/homebrew", "lifo/docrails", "puppetlabs/puppet", "tinkerpop/gremlin", "tinkerpop/blueprints", "tinkerpop/pipes", "tinkerpop/rexster", "tinkerpop/frames", "rack/rack", "sinatra/sinatra"]
+g = new Neo4jGraph(Defaults.DBPATH)
 
 repoidx = g.idx(IndexNames.REPOSITORY)
 
-for (reponame in repos) {
+for (reponame in Defaults.PROJECTS) {
     println "*************************"
-    printf("Repo: %s\n", [reponame])
+    println "Repo: " + reponame
     repo = repoidx.get(IdCols.REPOSITORY, reponame).next()
-    printf("Commits: %d\n", [repo.in("REPOSITORY").count()])
-    printf("Deltas: %d\n", [repo.in("REPOSITORY").out("CHANGED").count()])
-    printf("Unique Files: %d\n", [repo.in("REPOSITORY").out("CHANGED").dedup().count()])
+    println "Commits: " + repo.in(EdgeType.REPOSITORY).count()
+    println "Deltas: " + repo.in(EdgeType.REPOSITORY).out(EdgeType.CHANGED).count()
+    println "Unique Files: " + repo.in(EdgeType.REPOSITORY).out(EdgeType.CHANGED).dedup().count()
 
-    printf("Issues: %d\n", [repo.out("ISSUE").count()])
-    for (event in eventTypes) {
+    println "Issues: " + repo.out(EdgeType.ISSUE).count()
+    for (event in Defaults.EVENT_TYPES) {
         issueIds = [:]
         numEvent = 0
-        repo.out("ISSUE").out("ISSUE_EVENT").filter{it.event==event}.sideEffect{numEvent +=1}.in("ISSUE_EVENT").issue_id.groupCount(issueIds).iterate()
+        repo.out(EdgeType.ISSUE).out(EdgeType.ISSUEEVENT).filter{it.event==event}.sideEffect{numEvent +=1}.in(EdgeType.ISSUEEVENT).issue_id.groupCount(issueIds).iterate()
         issueClosedHist = [:].withDefault{0}
         issueIds.each{k,v -> issueClosedHist[v] += 1}
-        printf("event: %s num: %d\n", [event, numEvent])
-        printSortedMap(issueClosedHist)
+        println "event: " + event + " num: " + numEvent
+        Helpers.printSortedMap(issueClosedHist)
     }
-    println("\n\n")
+    println "\n"
 }
 
 g.shutdown()
