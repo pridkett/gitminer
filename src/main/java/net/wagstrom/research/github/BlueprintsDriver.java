@@ -16,9 +16,7 @@
 
 package net.wagstrom.research.github;
 
-import java.text.ParseException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -460,7 +458,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             createEdgeIfNotExist(node, author, EdgeType.COMMITAUTHOR);
         }
         setProperty(node, PropertyName.AUTHORED_DATE, commit.getAuthoredDate());
-        setProperty(node, PropertyName.COMMITED_DATE, commit.getCommittedDate());
+        setProperty(node, PropertyName.COMMITTED_DATE, commit.getCommittedDate());
         if (commit.getCommitter() != null) {
             Vertex committer = saveUser(commit.getCommitter());
             createEdgeIfNotExist(node, committer, EdgeType.COMMITTER);
