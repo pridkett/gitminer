@@ -570,7 +570,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         // Fix for the v3 API always creating a pull request object
         if (issue.getPullRequest() != null && issue.getPullRequest().getId() != 0L) {
             org.eclipse.egit.github.core.PullRequest pr = issue.getPullRequest();
-            Vertex prnode = saveRepositoryPullRequest(repo, pr);
+            Vertex prnode = savePullRequest(repo, pr);
             createEdgeIfNotExist(issuenode, prnode, EdgeType.PULLREQUEST);
         }
         setProperty(issuenode, PropertyName.STATE, issue.getState().toString());
@@ -1080,23 +1080,22 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return mapper;
     }
 
-    private Vertex saveRepositoryPullRequest(
+    private Vertex savePullRequest(
             org.eclipse.egit.github.core.Repository repo,
             org.eclipse.egit.github.core.PullRequest request) {
-        return saveRepositoryPullRequest(repo, request, false);
+        return savePullRequest(repo, request, false);
     }
 
     /**
-     * {@link #saveRepositoryPullRequest(String, PullRequest, boolean)} updated for v3 api
+     * {@link #savePullRequest(String, PullRequest, boolean)} updated for v3 api
      * @param repo
      * @param request
      * @param full
      * @return
      */
-    public Vertex saveRepositoryPullRequest(
+    public Vertex savePullRequest(
             org.eclipse.egit.github.core.Repository repo,
             org.eclipse.egit.github.core.PullRequest request, boolean full) {
-        log.trace("saveRepositoryPullRequest: enter");
         log.trace("Saving pull request {}", request.getNumber());
         log.trace(request.toString());
         String reponame = repo.generateId();
@@ -1181,7 +1180,6 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             setProperty(pullnode, PropertyName.SYS_UPDATE_COMPLETE.toString(), new Date());
         }
 
-        log.trace("saveRepositoryPullRequest: exit");
         return pullnode;
     }
 
@@ -1195,8 +1193,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param request
      * @return
      */
-    public Vertex saveRepositoryPullRequest(String reponame, PullRequest request) {
-        return saveRepositoryPullRequest(reponame, request, false);
+    public Vertex savePullRequest(String reponame, PullRequest request) {
+        return savePullRequest(reponame, request, false);
     }
 
     /**
@@ -1207,8 +1205,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param full whether or not this is a full update. If true then it sets parameters such as sys:discussions_added
      * @return
      */
-    public Vertex saveRepositoryPullRequest(String reponame, PullRequest request, boolean full) {
-        log.trace("saveRepositoryPullRequest: enter");
+    public Vertex savePullRequest(String reponame, PullRequest request, boolean full) {
         log.trace("Saving pull request {}", request.getNumber());
         log.trace(request.toString());
         Vertex reponode = getOrCreateRepository(reponame);
@@ -1253,28 +1250,27 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             setProperty(pullnode, PropertyName.SYS_DISCUSSIONS_ADDED.toString(), new Date());
             setProperty(pullnode, PropertyName.SYS_UPDATE_COMPLETE.toString(), new Date());
         }
-        log.trace("saveRepositoryPullRequest: exit");
         return pullnode;
     }
 
     /**
-     * {@link #saveRepositoryPullRequests(String, Collection)} updated for v3 api
+     * {@link #savePullRequests(String, Collection)} updated for v3 api
      * 
      * @param repo
      * @param requests3
      */
-    public void saveRepositoryPullRequests(
+    public void savePullRequests(
             org.eclipse.egit.github.core.Repository repo,
             Collection<org.eclipse.egit.github.core.PullRequest> requests3) {
         for (org.eclipse.egit.github.core.PullRequest request : requests3) {
-            saveRepositoryPullRequest(repo, request);
+            savePullRequest(repo, request);
         }
     }
 
     // FIXME: this code does not look like it functions properly
-    public void saveRepositoryPullRequests(String project, Collection<PullRequest> requests) {
+    public void savePullRequests(String project, Collection<PullRequest> requests) {
         for (PullRequest request : requests) {
-            saveRepositoryPullRequest(project, request);
+            savePullRequest(project, request);
         }
     }
 

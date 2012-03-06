@@ -216,7 +216,7 @@ public class GitHubMain {
                 if (p.getProperty("net.wagstrom.research.github.miner.repositories.pullrequests", "true").equals("true")) {
                     Collection<org.eclipse.egit.github.core.PullRequest> requests3 = pmv3.getAllPullRequests(repo);
                     if (requests3 != null) {
-                        bp.saveRepositoryPullRequests(repo, requests3);
+                        bp.savePullRequests(repo, requests3);
 
                         Map<Integer, Date> savedRequests = bp.getPullRequestDiscussionsAddedAt(proj);
                         log.trace("SavedPullRequest Keys: {}", savedRequests.keySet());
@@ -229,8 +229,8 @@ public class GitHubMain {
                             }
                             try {
                                 // Fetch it BOTH ways -- using v2 and v3 api as they provide different information
-                                bp.saveRepositoryPullRequest(proj, pm.getPullRequest(projsplit[0], projsplit[1], request.getNumber()), true);
-                                bp.saveRepositoryPullRequest(repo, pmv3.getPullRequest(repo, request.getNumber()), true);
+                                bp.savePullRequest(proj, pm.getPullRequest(projsplit[0], projsplit[1], request.getNumber()), true);
+                                bp.savePullRequest(repo, pmv3.getPullRequest(repo, request.getNumber()), true);
                             } catch (NullPointerException e) {
                                 log.error("NullPointerException saving pull request: {}:{}", proj, request.getNumber());
                             }
