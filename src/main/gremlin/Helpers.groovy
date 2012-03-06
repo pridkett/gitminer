@@ -43,7 +43,6 @@ class Helpers {
     }
 
     static int parseDate(String s) {
-        println("bbbbbbb")
         return Date.parse(Defaults.DATE_FORMAT, s).getTime()/1000
     }
 
@@ -55,6 +54,10 @@ class Helpers {
 
     static int dateDifference(Date d1, Date d2) {
         return (int)((d1.getTime() - d2.getTime())/1000L)
+    }
+    
+    static int dateDifferenceAbs(Date d1, Date d2) { 
+        return Math.abs(dateDifference(d1, d2))
     }
     
     static Collection getAllRepositoryUsers(repo) {

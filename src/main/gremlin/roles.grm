@@ -8,8 +8,8 @@ import net.wagstrom.research.github.EdgeType
 import net.wagstrom.research.github.VertexType
 
 ROCKSTAR_THRESHOLD=0.20; // should be in the top 20% of followed links by people in the community
-PRODDER_TIME_THRESHOLD=14*86400*1000; // number of ms that an issue should be idle before a prodder picks it up
-
+PRODDER_TIME_THRESHOLD=14*86400 // number of seconds that an issue should be idle before a prodder picks it up
+                                // we need to validate this by each project 
 
 def getAllGitAccounts(IndexableGraph g, Vertex user) {
     // getting all of a users git accounts is tricky because they don't make all of their email addresses
@@ -49,36 +49,93 @@ def getAllGitAccounts(IndexableGraph g, Vertex user) {
     gitAccounts = (gitAccounts as Set) + traceAccounts
      
     allGitAccounts = [] as Set
-    for (email in gitAccounts._().out("EMAIL").email.dedup().toList()) {
-        allGitAccounts += g.idx(IndexNames.EMAIL).get(IdCols.EMAIL, email)._().in("EMAIL").filter{it.type=="GIT_USER"}.toList()
+    for (email in gitAccounts._().out(EdgeType.EMAIL).email.dedup().toList()) {
+        allGitAccounts += g.idx(IndexNames.EMAIL).get(IdCols.EMAIL, email)._().in(EdgeType.EMAIL).filter{it.type==VertexType.GIT_USER}.toList()
     }
 
     return allGitAccounts
 }
 
-def getIssueInfo(IndexableGraph g, Vertex issue) {
-    // timeline is tuple of (eventDate, event)
-    // where event can actually be any of the actual issue, issue comment, or issue event
-    timeline = [Helpers.parseDate(issue.createdAt), issue]
-    
-    // first sort all of the issue comments
-    issue.out(EdgeType.ISSUECOMMENT).sideEffect{timeline.add([Helpers.parseDate(it.createdAt), it])}.iterate()
-    
-    // next add all the issue events
-    issue.out(EdgeType.ISSUEEVENT).sideEffect{timeline.add([Helpers.parseDate(it.createdAt), it])}.iterate()
-    
-    timeline.sort{a,b -> a[0] <=> b[0]}
-    
-    lastTime = null
-    // fixme: need an index here
-    for (element in timeline) {
+def getUserFromVertex(Vertex v) {
+    switch (v.type) {
+        case VertexType.ISSUE:
+            return v.in(EdgeType.ISSUEOWNER).next()
+            break
+        
+        case VertexType.COMMENT:
+            return v.in(EdgeType.ISSUECOMMENTOWNER).next()
+            break
+        
+        case VertexType.ISSUE_EVENT:
+            return v.in(EdgeType.ISSUEEVENTACTOR).next()
+            break
+        
+        default:
+            println "Unable to get User for vertex id=" + v.id + " type: " + v.type
+            return null;
+            break
     }
 }
 
 /**
- * Provides information about secondary attributes
+ * calculate the users who are prodders
  * 
- * Prodders
+ * question: can users be prodders if they follow their own activities?
+ * answer: yes
+ * question: can user be prodders on issues they own
+ * answer: yes
+ */
+def getIssueInfo(IndexableGraph g, Vertex issue) {
+    prodders = []
+    
+    // timeline is tuple of (eventDate, event)
+    // where event can actually be any of the actual issue, issue comment, or issue event
+    timeline = [[Helpers.timestampToDate(issue.createdAt), issue]]
+    
+    // first sort all of the issue comments
+    issue.out(EdgeType.ISSUECOMMENT). \
+          sideEffect{timeline.add([Helpers.timestampToDate(it.createdAt), it])}. \
+          iterate()
+    
+    // next add all the issue events
+    issue.out(EdgeType.ISSUEEVENT). \
+          hasNot("event", "subscribed"). \
+          hasNot("event", "unsubscribed"). \
+          hasNot("event", "mentioned"). \
+          sideEffect{timeline.add([Helpers.timestampToDate(it.createdAt), it])}. \
+          iterate()
+    
+    // next, if this is actually a pull request, we need to add the
+    // actions associated with the pull request
+    try { 
+        pullRequest = g.idx(IndexNames.PULLREQUEST).get(IdCols.PULLREQUEST, issue.issue_id).next() 
+        // fixme: add in pullrequest actions
+    } catch (java.util.NoSuchElementException e) { }
+    
+    timeline.sort{a,b -> a[0] <=> b[0]}
+    
+    lastTime = null
+    lastAction = null
+    for (element in timeline) {
+        when = element[0]
+        action = element[1]
+    
+        if (lastTime != null && Helpers.dateDifferenceAbs(when, lastTime) > PRODDER_TIME_THRESHOLD) {
+            if (getUserFromVertex(action).login == "name") {
+                println "action: " +  action  + " issue: " + issue.issue_id
+            }
+            prodders.add(getUserFromVertex(action))
+        }
+        lastTime = when
+        lastAction = action
+    }
+    return prodders as Set
+}
+
+/**
+ * Provides information about secondary attributes that can be used to calculate
+ * other roles
+ * 
  * Stewards 
  * Code Warrior
  * Super Star
@@ -96,16 +153,28 @@ def devInfo(IndexableGraph g, Vertex user, Vertex repo, Map userSet) {
     // NOTE: this ONLY covers contributions to the projects we've pulled
     allCodingContributions = gitAccounts._().in(EdgeType.COMMITAUTHOR).count()
     allCodingProjects = gitAccounts._().in(EdgeType.COMMITAUTHOR).out(EdgeType.REPOSITORY).dedup().count()
+    // look at people following...
     
     // project merged pull requests
-    projectMergedPullRequests = user.in("PULLREQUEST_MERGED_BY").in("PULLREQUEST").filter{it==repo}.count()
+    projectMergedPullRequests = user.in(EdgeType.PULLREQUESTMERGEDBY).in(EdgeType.PULLREQUEST).filter{it==repo}.count()
     
-    printf("User: %s\n", user.login)
-    printf("  Community Following: %d\n", communityFollowing)
-    printf("    Community Commits: %d\n", codingContributions)
-    printf("          All Commits: %d\n", allCodingContributions)
-    printf("         All Projects: %d\n", allCodingProjects)
-    printf(" Pull Requests Merged: %d\n", projectMergedPullRequests)
+//    println "User: " + user.login
+//    println "  Community Following: " + communityFollowing
+//    println "    Community Commits: " + codingContributions
+//    println "          All Commits: " + allCodingContributions
+//    println "         All Projects: " + allCodingProjects
+//    println " Pull Requests Merged: " + projectMergedPullRequests
+
+    return ["communityFollowing": communityFollowing,
+            "codingContributions": codingContributions,
+            "allCodingContributions": allCodingContributions,
+            "allCodingProjects": allCodingProjects,
+            "projectPullRequestsMerged": projectMergedPullRequests]
+}
+
+def devInfoThreshold(Map devInfo, String key, float threshold) {
+    int numEntries = devInfo.size() * threshold
+    return devInfo.sort{a,b -> a.value[key] <=> b.value[key]}.keySet().asList().reverse()[0..numEntries] as Set    
 }
 
 g = new Neo4jGraph(Defaults.DBPATH)
@@ -119,6 +188,7 @@ for (project in projects) {
     watchers = repo.in(EdgeType.REPOWATCHED).toList()
     // collaborators: have admin rights on projects
     collaborators = repo.out(EdgeType.REPOCOLLABORATOR).toList()
+    
     // contributors: have committed code to project
     contributors = repo.out(EdgeType.REPOCONTRIBUTOR).toList() + \
                    repo.in(EdgeType.REPOOWNER).dedup().toList()
@@ -145,8 +215,7 @@ for (project in projects) {
     forkOwners = repo.out(EdgeType.REPOFORK). \
                       in(EdgeType.REPOOWNER).dedup().toList()
 
-    // FIXME: this should be converted to constants
-    committers = repo.in("REPOSITORY").out("AUTHOR").filter{it.type=="GIT_USER"}.out("EMAIL").dedup().in("EMAIL").filter{it.type=="USER"}
+    committers = repo.in(EdgeType.REPOSITORY).out(EdgeType.COMMITAUTHOR).filter{it.type==VertexType.GIT_USER}.out(EdgeType.EMAIL).dedup().in(EdgeType.EMAIL).filter{it.type==VertexType.USER}
      
     allActive = (collaborators + contributors + issueOwners + \
                 issueCommenters + pullRequestOwners + \
@@ -166,11 +235,11 @@ for (project in projects) {
      * Issues - people active only on issues. This clearly needs a better name.
      */
     println "Issues"
-    println Helpers.setDifferenceLeft((issueOwners + issueCommenters).unique(),
+    println Helpers.setDifferenceLeft((issueOwners + issueCommenters + pullRequestCommenters).unique(),
                                       (collaborators + contributors +
                                        pullRequestOwners +
                                        openPullRequestOwners + closedPullRequestOwners +
-                                       pullRequestCommenters + mergedPullRequestOwners +
+                                       mergedPullRequestOwners +
                                        mergers + forkOwners).unique()).login.sort{a,b -> a <=> b}
     /*
      * Independent - forked the repo, but no pull requests
@@ -198,9 +267,25 @@ for (project in projects) {
     println allCollaborators.login.sort{a,b -> a <=> b}
 
     userSet = ["allUsers": allUsers]
+    devStats = [:]
     for (collab in allCollaborators) {
-        devInfo(g, collab, repo, userSet)
+        devStats[collab.login] = devInfo(g, collab, repo, userSet)
     }
+
+    topFollowers = devInfoThreshold(devStats, "communityFollowing", ROCKSTAR_THRESHOLD)
+    topCoders = devInfoThreshold(devStats, "codingContributions", ROCKSTAR_THRESHOLD)
+    println "Community Rock Stars"
+    println topFollowers.intersect(topCoders)
+       
+    allProdders = [:].withDefault{0}
+    for (issue in repo.out(EdgeType.ISSUE)) {
+        prodders = getIssueInfo(g, issue)        
+        prodders.each{allProdders[it.login] += 1}
+    }
+    int numEntries = allProdders.size() * ROCKSTAR_THRESHOLD
+    println "Prodders"
+    println allProdders.sort{a,b -> a.value <=> b.value}.keySet().asList().reverse()[0..numEntries]
+
 }
 
 g.shutdown()
