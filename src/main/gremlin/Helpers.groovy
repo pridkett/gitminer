@@ -1,6 +1,7 @@
 import net.wagstrom.research.github.EdgeType
 import net.wagstrom.research.github.VertexType
 import com.tinkerpop.blueprints.pgm.Vertex
+import com.tinkerpop.blueprints.pgm.Element
 
 class Helpers {
     static printSortedMap(Map inmap) {
@@ -46,7 +47,7 @@ class Helpers {
         return Date.parse(Defaults.DATE_FORMAT, s).getTime()/1000
     }
 
-    static void updateDate(Vertex v, String s) {
+    static void updateDate(Element v, String s) {
         if (v.getProperty(s) != null) {
             v.setProperty(s, parseDate(v.getProperty(s)))
         }
