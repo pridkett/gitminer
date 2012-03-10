@@ -6,6 +6,7 @@ import net.wagstrom.research.github.IndexNames
 import net.wagstrom.research.github.IdCols
 import net.wagstrom.research.github.EdgeType
 import net.wagstrom.research.github.VertexType
+import net.wagstrom.research.github.PropertyName
 
 ROCKSTAR_THRESHOLD=0.20; // should be in the top 20% of followed links by people in the community
 PRODDER_TIME_THRESHOLD=14*86400 // number of seconds that an issue should be idle before a prodder picks it up
@@ -112,11 +113,9 @@ def getIssueInfo(IndexableGraph g, Vertex issue) {
         // fixme: add in pullrequest actions
     } catch (java.util.NoSuchElementException e) { }
     
-    timeline.sort{a,b -> a[0] <=> b[0]}
-    
     lastTime = null
     lastAction = null
-    for (element in timeline) {
+    for (element in timeline.sort{a,b -> a[0] <=> b[0]}) {
         when = element[0]
         action = element[1]
     
@@ -136,10 +135,9 @@ def getIssueInfo(IndexableGraph g, Vertex issue) {
  * Provides information about secondary attributes that can be used to calculate
  * other roles
  * 
- * Stewards 
- * Code Warrior
- * Super Star
- * Community Rock Stars - individuals in the top 20% of contributors and also the top 20% of followers
+ * Stewards - top 20% of pull requests merged and top 20% of issues closed
+ * Code Warrior -
+ * Project Rock Stars - individuals in the top 20% of contributors and also the top 20% of followers
  */
 def devInfo(IndexableGraph g, Vertex user, Vertex repo, Map userSet) {
     gitAccounts = getAllGitAccounts(g, user)
@@ -157,7 +155,15 @@ def devInfo(IndexableGraph g, Vertex user, Vertex repo, Map userSet) {
     
     // project merged pull requests
     projectMergedPullRequests = user.in(EdgeType.PULLREQUESTMERGEDBY).in(EdgeType.PULLREQUEST).filter{it==repo}.count()
-    
+
+    // issues closed
+    projectIssuesClosed = user.out(EdgeType.ISSUEEVENTACTOR). \
+                               has(PropertyName.EVENT,"closed"). \
+                               in(EdgeType.ISSUEEVENT). \
+                               dedup(). \
+                               in(EdgeType.ISSUE). \
+                               filter{it == repo}.count()
+
 //    println "User: " + user.login
 //    println "  Community Following: " + communityFollowing
 //    println "    Community Commits: " + codingContributions
@@ -169,7 +175,8 @@ def devInfo(IndexableGraph g, Vertex user, Vertex repo, Map userSet) {
             "codingContributions": codingContributions,
             "allCodingContributions": allCodingContributions,
             "allCodingProjects": allCodingProjects,
-            "projectPullRequestsMerged": projectMergedPullRequests]
+            "projectPullRequestsMerged": projectMergedPullRequests,
+            "projectIssuesClosed": projectIssuesClosed]
 }
 
 def devInfoThreshold(Map devInfo, String key, float threshold) {
@@ -178,7 +185,7 @@ def devInfoThreshold(Map devInfo, String key, float threshold) {
 }
 
 g = new Neo4jGraph(Defaults.DBPATH)
-projects = ["tinkerpop/gremlin"]
+projects = ["rails/rails"]
 
 for (project in projects) {
     repo = g.idx(IndexNames.REPOSITORY).get(IdCols.REPOSITORY, project).next()
@@ -198,6 +205,10 @@ for (project in projects) {
     issueCommenters = repo.out(EdgeType.ISSUE). \
                            out(EdgeType.ISSUECOMMENT). \
                            in(EdgeType.ISSUECOMMENTOWNER).dedup().toList()
+    issueSubscribers = repo.out(EdgeType.ISSUE). \
+                            out(EdgeType.ISSUEEVENT). \
+                            has(PropertyName.EVENT, "subscribed"). \
+                            in(EdgeType.ISSUEEVENTACTOR).dedup().toList()
     pullRequestOwners = repo.out(EdgeType.PULLREQUEST). \
                              in(EdgeType.PULLREQUESTOWNER).dedup().toList()
     openPullRequestOwners = repo.out(EdgeType.PULLREQUEST). \
@@ -215,7 +226,12 @@ for (project in projects) {
     forkOwners = repo.out(EdgeType.REPOFORK). \
                       in(EdgeType.REPOOWNER).dedup().toList()
 
-    committers = repo.in(EdgeType.REPOSITORY).out(EdgeType.COMMITAUTHOR).filter{it.type==VertexType.GIT_USER}.out(EdgeType.EMAIL).dedup().in(EdgeType.EMAIL).filter{it.type==VertexType.USER}
+    committers = repo.in(EdgeType.REPOSITORY). \
+                      out(EdgeType.COMMITAUTHOR). \
+                      filter{it.type==VertexType.GIT_USER}. \
+                      out(EdgeType.EMAIL).dedup(). \
+                      in(EdgeType.EMAIL). \
+                      filter{it.type==VertexType.USER}
      
     allActive = (collaborators + contributors + issueOwners + \
                 issueCommenters + pullRequestOwners + \
@@ -226,10 +242,11 @@ for (project in projects) {
     allCollaborators = (collaborators as Set) + contributors
 
     /*
-     * Lurkers - only watching the repo, no forks, issues, etc
+     * Lurkers - only watching the repo or subscribed to an issue, no
+     * forks, issues, etc
      */
     println "Lurkers"
-    println Helpers.setDifferenceLeft(watchers, allActive).login.sort{a,b -> a <=> b}
+    println Helpers.setDifferenceLeft((watchers + issueSubscribers), allActive).login.sort{a,b -> a <=> b}
     
     /*
      * Issues - people active only on issues. This clearly needs a better name.
@@ -274,9 +291,14 @@ for (project in projects) {
 
     topFollowers = devInfoThreshold(devStats, "communityFollowing", ROCKSTAR_THRESHOLD)
     topCoders = devInfoThreshold(devStats, "codingContributions", ROCKSTAR_THRESHOLD)
-    println "Community Rock Stars"
-    println topFollowers.intersect(topCoders)
-       
+    println "Project Rock Stars"
+    println topFollowers.intersect(topCoders).sort()
+    
+    topIssueClosers = devInfoThreshold(devStats, "projectIssuesClosed", ROCKSTAR_THRESHOLD)
+    topPullRequestClosers = devInfoThreshold(devStats, "projectPullRequestsMerged", ROCKSTAR_THRESHOLD)
+    println "Project Stewards"
+    println topIssueClosers.intersect(topPullRequestClosers).sort()
+    
     allProdders = [:].withDefault{0}
     for (issue in repo.out(EdgeType.ISSUE)) {
         prodders = getIssueInfo(g, issue)        
@@ -284,7 +306,7 @@ for (project in projects) {
     }
     int numEntries = allProdders.size() * ROCKSTAR_THRESHOLD
     println "Prodders"
-    println allProdders.sort{a,b -> a.value <=> b.value}.keySet().asList().reverse()[0..numEntries]
+    println allProdders.sort{a,b -> a.value <=> b.value}.keySet().asList().reverse()[0..numEntries].sort()
 
 }
 
