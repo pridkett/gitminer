@@ -5,9 +5,10 @@ public final class PropertyName {
     public static final String ADDITIONS = "additions";
     public static final String AUTHORED_DATE = "authoredDate";
     public static final String ASSIGNEE = "assignee";
-    public static final String BODY = "body";
     public static final String BILLING_EMAIL = "billingEmail";
+    public static final String BIOGRAPHY = "biography";
     public static final String BLOG = "blog";
+    public static final String BODY = "body";
     public static final String BODY_HTML = "bodyHtml";
     public static final String BODY_TEXT = "bodyText";
     public static final String CLONE_URL = "cloneUrl";
@@ -99,6 +100,7 @@ public final class PropertyName {
     public static final String URL = "url";
     public static final String USER = "user";
     public static final String USERNAME = "username"; // FIXME: is this the same as USER?
+    public static final String USER_TYPE = "user_type"; // GitHub normally returns a "type", to indicate if organization or not. "type" is reserved, so this is remapped to "user_type"
     public static final String VOTES = "votes";
     public static final String WATCHERS = "watchers";
     public static final String WHEN = "when";

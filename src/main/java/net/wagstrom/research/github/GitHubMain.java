@@ -24,8 +24,10 @@ import java.util.Map;
 import java.util.Properties;
 
 import net.wagstrom.research.github.v3.IssueMinerV3;
+import net.wagstrom.research.github.v3.OrganizationMinerV3;
 import net.wagstrom.research.github.v3.PullMinerV3;
 import net.wagstrom.research.github.v3.RepositoryMinerV3;
+import net.wagstrom.research.github.v3.UserMinerV3;
 
 import org.eclipse.egit.github.core.IssueEvent;
 import org.eclipse.egit.github.core.client.IGitHubClient;
@@ -56,7 +58,8 @@ public class GitHubMain {
     ApiThrottle v3throttle = null;
     long refreshTime = 0; // minimum age of a resource in milliseconds
     Properties p;
-
+    protected BlueprintsDriver bp;
+    
     public GitHubMain() {
         log = LoggerFactory.getLogger(this.getClass());		
         throttle = new ApiThrottle();
@@ -127,7 +130,7 @@ public class GitHubMain {
         }
 
 
-        BlueprintsDriver bp = connectToGraph(p);
+        connectToGraph(p);
 
         // make sure that it gets shutdown properly
         GraphShutdownHandler gsh = new GraphShutdownHandler();
@@ -138,7 +141,9 @@ public class GitHubMain {
         IssueMinerV3 imv3 = new IssueMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
         PullMinerV3 pmv3 = new PullMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
         RepositoryMinerV3 rmv3 = new RepositoryMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
-
+        UserMinerV3 umv3 = new UserMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+        OrganizationMinerV3 omv3 = new OrganizationMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+        
         RepositoryMiner rm = new RepositoryMiner(ThrottledGitHubInvocationHandler.createThrottledRepositoryService(factory.createRepositoryService(), throttle));
         IssueMiner im = new IssueMiner(ThrottledGitHubInvocationHandler.createThrottledIssueService(factory.createIssueService(), throttle));
 
@@ -154,7 +159,9 @@ public class GitHubMain {
                 // yay! full declarations! they're AWESOME!
                 org.eclipse.egit.github.core.Repository repo = rmv3.getRepository(projsplit[0], projsplit[1]);
                 bp.saveRepository(rm.getRepositoryInformation(projsplit[0], projsplit[1]));
-
+                log.warn("handling project owner...");
+                handleProjectOwner(repo.getOwner(), umv3, omv3);
+                
                 if (p.getProperty("net.wagstrom.research.github.miner.repositories.collaborators", "true").equals("true"))
                     bp.saveRepositoryCollaborators(proj, rm.getRepositoryCollaborators(projsplit[0], projsplit[1]));
                 if (p.getProperty("net.wagstrom.research.github.miner.repositories.contributors", "true").equals("true"))
@@ -302,6 +309,19 @@ public class GitHubMain {
     }
 
     /**
+     * @param owner
+     */
+    private void handleProjectOwner(org.eclipse.egit.github.core.User owner, UserMinerV3 umv3, OrganizationMinerV3 omv3) {
+        org.eclipse.egit.github.core.User u = umv3.getUser(owner.getLogin());
+        if (u.getType().toLowerCase().equals("organization")) {
+            Collection<org.eclipse.egit.github.core.User> members = omv3.getPublicOrganizationMembers(u.getLogin());
+            bp.saveOrganizationPublicMembers(u, members);
+        } else {
+            log.warn("Project owner is not an organization: {}", u.getType());
+        }
+    }
+
+    /**
      * Helper function for {@link #needsUpdate(Date, boolean)} that defaults to false
      * 
      * @param elementDate Date to check
@@ -379,9 +399,7 @@ public class GitHubMain {
         }
     }
 
-    private BlueprintsDriver connectToGraph(Properties p) {
-        BlueprintsDriver bp = null;
-
+    protected BlueprintsDriver connectToGraph(Properties p) {
         // pass through all the db.XYZ properties to the database
         HashMap<String, String> dbprops = new HashMap<String, String>();
         for (Object o : p.keySet()) {
@@ -397,6 +415,7 @@ public class GitHubMain {
             bp = new BlueprintsDriver(dbengine, dburl, dbprops);
         } catch (NullPointerException e) {
             log.error("properties undefined, must define both net.wagstrom.research.github.dbengine and net.wagstrom.research.github.dburl");
+            bp = null;
         }
         return bp;
     }

@@ -736,6 +736,25 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return node;
     }
 
+
+    /**
+     * In the v3 API organizations are just users with a type of "organization"
+     * 
+     * @param organization the owning organization
+     * @param members a list of the organization members
+     */
+    public void saveOrganizationPublicMembers(
+            org.eclipse.egit.github.core.User organization,
+            Collection<org.eclipse.egit.github.core.User> members) {
+        Vertex org = saveUser(organization);
+        for (org.eclipse.egit.github.core.User user : members) {
+            Vertex usernode = saveUser(user);
+            createEdgeIfNotExist(usernode, org, EdgeType.ORGANIZATIONMEMBER);
+            log.warn("adding {} to organization {}", user.getLogin(), organization.getLogin());
+        }
+    }
+    
+    
     protected Map<String, Vertex> saveOrganizationMembersHelper(String organization, List<User> owners, String edgetype) {
         Vertex org = getOrCreateOrganization(organization);
         HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
@@ -746,6 +765,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         }
         return mapper;
     }
+
 
     public Map<String, Vertex> saveOrganizationOwners(String organization, List<User> owners) {
         return saveOrganizationMembersHelper(organization, owners, EdgeType.ORGANIZATIONOWNER);
@@ -1333,6 +1353,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         Vertex node = getOrCreateUser(user.getLogin());
         log.debug("Saving User: {}", user.toString());
 
+        setProperty(node, PropertyName.BIOGRAPHY, user.getBiography());
         setProperty(node, PropertyName.BLOG, user.getBlog());
         setProperty(node, PropertyName.COMPANY, user.getCompany());
         setProperty(node, PropertyName.CREATED_AT, user.getCreatedAt());
@@ -1357,12 +1378,14 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             setProperty(node, PropertyName.TOTAL_PRIVATE_REPO_COUNT, user.getTotalPrivateRepos());
             setProperty(node, PropertyName.SYS_LAST_FULL_UPDATE.toString(), new Date());
         }
+        setProperty(node, PropertyName.URL, user.getUrl());
         setProperty(node, PropertyName.FULLNAME, user.getName());
         setProperty(node, PropertyName.GRAVATAR_ID, user.getAvatarUrl());
         setProperty(node, PropertyName.GITHUB_ID, user.getId()); // note name change
         setProperty(node, PropertyName.LOCATION, user.getLocation());
         setProperty(node, PropertyName.LOGIN, user.getLogin());
         setProperty(node, PropertyName.NAME, user.getName());
+        setProperty(node, PropertyName.USER_TYPE, user.getType());
         setProperty(node, PropertyName.SYS_LAST_UPDATED.toString(), new Date());
         // getPermission
         // getPlan
@@ -1485,7 +1508,5 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
     public Map<String, Vertex> saveUserWatchedRepositories(String user, List<Repository> repos) {
         return saveUserRepositoriesHelper(user, repos, EdgeType.REPOWATCHED);
     }
-
-
 
 }
