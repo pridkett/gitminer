@@ -11,11 +11,9 @@ class Helpers {
     }
 
     static setDifference(Collection s1, Collection s2) {
-        def diff = (s1 as Set) + s2
-        def tmp = s1 as Set
-        tmp.retainAll(s2)
-        diff.removeAll(tmp)
-        return diff;
+        def set1 = s1.clone().toSet()
+        set1.removeAll(s1.toSet().intersect(s2.toSet()))
+        return set1
     }
 
     
