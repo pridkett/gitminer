@@ -16,8 +16,10 @@ def getAllGitAccounts(IndexableGraph g, Vertex user) {
     // getting all of a users git accounts is tricky because they don't make all of their email addresses
     // public. Luckily, using these two methods we do a pretty good job of getting all of a users git_user
     // accounts
-    gitAccounts = user.out(EdgeType.EMAIL).in(EdgeType.EMAIL).filter{it.type==VertexType.GIT_USER}.dedup().toList()
-
+    gitAccounts = user.out(EdgeType.EMAIL). \
+                       in(EdgeType.EMAIL). \
+                       has("type", VertexType.GIT_USER). \
+                       dedup().toSet()
 
     // this code has been superseded as it isn't always that accurate and can
     // grab accounts that don't belong to this user
@@ -45,13 +47,13 @@ def getAllGitAccounts(IndexableGraph g, Vertex user) {
                 it.out(EdgeType.COMMITAUTHOR).filter{it.type==VertexType.GIT_USER}.out(EdgeType.EMAIL).next()}. \
          out(EdgeType.COMMITTER). \
          filter{it.type==VertexType.GIT_USER}.out(EdgeType.EMAIL).dedup().filter{it.in(EdgeType.EMAIL).filter{it.type == VertexType.USER}.count() == 0}. \
-         back(4).dedup().toList()
+         back(4).dedup().toSet()
             
-    gitAccounts = (gitAccounts as Set) + traceAccounts
+    gitAccounts = gitAccounts + traceAccounts
      
     allGitAccounts = [] as Set
-    for (email in gitAccounts._().out(EdgeType.EMAIL).email.dedup().toList()) {
-        allGitAccounts += g.idx(IndexNames.EMAIL).get(IdCols.EMAIL, email)._().in(EdgeType.EMAIL).filter{it.type==VertexType.GIT_USER}.toList()
+    for (email in gitAccounts._().out(EdgeType.EMAIL).email.dedup().toSet()) {
+        allGitAccounts += g.idx(IndexNames.EMAIL).get(IdCols.EMAIL, email)._().in(EdgeType.EMAIL).has("type", VertexType.GIT_USER).toSet()
     }
 
     return allGitAccounts
