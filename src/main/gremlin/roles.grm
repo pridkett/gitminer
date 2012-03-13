@@ -12,6 +12,15 @@ ROCKSTAR_THRESHOLD=0.20; // should be in the top 20% of followed links by people
 PRODDER_TIME_THRESHOLD=14*86400 // number of seconds that an issue should be idle before a prodder picks it up
                                 // we need to validate this by each project 
 
+def calculateDeltas(Collection xs) {
+    return (xs == null || xs.size()<2)?null:[xs, xs[1..xs.size()-1]].transpose().collect{a,b -> b-a}
+}
+
+def stdev(Collection xs) { 
+    return (xs == null || xs.size()<2)?null:Math.sqrt((xs.collect{it*it}.sum() - xs.sum()*xs.mean()) / (xs.size()-1))
+}
+
+
 def getAllGitAccounts(IndexableGraph g, Vertex user) {
     // getting all of a users git accounts is tricky because they don't make all of their email addresses
     // public. Luckily, using these two methods we do a pretty good job of getting all of a users git_user
@@ -193,7 +202,7 @@ for (project in projects) {
     repo = g.idx(IndexNames.REPOSITORY).get(IdCols.REPOSITORY, project).next()
     println "\n\n******************************************"
     println repo.name
-
+                             
     watchers = repo.in(EdgeType.REPOWATCHED).toSet()
         
     // collaborators: have admin rights on projects
@@ -377,9 +386,8 @@ for (project in projects) {
     println "Code Warriors"
     // this has been inlined in the following function because groovy fails to type 'correctly'
     //def zip(Collection a, Collection b) { [a, b].transpose() }
-    def calculateDeltas(Collection xs) { [xs, xs[1..xs.size()-1]].transpose().collect{a,b -> b-a} }
-    def stdev(Collection xs) { Math.sqrt((xs.collect{it*it}.sum() - xs.sum()*xs.mean()) / (xs.size()-1))}
-    // select all commits
+
+        // select all commits
                              // group for each committer
                              // extract from pipe
                              // extract commit times and sort by date
@@ -389,7 +397,7 @@ for (project in projects) {
                              groupBy{it.out(EdgeType.COMMITAUTHOR).next()}{it}.cap.next(). \
                              collect{a, b -> [a, b*.outE("COMMITTER")*.when*.next().sort{it}]}. \
                              collect{a, b -> [a, calculateDeltas(b)]}. \
-                             collect{a, b -> [a, b.mean(), stdev(b)]}
+                             collect{a, b -> [a, b==null?null:b.mean(), stdev(b)]}
 }
 
 g.shutdown()
