@@ -372,6 +372,22 @@ for (project in projects) {
     println "Prodders"
     println allProdders.sort{a,b -> a.value <=> b.value}.keySet().asList().reverse()[0..numEntries].sort()
 
+    println "Code Warriors"
+    // this has been inlined in the following function because groovy fails to type 'correctly'
+    //def zip(Collection a, Collection b) { [a, b].transpose() }
+    def calculateDeltas(Collection xs) { [xs, xs[1..xs.size()-1]].transpose().collect{a,b -> b-a} }
+    def stdev(Collection xs) { Math.sqrt((xs.collect{it*it}.sum() - xs.sum()*xs.mean()) / (xs.size()-1))}
+    // select all commits
+                             // group for each committer
+                             // extract from pipe
+                             // extract commit times and sort by date
+                             // calculate deltas between times
+                             // run mean and sd
+    committersCommits = repo.in(EdgeType.REPOSITORY). \
+                             groupBy{it.out(EdgeType.COMMITAUTHOR).next()}{it}.cap.next(). \
+                             collect{a, b -> [a, b*.outE("COMMITTER")*.when*.next().sort{it}]}. \
+                             collect{a, b -> [a, calculateDeltas(b)]}. \
+                             collect{a, b -> [a, b.mean(), stdev(b)]}
 }
 
 g.shutdown()
