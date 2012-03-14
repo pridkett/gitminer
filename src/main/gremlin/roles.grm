@@ -196,7 +196,8 @@ def devInfoThreshold(Map devInfo, String key, float threshold) {
 }
 
 g = new Neo4jGraph(Defaults.DBPATH)
-projects = ["tinkerpop/gremlin"]
+projects = ["tinkerpop/pipes"]
+projects = Defaults.PROJECTS
 
 for (project in projects) {
     repo = g.idx(IndexNames.REPOSITORY).get(IdCols.REPOSITORY, project).next()
@@ -245,19 +246,22 @@ for (project in projects) {
                       in(EdgeType.EMAIL). \
                       filter{it.type==VertexType.USER}.toSet()
      
-    allActive = (collaborators + contributors + issueOwners + \
-                issueCommenters + pullRequestOwners + \
-                openPullRequestOwners + closedPullRequestOwners + \
-                pullRequestCommenters + mergedPullRequestOwners + \
-                mergers + forkOwners).toSet()
-
     allCollaborators = (collaborators as Set) + contributors
     
     organizationMembers = repo.in(EdgeType.REPOOWNER). \
                                in(EdgeType.ORGANIZATIONMEMBER).toSet()
     organizationCommitters = committers.intersect(organizationMembers + collaborators)
     insideCollaborators = (organizationMembers + collaborators) as Set
+    // I have no idea why this works, but it fixes some of the syntax errors
+    // we get with the .count() method
     insideCollaborators = Helpers.setDifferenceLeft(insideCollaborators, [])
+
+    allActive = (collaborators + contributors + issueOwners + \
+        issueCommenters + pullRequestOwners + \
+        openPullRequestOwners + closedPullRequestOwners + \
+        pullRequestCommenters + mergedPullRequestOwners + \
+        mergers + forkOwners + insideCollaborators).toSet()
+
 
     allUsers = allActive + watchers + issueSubscribers + insideCollaborators
     
@@ -271,7 +275,7 @@ for (project in projects) {
      * Issues - people active only on issues. This clearly needs a better name.
      */
     issueUsers = Helpers.setDifferenceLeft((issueOwners + issueCommenters + pullRequestCommenters).unique(),
-                                           (collaborators + contributors +
+                                           (insideCollaborators +
                                             pullRequestOwners +
                                             openPullRequestOwners + closedPullRequestOwners +
                                             mergedPullRequestOwners +
@@ -280,19 +284,19 @@ for (project in projects) {
      * Independent - forked the repo, but no pull requests
      */
     independent = Helpers.setDifferenceLeft(forkOwners, \
-                                            (pullRequestOwners + allCollaborators).unique())
+                                            (pullRequestOwners + insideCollaborators).unique())
 
     /*
      * Wannabes - created a pull request, but never accepted
      */
-    wannabes = Helpers.setDifferenceLeft(closedPullRequestOwners, mergedPullRequestOwners)
+    wannabes = Helpers.setDifferenceLeft(closedPullRequestOwners, (mergedPullRequestOwners + insideCollaborators))
 
     /*
      * External Contributors - created a pull request, pull request
      * has been merged. No direct access.
      */
     externalContributors =  Helpers.setDifferenceLeft(mergedPullRequestOwners,
-                                                      (collaborators + organizationMembers).unique())
+                                                      (insideCollaborators).unique())
 
     /*
      * Lurkers - only watching the repo or subscribed to an issue, no
@@ -332,33 +336,39 @@ for (project in projects) {
     println "Collaborators [" + insideCollaborators.count() + "]"
     println insideCollaborators.login.sort{a,b -> a <=> b}
 
-//    println "Sanity Checks - Overlap"
-//    println "Lurkers - Lurkers: " + lurkers.intersect(lurkers).count()
-//    println "Lurkers - Issues: " + lurkers.intersect(issueUsers).count()
-//    println "Lurkers - Independent: " + lurkers.intersect(independent).count()
-//    println "Lurkers - Wannabes: " + lurkers.intersect(wannabes).count()
-//    println "Lurkers - External Contributors: " + lurkers.intersect(externalContributors).count()
-//    println "Lurkers - Collaborators: " + lurkers.intersect(insideCollaborators).count()
-//    println "Issues - Independent: " + issueUsers.intersect(independent).count()
-//    println "Issues - Wannabes: " + issueUsers.intersect(wannabes).count()
-//    println "Issues - External Contributors: " + issueUsers.intersect(externalContributors).count()
-//    println "Issues - Collaborators: " + issueUsers.intersect(insideCollaborators).count()
-//    println "Independent - Wannabes: " + independent.intersect(wannabes).count()
-//    println "Independent - External Contributors: " + independent.intersect(externalContributors).count()
-//    println "Independent - Collaborators: " + independent.intersect(insideCollaborators).count()
-//    println "Wannabes - External Contributors: " + wannabes.intersect(externalContributors).count()
-//    println "Wannabes - Collaborators: " + wannabes.intersect(insideCollaborators).count()
-//    println "External Contributors - Collaborators: " + externalContributors.intersect(insideCollaborators).count()
-//    
-//    println "Sanity Checks - Coverage"
-//    classifiedUsers = (lurkers + issueUsers + independent + wannabes + externalContributors + insideCollaborators)
-//    println "Total Classified Users: " + classifiedUsers.size()
-//    println "All Users: " + allUsers.size()
-//    
-//    println "Classified but not in All Users: " + Helpers.setDifferenceLeft(classifiedUsers, allUsers).login.sort()
-//    println "All Users but not in Classified: " + Helpers.setDifferenceLeft(allUsers, classifiedUsers).login.sort()
-
-    userSet = ["allUsers": allUsers]
+    println "Sanity Checks - Overlap"
+    println "Lurkers - Issues: " + lurkers.intersect(issueUsers).count()
+    println "Lurkers - Independent: " + lurkers.intersect(independent).count()
+    println "Lurkers - Wannabes: " + lurkers.intersect(wannabes).count()
+    println "Lurkers - External Contributors: " + lurkers.intersect(externalContributors).count()
+    println "Lurkers - Collaborators: " + lurkers.intersect(insideCollaborators).count()
+    println "Issues - Independent: " + issueUsers.intersect(independent).count()
+    println "Issues - Wannabes: " + issueUsers.intersect(wannabes).count()
+    println "Issues - External Contributors: " + issueUsers.intersect(externalContributors).count()
+    println "Issues - Collaborators: " + issueUsers.intersect(insideCollaborators).count()
+    println "Independent - Wannabes: " + independent.intersect(wannabes).count()
+    println "Independent - External Contributors: " + independent.intersect(externalContributors).count()
+    println "Independent - Collaborators: " + independent.intersect(insideCollaborators).count()
+    println "Wannabes - External Contributors: " + wannabes.intersect(externalContributors).count()
+    println "Wannabes - Collaborators: " + wannabes.intersect(insideCollaborators).count()
+    println "External Contributors - Collaborators: " + externalContributors.intersect(insideCollaborators).count()
+    
+    println "Sanity Checks - Coverage"
+    classifiedUsers = (lurkers + issueUsers + independent + wannabes + externalContributors + insideCollaborators)
+    println "Total Classified Users: " + classifiedUsers.size()
+    println "All Users: " + allUsers.size()
+    
+    println "Classified but not in All Users: " + Helpers.setDifferenceLeft(classifiedUsers, allUsers).login.sort()
+    println "All Users but not in Classified: " + Helpers.setDifferenceLeft(allUsers, classifiedUsers).login.sort()
+    
+    userSet = ["allUsers": allUsers,
+               "lurkers": lurkers,
+               "issues": issueUsers,
+               "independent": independent,
+               "wannabes": wannabes,
+               "external": externalContributors,
+               "internal": insideCollaborators]
+    
     devStats = [:]
     for (collab in allCollaborators) {
         devStats[collab.login] = devInfo(g, collab, repo, userSet)
@@ -368,11 +378,13 @@ for (project in projects) {
     topCoders = devInfoThreshold(devStats, "codingContributions", ROCKSTAR_THRESHOLD)
     println "Project Rock Stars"
     println topFollowers.intersect(topCoders).sort()
+    userSet["projectRockStars"] = topFollowers.intersect(topCoders)
     
     topIssueClosers = devInfoThreshold(devStats, "projectIssuesClosed", ROCKSTAR_THRESHOLD)
     topPullRequestClosers = devInfoThreshold(devStats, "projectPullRequestsMerged", ROCKSTAR_THRESHOLD)
     println "Project Stewards"
     println topIssueClosers.intersect(topPullRequestClosers).sort()
+    userSet["projectStewards"] = topIssueClosers.intersect(topPullRequestClosers)
     
     allProdders = [:].withDefault{0}
     for (issue in repo.out(EdgeType.ISSUE)) {
