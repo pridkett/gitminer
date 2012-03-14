@@ -414,6 +414,19 @@ for (project in projects) {
     consistentUsers = committerDeltas.sort{row -> -row[2]}[0..committerDeltas.size()/4]*. \
                                       get(0)*.out(EdgeType.NAME)*.name*.next()
     println frequentUsers.intersect(consistentUsers)
+
+    println "Nomads"
+
+    nomads = repo.in(EdgeType.REPOSITORY). \
+                  groupCount{it.out(EdgeType.COMMITAUTHOR).next()}. \
+                  cap.next(). \
+                  findAll{it.value == 1}. \
+                  collect{it.key}. \
+                  findAll{it.in(EdgeType.COMMITAUTHOR). \
+                             filter{a -> a.out(EdgeType.REPOSITORY).next() != repo}. \
+                             count() > 0}
+    println nomads*.out(EdgeType.NAME)*.name*.next()
+                  
 }
 
 g.shutdown()
