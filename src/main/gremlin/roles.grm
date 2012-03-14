@@ -392,19 +392,19 @@ for (project in projects) {
     //def zip(Collection a, Collection b) { [a, b].transpose() }
 
     // select all commits
-                           // group for each committer & extract from pipe
-                           // extract commit times and sort by date
-                           // filter users whose commits have not spanned 14 days
-                           // calculate deltas between times
-                           // filter nil deltas
-                           // run mean and sd
     committerDeltas = repo.in(EdgeType.REPOSITORY). \
+                           // group for each committer & extract from pipe
                            groupBy{it.out(EdgeType.COMMITAUTHOR).next()}{it}.cap.next(). \
+                           // extract commit times and sort by date
                            collect{a, b -> [a, b*.outE("COMMITTER")*.when*.next().sort{it}]}. \
+                           // filter users whose commits have not spanned 14 days
                            findAll{a, b -> b[-1]-b[0] > CW_MIN_SPAN_TIME && 
                                                         b.size() > CW_MIN_COMMITS}. \
+                           // calculate deltas between times
                            collect{a, b -> [a, calculateDeltas(b)]}. \
+                           // filter nil deltas (needed?)
                            //findAll{a, b -> b != null }. \
+                           // run mean and sd
                            collect{a, b -> [a, b.mean(), stdev(b)]}
     //println committerDeltas
     // reverse sort by mean, take top 20%, extract committer name
@@ -417,14 +417,21 @@ for (project in projects) {
 
     println "Nomads"
 
+    // select commits
     nomads = repo.in(EdgeType.REPOSITORY). \
+                  // group by {author -> count(commits)}
                   groupCount{it.out(EdgeType.COMMITAUTHOR).next()}. \
+                  // extract
                   cap.next(). \
+                  // select single commit users
                   findAll{it.value == 1}. \
+                  // fetch gitusers
                   collect{it.key}. \
+                  // select gitusers with commits in other projects
                   findAll{it.in(EdgeType.COMMITAUTHOR). \
                              filter{a -> a.out(EdgeType.REPOSITORY).next() != repo}. \
                              count() > 0}
+
     println nomads*.out(EdgeType.NAME)*.name*.next()
                   
 }
