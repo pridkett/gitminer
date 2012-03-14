@@ -11,6 +11,10 @@ import net.wagstrom.research.github.PropertyName
 ROCKSTAR_THRESHOLD=0.20; // should be in the top 20% of followed links by people in the community
 PRODDER_TIME_THRESHOLD=14*86400 // number of seconds that an issue should be idle before a prodder picks it up
                                 // we need to validate this by each project 
+// amount of time between first and last commit required for inclusion in analysis
+CW_MIN_SPAN_TIME = 14*86400
+// minimum number of commits to be included in analysis, 3 because we need at least 2 deltas
+CW_MIN_COMMITS = 3
 
 def calculateDeltas(Collection xs) {
     return (xs == null || xs.size()<2)?null:[xs, xs[1..xs.size()-1]].transpose().collect{a,b -> b-a}
@@ -387,17 +391,29 @@ for (project in projects) {
     // this has been inlined in the following function because groovy fails to type 'correctly'
     //def zip(Collection a, Collection b) { [a, b].transpose() }
 
-        // select all commits
-                             // group for each committer
-                             // extract from pipe
-                             // extract commit times and sort by date
-                             // calculate deltas between times
-                             // run mean and sd
-    committersCommits = repo.in(EdgeType.REPOSITORY). \
-                             groupBy{it.out(EdgeType.COMMITAUTHOR).next()}{it}.cap.next(). \
-                             collect{a, b -> [a, b*.outE("COMMITTER")*.when*.next().sort{it}]}. \
-                             collect{a, b -> [a, calculateDeltas(b)]}. \
-                             collect{a, b -> [a, b==null?null:b.mean(), stdev(b)]}
+    // select all commits
+                           // group for each committer & extract from pipe
+                           // extract commit times and sort by date
+                           // filter users whose commits have not spanned 14 days
+                           // calculate deltas between times
+                           // filter nil deltas
+                           // run mean and sd
+    committerDeltas = repo.in(EdgeType.REPOSITORY). \
+                           groupBy{it.out(EdgeType.COMMITAUTHOR).next()}{it}.cap.next(). \
+                           collect{a, b -> [a, b*.outE("COMMITTER")*.when*.next().sort{it}]}. \
+                           findAll{a, b -> b[-1]-b[0] > CW_MIN_SPAN_TIME && 
+                                                        b.size() > CW_MIN_COMMITS}. \
+                           collect{a, b -> [a, calculateDeltas(b)]}. \
+                           //findAll{a, b -> b != null }. \
+                           collect{a, b -> [a, b.mean(), stdev(b)]}
+    //println committerDeltas
+    // reverse sort by mean, take top 20%, extract committer name
+    frequentUsers   = committerDeltas.sort{row -> -row[1]}[0..committerDeltas.size()/4]*. \
+                                      get(0)*.out(EdgeType.NAME)*.name*.next()
+    // reverse sort by sd, take top 20%, extract committer name
+    consistentUsers = committerDeltas.sort{row -> -row[2]}[0..committerDeltas.size()/4]*. \
+                                      get(0)*.out(EdgeType.NAME)*.name*.next()
+    println frequentUsers.intersect(consistentUsers)
 }
 
 g.shutdown()
