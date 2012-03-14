@@ -24,6 +24,30 @@ def stdev(Collection xs) {
     return (xs == null || xs.size()<2)?null:Math.sqrt((xs.collect{it*it}.sum() - xs.sum()*xs.mean()) / (xs.size()-1))
 }
 
+/**
+ * There are multiple different ways that we can tie a git account to a github
+ * account. This iterates through three ways in an attempt to map the commit with the user
+ * 
+ * 1. direct links via email addresses
+ * 2. gravatar links
+ * 3. referenced commits from issue events
+ * 
+ */
+def getUserFromGitUser(Vertex gituser) {
+    try {
+        return gituser.out(EdgeType.EMAIL).in(EdgeType.EMAIL).has(PropertyName.TYPE, VertexType.USER).next()    
+    } catch (e) {}
+    
+    try {
+        return gituser.out(EdgeType.EMAIL).out(EdgeType.GRAVATARHASH).in(EdgeType.GRAVATAR).next()
+    } catch (e) {}
+
+    try {
+        return gituser.in('COMMITTER').out('AUTHOR').filter{it==gituser}.back(2).in("EVENT_COMMIT").in("ISSUE_EVENT_ACTOR").dedup().next()
+    } catch (e) {}
+   
+    return null;
+}
 
 def getAllGitAccounts(IndexableGraph g, Vertex user) {
     // getting all of a users git accounts is tricky because they don't make all of their email addresses
@@ -61,8 +85,14 @@ def getAllGitAccounts(IndexableGraph g, Vertex user) {
          out(EdgeType.COMMITTER). \
          filter{it.type==VertexType.GIT_USER}.out(EdgeType.EMAIL).dedup().filter{it.in(EdgeType.EMAIL).filter{it.type == VertexType.USER}.count() == 0}. \
          back(4).dedup().toSet()
+    
+    gravatars = user.out(EdgeType.GRAVATAR). \
+                     in(EdgeType.GRAVATARHASH). \
+                     has(PropertyName.TYPE, VertexType.EMAIL). \
+                     in(VertexType.EMAIL). \
+                     has(PropertyName.TYPE, VertexType.GIT_USER).toSet()
             
-    gitAccounts = gitAccounts + traceAccounts
+    gitAccounts = gitAccounts + traceAccounts + gravatars
      
     allGitAccounts = [] as Set
     for (email in gitAccounts._().out(EdgeType.EMAIL).email.dedup().toSet()) {

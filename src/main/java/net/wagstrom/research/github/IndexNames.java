@@ -22,4 +22,5 @@ public final class IndexNames {
     public static final String PULLREQUESTMARKER = "pullrequestmarker-idx";
     public static final String MILESTONE = "milestone-idx";
     public static final String ISSUEEVENT = "issueevent-idx";
+    public static final String GRAVATAR = "gravatar-idx";
 }

@@ -17,6 +17,8 @@ public final class EdgeType {
     public static final String GISTCOMMENTOWNER = "GIST_COMMENT_OWNER";
     public static final String GISTFILE = "GIST_FILE";
     public static final String GISTOWNER = "GIST_OWNER";
+    public static final String GRAVATAR = "GRAVATAR";
+    public static final String GRAVATARHASH = "GRAVATAR_HASH";
     public static final String ISSUE = "ISSUE";
     public static final String ISSUEALTEVENT = "ISSUE_ALT_EVENT";
     public static final String ISSUEASSIGNEE = "ISSUE_ASSIGNEE";

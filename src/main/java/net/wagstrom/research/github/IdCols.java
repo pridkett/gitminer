@@ -10,6 +10,7 @@ public final class IdCols {
     public static final String GIST = "gist_id";
     public static final String GISTFILE = "gistfile_id";
     public static final String GITUSER = "string";
+    public static final String GRAVATAR = "hash";
     public static final String ISSUE = "issue_id";
     public static final String LABEL = "label";
     public static final String MILESTONE = "milestone";
@@ -20,5 +21,6 @@ public final class IdCols {
     public static final String PULLREQUESTREVIEWCOMMENT = "comment_id";
     public static final String REPOSITORY = "reponame";
     public static final String TEAM = "team_id";
+    public static final String TYPE = "type";
     public static final String USER = "login";
 }

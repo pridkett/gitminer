@@ -77,6 +77,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
     private Index <Vertex> markeridx = null;
     private Index <Vertex> milestoneidx = null;
     private Index <Vertex> issueeventidx = null;
+    private Index <Vertex> gravataridx = null;
 
     /**
      * Base constructor for BlueprintsDriver
@@ -109,6 +110,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         markeridx = getOrCreateIndex(IndexNames.PULLREQUESTMARKER);
         milestoneidx = getOrCreateIndex(IndexNames.MILESTONE);
         issueeventidx = getOrCreateIndex(IndexNames.ISSUEEVENT);
+        gravataridx = getOrCreateIndex(IndexNames.GRAVATAR);
     }	
 
     /**

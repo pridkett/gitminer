@@ -84,6 +84,7 @@ public final class PropertyName {
     public static final String SVN_URL = "svnUrl";
     public static final String STATE = "state";
     public static final String SYS_COMMENTS_ADDED = "sys_comments_added";
+    public static final String SYS_CREATED_AT = "sys_created_at";
     public static final String SYS_EVENTS_ADDED = "sys_events_added";
     public static final String SYS_DISCUSSIONS_ADDED = "sys_discussions_added";
     public static final String SYS_LAST_FULL_UPDATE = "sys_last_full_update";

@@ -2,6 +2,7 @@ import net.wagstrom.research.github.EdgeType
 import net.wagstrom.research.github.VertexType
 import com.tinkerpop.blueprints.pgm.Vertex
 import com.tinkerpop.blueprints.pgm.Element
+import java.security.MessageDigest
 
 class Helpers {
     static printSortedMap(Map inmap) {
@@ -99,5 +100,27 @@ class Helpers {
                     mergers + forkOwners).unique()
         def allUsers = (allActive as Set) + watchers
         return allUsers
+    }
+    
+    static String gravatarHash(String email) {
+        def m = MessageDigest.getInstance("MD5")
+        m.update(email.trim().toLowerCase().getBytes())
+        def l = new BigInteger(1, m.digest())
+        return l.toString(16)
+    }
+    
+    /**
+     * gravatarId's can be problematic as they can be either of:
+     * https://secure.gravatar.com/avatar/ee85853909657f47c8a68e8a9bc7d992?d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-140.png
+     * e3e98bfa99e82ac8b0cb63660dc23b14
+     * 
+     * This function extracts the proper value
+     */
+    static String gravatarIdExtract(String gravatarId) {
+        try {
+            return (gravatarId =~ /([a-f0-9]{32})/)[0][0]
+        } catch (e) {
+            return null;
+        }
     }
 }

@@ -37,4 +37,5 @@ public final class VertexType {
     public static final String PULLREQUESTMARKER = "PULLREQUESTMARKER";
     public static final String PULLREQUESTREVIEWCOMMENT = "PULLREQUESTREVIEWCOMMENT";
     public static final String DISCUSSION = "DISCUSSION";
+    public static final String GRAVATAR = "GRAVATAR";
 }
