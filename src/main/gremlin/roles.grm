@@ -229,9 +229,47 @@ def devInfoThreshold(Map devInfo, String key, float threshold) {
     return devInfo.sort{a,b -> a.value[key] <=> b.value[key]}.keySet().asList().reverse()[0..numEntries] as Set    
 }
 
+/**
+ *  Generates an overlap matrix for a given set of projects on a given set of metrics
+ *  
+ */
+def allUserDataCompare(Map allUserData, Collection projects, Collection metrics) {
+    println "*************************************"
+    println "Overlap for projects: " + projects
+    for (metric in metrics) {
+        println "Overlap for: " + metric
+        overlap = new int[projects.size()][projects.size()]
+        for (int i = 0; i < projects.size(); i ++) {
+            for (int j = 0; j <= i; j ++) {
+                overlap[i][j] = allUserData[projects[i]][metric].intersect(allUserData[projects[j]][metric]).size()
+                print sprintf("%4d", overlap[i][j])
+            }
+            println ""
+        }
+    }    
+}
+
+def allUserRoleOverload(Map allUserData, Collection projects, Collection metrics) {
+    println "*************************************"
+    println "Overload for roles: " + metrics
+    for (project in projects) {
+        println "Overlap for: " + project
+        overlap = new int[metrics.size()][metrics.size()]
+        for (int i = 0; i < metrics.size(); i ++) {
+            for (int j = 0; j <= i; j ++) {
+                overlap[i][j] = allUserData[project][metrics[i]].intersect(allUserData[project][metrics[j]]).size()
+                print sprintf("%4d", overlap[i][j])
+            }
+            println ""
+        }
+    }
+}
+
 g = new Neo4jGraph(Defaults.DBPATH)
-projects = ["tinkerpop/pipes"]
-projects = Defaults.PROJECTS
+projects = ["tinkerpop/gremlin", "tinkerpop/blueprints", "tinkerpop/pipes", "tinkerpop/rexster", "tinkerpop/frames"]
+//  projects = Defaults.PROJECTS
+
+allUserData = [:]
 
 for (project in projects) {
     repo = g.idx(IndexNames.REPOSITORY).get(IdCols.REPOSITORY, project).next()
@@ -270,8 +308,11 @@ for (project in projects) {
     mergers = repo.out(EdgeType.ISSUE). \
                    out(EdgeType.ISSUEEVENT). \
                    filter{it.event=="merged"}.in(EdgeType.ISSUEEVENTACTOR).dedup().toSet()
+    // filter out Organizations because they don't really fork the code. It's an artifact
+    // of the way that GitHub handles organizations in their code
     forkOwners = repo.out(EdgeType.REPOFORK). \
-                      in(EdgeType.REPOOWNER).dedup().toSet()
+                      in(EdgeType.REPOOWNER). \
+                      hasNot(PropertyName.USER_TYPE, "Organization").dedup().toSet()
 
     committers = repo.in(EdgeType.REPOSITORY). \
                       out(EdgeType.COMMITAUTHOR). \
@@ -280,7 +321,6 @@ for (project in projects) {
                       in(EdgeType.EMAIL). \
                       filter{it.type==VertexType.USER}.toSet()
      
-    allCollaborators = (collaborators as Set) + contributors
     
     organizationMembers = repo.in(EdgeType.REPOOWNER). \
                                in(EdgeType.ORGANIZATIONMEMBER).toSet()
@@ -290,6 +330,8 @@ for (project in projects) {
     // we get with the .count() method
     insideCollaborators = Helpers.setDifferenceLeft(insideCollaborators, [])
 
+    allCollaborators = (collaborators as Set) + contributors + insideCollaborators
+    
     allActive = (collaborators + contributors + issueOwners + \
         issueCommenters + pullRequestOwners + \
         openPullRequestOwners + closedPullRequestOwners + \
@@ -370,31 +412,31 @@ for (project in projects) {
     println "Collaborators [" + insideCollaborators.count() + "]"
     println insideCollaborators.login.sort{a,b -> a <=> b}
 
-    println "Sanity Checks - Overlap"
-    println "Lurkers - Issues: " + lurkers.intersect(issueUsers).count()
-    println "Lurkers - Independent: " + lurkers.intersect(independent).count()
-    println "Lurkers - Wannabes: " + lurkers.intersect(wannabes).count()
-    println "Lurkers - External Contributors: " + lurkers.intersect(externalContributors).count()
-    println "Lurkers - Collaborators: " + lurkers.intersect(insideCollaborators).count()
-    println "Issues - Independent: " + issueUsers.intersect(independent).count()
-    println "Issues - Wannabes: " + issueUsers.intersect(wannabes).count()
-    println "Issues - External Contributors: " + issueUsers.intersect(externalContributors).count()
-    println "Issues - Collaborators: " + issueUsers.intersect(insideCollaborators).count()
-    println "Independent - Wannabes: " + independent.intersect(wannabes).count()
-    println "Independent - External Contributors: " + independent.intersect(externalContributors).count()
-    println "Independent - Collaborators: " + independent.intersect(insideCollaborators).count()
-    println "Wannabes - External Contributors: " + wannabes.intersect(externalContributors).count()
-    println "Wannabes - Collaborators: " + wannabes.intersect(insideCollaborators).count()
-    println "External Contributors - Collaborators: " + externalContributors.intersect(insideCollaborators).count()
-    
-    println "Sanity Checks - Coverage"
+//    println "Sanity Checks - Overlap"
+//    println "Lurkers - Issues: " + lurkers.intersect(issueUsers).count()
+//    println "Lurkers - Independent: " + lurkers.intersect(independent).count()
+//    println "Lurkers - Wannabes: " + lurkers.intersect(wannabes).count()
+//    println "Lurkers - External Contributors: " + lurkers.intersect(externalContributors).count()
+//    println "Lurkers - Collaborators: " + lurkers.intersect(insideCollaborators).count()
+//    println "Issues - Independent: " + issueUsers.intersect(independent).count()
+//    println "Issues - Wannabes: " + issueUsers.intersect(wannabes).count()
+//    println "Issues - External Contributors: " + issueUsers.intersect(externalContributors).count()
+//    println "Issues - Collaborators: " + issueUsers.intersect(insideCollaborators).count()
+//    println "Independent - Wannabes: " + independent.intersect(wannabes).count()
+//    println "Independent - External Contributors: " + independent.intersect(externalContributors).count()
+//    println "Independent - Collaborators: " + independent.intersect(insideCollaborators).count()
+//    println "Wannabes - External Contributors: " + wannabes.intersect(externalContributors).count()
+//    println "Wannabes - Collaborators: " + wannabes.intersect(insideCollaborators).count()
+//    println "External Contributors - Collaborators: " + externalContributors.intersect(insideCollaborators).count()
+//    
+//    println "Sanity Checks - Coverage"
     classifiedUsers = (lurkers + issueUsers + independent + wannabes + externalContributors + insideCollaborators)
     println "Total Classified Users: " + classifiedUsers.size()
-    println "All Users: " + allUsers.size()
-    
-    println "Classified but not in All Users: " + Helpers.setDifferenceLeft(classifiedUsers, allUsers).login.sort()
-    println "All Users but not in Classified: " + Helpers.setDifferenceLeft(allUsers, classifiedUsers).login.sort()
-    
+//    println "All Users: " + allUsers.size()
+//    
+//    println "Classified but not in All Users: " + Helpers.setDifferenceLeft(classifiedUsers, allUsers).login.sort()
+//    println "All Users but not in Classified: " + Helpers.setDifferenceLeft(allUsers, classifiedUsers).login.sort()
+//    
     userSet = ["allUsers": allUsers,
                "lurkers": lurkers,
                "issues": issueUsers,
@@ -405,30 +447,31 @@ for (project in projects) {
     
     devStats = [:]
     for (collab in allCollaborators) {
-        devStats[collab.login] = devInfo(g, collab, repo, userSet)
+        devStats[collab] = devInfo(g, collab, repo, userSet)
     }
 
     topFollowers = devInfoThreshold(devStats, "communityFollowing", ROCKSTAR_THRESHOLD)
     topCoders = devInfoThreshold(devStats, "codingContributions", ROCKSTAR_THRESHOLD)
     println "Project Rock Stars"
-    println topFollowers.intersect(topCoders).sort()
+    println topFollowers.intersect(topCoders).login.sort()
     userSet["projectRockStars"] = topFollowers.intersect(topCoders)
     
     topIssueClosers = devInfoThreshold(devStats, "projectIssuesClosed", ROCKSTAR_THRESHOLD)
     topPullRequestClosers = devInfoThreshold(devStats, "projectPullRequestsMerged", ROCKSTAR_THRESHOLD)
     println "Project Stewards"
-    println topIssueClosers.intersect(topPullRequestClosers).sort()
+    println topIssueClosers.intersect(topPullRequestClosers).login.sort()
     userSet["projectStewards"] = topIssueClosers.intersect(topPullRequestClosers)
     
     allProdders = [:].withDefault{0}
     for (issue in repo.out(EdgeType.ISSUE)) {
         prodders = getIssueInfo(g, issue)        
-        prodders.each{allProdders[it.login] += 1}
+        prodders.each{allProdders[it] += 1}
     }
     int numEntries = allProdders.size() * ROCKSTAR_THRESHOLD
     println "Prodders"
-    println allProdders.sort{a,b -> a.value <=> b.value}.keySet().asList().reverse()[0..numEntries].sort()
-
+    println allProdders.sort{a,b -> a.value <=> b.value}.keySet().asList().reverse()[0..numEntries].login.sort()
+    userSet["prodders"] = allProdders.sort{a,b -> a.value <=> b.value}.keySet().asList().reverse()[0..numEntries]
+    
     println "Code Warriors"
     // this has been inlined in the following function because groovy fails to type 'correctly'
     //def zip(Collection a, Collection b) { [a, b].transpose() }
@@ -475,7 +518,13 @@ for (project in projects) {
                              count() > 0}
 
     println nomads*.out(EdgeType.NAME)*.name*.next()
-                  
+    
+    allUserData[project] = userSet              
 }
 
 g.shutdown()
+
+println allUserData.keySet()
+allUserDataCompare(allUserData, ["tinkerpop/blueprints", "tinkerpop/pipes", "tinkerpop/gremlin", "tinkerpop/rexster", "tinkerpop/frames"], \
+                   allUserData["tinkerpop/blueprints"].keySet().toList())
+allUserRoleOverload(allUserData, ["tinkerpop/blueprints"], allUserData["tinkerpop/blueprints"].keySet().toList())    
