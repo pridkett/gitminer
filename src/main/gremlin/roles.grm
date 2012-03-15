@@ -479,7 +479,9 @@ for (project in projects) {
     // select all commits
     committerDeltas = repo.in(EdgeType.REPOSITORY). \
                            // group for each committer & extract from pipe
-                           groupBy{it.out(EdgeType.COMMITAUTHOR).next()}{it}.cap.next(). \
+                           groupBy{ getUserFromGitUser(it.out(EdgeType.COMMITAUTHOR).next()) }{it}. \
+                           //groupBy{ it.out(EdgeType.COMMITAUTHOR).next() }{it}. \
+                           cap.next(). \
                            // extract commit times and sort by date
                            collect{a, b -> [a, b*.outE("COMMITTER")*.when*.next().sort{it}]}. \
                            // filter users whose commits have not spanned 14 days
@@ -492,34 +494,38 @@ for (project in projects) {
                            // run mean and sd
                            collect{a, b -> [a, b.mean(), stdev(b)]}
     //println committerDeltas
-    // reverse sort by mean, take top 20%, extract committer name
-    frequentUsers   = committerDeltas.sort{row -> -row[1]}[0..committerDeltas.size()/4]*. \
-                                      get(0)*.out(EdgeType.NAME)*.name*.next()
-    // reverse sort by sd, take top 20%, extract committer name
-    consistentUsers = committerDeltas.sort{row -> -row[2]}[0..committerDeltas.size()/4]*. \
-                                      get(0)*.out(EdgeType.NAME)*.name*.next()
-    println frequentUsers.intersect(consistentUsers)
-
+    // reverse sort by mean, take top 20%, extract github user
+    frequentUsers   = committerDeltas.findAll{it!=null}.sort{row -> -row[1]}[0..committerDeltas.size()*ROCKSTAR_THRESHOLD]*.get(0)
+    // reverse sort by sd, take top 20%, extract githubuser
+    consistentUsers = committerDeltas.findAll{it!=null}.sort{row -> -row[2]}[0..committerDeltas.size()*ROCKSTAR_THRESHOLD]*.get(0)
+    println frequentUsers.intersect(consistentUsers).login.sort()
+    userSet["codeWarriors"] = frequentUsers.intersect(consistentUsers)
+    
     println "Nomads"
 
     // select commits
     nomads = repo.in(EdgeType.REPOSITORY). \
-                  // group by {author -> count(commits)}
-                  groupCount{it.out(EdgeType.COMMITAUTHOR).next()}. \
+                  // group by {githubuser -> count(commits)}
+                  groupCount{getUserFromGitUser(it.out(EdgeType.COMMITAUTHOR).next())}. \
                   // extract
                   cap.next(). \
+                  // exclude nil keys
+                  findAll{it.key != null}. \
                   // select single commit users
                   findAll{it.value == 1}. \
                   // fetch gitusers
                   collect{it.key}. \
+                  // convert back to gitusers (take care because this is a set
                   // select gitusers with commits in other projects
-                  findAll{it.in(EdgeType.COMMITAUTHOR). \
+                  findAll{getAllGitAccounts(g, it)._(). \
+                             in(EdgeType.COMMITAUTHOR). \
                              filter{a -> a.out(EdgeType.REPOSITORY).next() != repo}. \
                              count() > 0}
 
-    println nomads*.out(EdgeType.NAME)*.name*.next()
+    println nomads*.login
+    userSet["nomads"] = nomads
     
-    allUserData[project] = userSet              
+    allUserData[project] = userSet
 }
 
 g.shutdown()
