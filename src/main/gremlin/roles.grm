@@ -266,8 +266,8 @@ def allUserRoleOverload(Map allUserData, Collection projects, Collection metrics
 }
 
 g = new Neo4jGraph(Defaults.DBPATH)
-projects = ["tinkerpop/gremlin", "tinkerpop/blueprints", "tinkerpop/pipes", "tinkerpop/rexster", "tinkerpop/frames"]
-//  projects = Defaults.PROJECTS
+// projects = ["tinkerpop/gremlin", "tinkerpop/blueprints", "tinkerpop/pipes", "tinkerpop/rexster", "tinkerpop/frames"]
+projects = Defaults.PROJECTS
 
 allUserData = [:]
 
@@ -531,6 +531,23 @@ for (project in projects) {
 g.shutdown()
 
 println allUserData.keySet()
+
+println "*************************************************"
+println "Tinkerpop Stuff"
+println "*************************************************"
 allUserDataCompare(allUserData, ["tinkerpop/blueprints", "tinkerpop/pipes", "tinkerpop/gremlin", "tinkerpop/rexster", "tinkerpop/frames"], \
                    allUserData["tinkerpop/blueprints"].keySet().toList())
 allUserRoleOverload(allUserData, ["tinkerpop/blueprints"], allUserData["tinkerpop/blueprints"].keySet().toList())    
+
+println "*************************************************"
+println "Rails Stuff"
+println "*************************************************"
+allUserDataCompare(allUserData, ["rails/rails", "rack/rack", "sinatra/sinatra"], \
+    allUserData["tinkerpop/blueprints"].keySet().toList())
+
+println "*************************************************"
+println "MEGA COMPARE!"
+println "*************************************************"
+allUserDataCompare(allUserData, projects, \
+    allUserData["tinkerpop/blueprints"].keySet().toList())
+allUserRoleOverload(allUserData, projects, allUserData["tinkerpop/blueprints"].keySet().toList())
