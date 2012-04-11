@@ -1,4 +1,4 @@
-package net.wagstrom.research.github;
+package net.wagstrom.research.github.v2;
 
 import java.util.List;
 
@@ -11,6 +11,11 @@ import com.github.api.v2.schema.Team;
 import com.github.api.v2.schema.User;
 import com.github.api.v2.services.OrganizationService;
 
+
+/**
+ * @author Patrick Wagstrom <patrick@wagstrom.net>
+ * @deprecated
+ */
 public class OrganizationMiner {
     private OrganizationService service = null;
     private Logger log;

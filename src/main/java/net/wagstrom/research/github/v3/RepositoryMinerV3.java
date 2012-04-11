@@ -1,7 +1,11 @@
 package net.wagstrom.research.github.v3;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
+import org.eclipse.egit.github.core.Contributor;
+import org.eclipse.egit.github.core.IRepositoryIdProvider;
 import org.eclipse.egit.github.core.Repository;
 import org.eclipse.egit.github.core.client.IGitHubClient;
 import org.eclipse.egit.github.core.service.RepositoryService;
@@ -18,6 +22,15 @@ public class RepositoryMinerV3 extends V3Miner {
         log = LoggerFactory.getLogger(RepositoryMinerV3.class);
     }
 
+    public Repository getRepository(IRepositoryIdProvider repo) {
+        try {
+            return service.getRepository(repo);
+        } catch (IOException e) {
+            log.error("IO exception fetching Repository: {}", repo.generateId(), e);
+            return null;
+        }
+    }
+
     public Repository getRepository(String username, String reponame) {
         try {
             return service.getRepository(username, reponame);
@@ -27,39 +40,39 @@ public class RepositoryMinerV3 extends V3Miner {
         }
     }
 
-    // TODO: implement these methods
-    //	public List<String> getRepositoryCollaborators(String username, String reponame) {
-    //		log.trace("Fetching collaborators: {}/{}", username, reponame);
-    //		List<String> collabs = service.getCollaborators(username, reponame);
-    //		log.debug("Fetched collaborators: {}/{} number: {}", new Object[] {username, reponame, collabs==null?"null":collabs.size()});
-    //		return collabs;
-    //	}
-    //	
-    //	public List<User> getRepositoryContributors(String username, String reponame) {
-    //		log.trace("Fetching contributors: {}/{}", username, reponame);
-    //		List<User> contributors = service.getContributors(username, reponame);
-    //		log.debug("Fetched contributors: {}/{} number: {}", new Object[] {username, reponame, contributors==null?"null":contributors.size()});
-    //		return contributors;
-    //	}
-    //	
-    //	public List<Repository> getUserRepositories(String username) {
-    //		log.trace("Fetching repositories for user: {}", username);
-    //		List<Repository> repos = service.getRepositories(username);
-    //		log.debug("Fetched repositories for user: {} number: {}", username, repos==null?"null":repos.size());
-    //		return repos;
-    //	}
-    //	
-    //	public List<String> getWatchers(String username, String reponame) {
-    //		log.trace("Fetching watchers for repository: {}/{}", username, reponame);
-    //		List<String> watchers = service.getWatchers(username,  reponame);
-    //		log.debug("Fetched watchers for repository: {}/{} number: {}", new Object[] {username, reponame, watchers==null?"null":watchers.size()});
-    //		return watchers;
-    //	}
-    //	
-    //	public List<Repository> getForks(String username, String reponame) {
-    //		log.trace("Fetching forks for repository: {}/{}", username, reponame);
-    //		List<Repository> forks = service.getForks(username, reponame);
-    //		log.debug("Fetched forks for repository: {}/{} number: {}", new Object[] {username, reponame, forks==null?"null":forks.size()});
-    //		return forks;
-    //	}
+    public List<Repository> getRepositories(String login) {
+        try {
+            return service.getRepositories(login);
+        } catch (IOException e) {
+            log.error("IOException in getRepositories: {}", login, e);
+            return null;
+        }
+    }
+
+    public List<Contributor> getContributors(IRepositoryIdProvider repo) {
+        try {
+            return service.getContributors(repo, false);
+        } catch (IOException e) {
+            log.error("Error fetching contributors for repository: {}", repo.generateId(), e);
+            return null;
+        }
+    }
+    
+    public Map<String, Long> getLanguages(IRepositoryIdProvider repo) {
+        try {
+            return service.getLanguages(repo);
+        } catch (IOException e) {
+            log.error("Error fetching languages for repository: {}", repo.generateId(), e);
+            return null;
+        }
+    }
+    
+    public List<Repository> getForks(IRepositoryIdProvider repo) {
+        try {
+            return service.getForks(repo);
+        } catch (IOException e) {
+            log.error("Error fetching forks for repository: {}", repo.generateId(), e);
+            return null;
+        }
+    }
 }

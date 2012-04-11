@@ -1,5 +1,9 @@
-package net.wagstrom.research.github;
+package net.wagstrom.research.github.v2;
 
+/**
+ * @author Patrick Wagstrom <patrick@wagstrom.net>
+ * @deprecated
+ */
 public abstract class BaseMiner {
 
     /**

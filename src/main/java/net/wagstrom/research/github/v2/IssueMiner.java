@@ -1,8 +1,9 @@
-package net.wagstrom.research.github;
+package net.wagstrom.research.github.v2;
 
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +13,10 @@ import com.github.api.v2.schema.Issue;
 import com.github.api.v2.schema.Issue.State;
 import com.github.api.v2.services.IssueService;
 
+/**
+ * @author Patrick Wagstrom
+ * @deprecated
+ */
 public class IssueMiner extends BaseMiner {
     private IssueService service = null;
     private Logger log;

@@ -1,4 +1,4 @@
-package net.wagstrom.research.github;
+package net.wagstrom.research.github.v2;
 
 import java.util.Date;
 

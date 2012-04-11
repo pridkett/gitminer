@@ -23,27 +23,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import net.wagstrom.research.github.v3.CollaboratorMinerV3;
+import net.wagstrom.research.github.v3.GistMinerV3;
 import net.wagstrom.research.github.v3.IssueMinerV3;
 import net.wagstrom.research.github.v3.OrganizationMinerV3;
 import net.wagstrom.research.github.v3.PullMinerV3;
 import net.wagstrom.research.github.v3.RepositoryMinerV3;
 import net.wagstrom.research.github.v3.UserMinerV3;
+import net.wagstrom.research.github.v3.WatcherMinerV3;
 
 import org.eclipse.egit.github.core.IssueEvent;
+import org.eclipse.egit.github.core.User;
 import org.eclipse.egit.github.core.client.IGitHubClient;
 import org.eclipse.egit.github.core.client.GitHubClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.api.v2.schema.Gist;
-import com.github.api.v2.schema.Issue;
-import com.github.api.v2.schema.PullRequest;
-import com.github.api.v2.schema.Repository;
-import com.github.api.v2.schema.Team;
-import com.github.api.v2.schema.User;
-import com.github.api.v2.services.FeedService;
-import com.github.api.v2.services.GitHubException;
-import com.github.api.v2.services.GitHubServiceFactory;
 import com.ibm.research.govsci.graph.GraphShutdownHandler;
 
 /**
@@ -59,7 +54,7 @@ public class GitHubMain {
     long refreshTime = 0; // minimum age of a resource in milliseconds
     Properties p;
     protected BlueprintsDriver bp;
-    
+
     public GitHubMain() {
         log = LoggerFactory.getLogger(this.getClass());		
         throttle = new ApiThrottle();
@@ -71,7 +66,6 @@ public class GitHubMain {
         ArrayList <String> projects = new ArrayList<String> ();
         ArrayList <String> users = new ArrayList<String> ();
         ArrayList <String> organizations = new ArrayList<String> ();
-        GitHubServiceFactory factory = GitHubServiceFactory.newInstance();
         p = GithubProperties.props();
 
         // set the maximum rate as specificed in the configuration properties file
@@ -138,19 +132,15 @@ public class GitHubMain {
         Runtime.getRuntime().addShutdownHook(gsh);
 
         GitHubClient ghc = new GitHubClient();
+
         IssueMinerV3 imv3 = new IssueMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
         PullMinerV3 pmv3 = new PullMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
         RepositoryMinerV3 rmv3 = new RepositoryMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
         UserMinerV3 umv3 = new UserMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
         OrganizationMinerV3 omv3 = new OrganizationMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
-        
-        RepositoryMiner rm = new RepositoryMiner(ThrottledGitHubInvocationHandler.createThrottledRepositoryService(factory.createRepositoryService(), throttle));
-        IssueMiner im = new IssueMiner(ThrottledGitHubInvocationHandler.createThrottledIssueService(factory.createIssueService(), throttle));
-
-        PullMiner pm = new PullMiner(ThrottledGitHubInvocationHandler.createThrottledPullRequestService(factory.createPullRequestService(), throttle));
-        UserMiner um = new UserMiner(ThrottledGitHubInvocationHandler.createThrottledUserService(factory.createUserService(), throttle));
-        GistMiner gm = new GistMiner(ThrottledGitHubInvocationHandler.createThrottledGistService(factory.createGistService(), throttle));
-        OrganizationMiner om = new OrganizationMiner(ThrottledGitHubInvocationHandler.createThrottledOrganizationService(factory.createOrganizationService(), throttle));
+        GistMinerV3 gmv3 = new GistMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+        WatcherMinerV3 wmv3 = new WatcherMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+        CollaboratorMinerV3 cmv3 = new CollaboratorMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
 
         if (p.getProperty("net.wagstrom.research.github.miner.repositories","true").equals("true")) {
             for (String proj : projects) {
@@ -158,28 +148,28 @@ public class GitHubMain {
 
                 // yay! full declarations! they're AWESOME!
                 org.eclipse.egit.github.core.Repository repo = rmv3.getRepository(projsplit[0], projsplit[1]);
-                bp.saveRepository(rm.getRepositoryInformation(projsplit[0], projsplit[1]));
+                bp.saveRepository(repo);
                 log.warn("handling project owner...");
                 handleProjectOwner(repo.getOwner(), umv3, omv3);
-                
+
                 if (p.getProperty("net.wagstrom.research.github.miner.repositories.collaborators", "true").equals("true"))
-                    bp.saveRepositoryCollaborators(proj, rm.getRepositoryCollaborators(projsplit[0], projsplit[1]));
+                    bp.saveRepositoryCollaborators(repo, cmv3.getCollaborators(repo));
                 if (p.getProperty("net.wagstrom.research.github.miner.repositories.contributors", "true").equals("true"))
-                    bp.saveRepositoryContributors(proj, rm.getRepositoryContributors(projsplit[0], projsplit[1]));
+                    bp.saveRepositoryContributors(repo, rmv3.getContributors(repo));
                 if (p.getProperty("net.wagstrom.research.github.miner.repositories.watchers", "true").equals("true"))
-                    bp.saveRepositoryWatchers(proj, rm.getWatchers(projsplit[0], projsplit[1]));
+                    bp.saveRepositoryWatchers(repo, wmv3.getWatchers(repo));
                 if (p.getProperty("net.wagstrom.research.github.miner.repositories.forks", "true").equals("true"))
-                    bp.saveRepositoryForks(proj, rm.getForks(projsplit[0], projsplit[1]));
+                    bp.saveRepositoryForks(repo, rmv3.getForks(repo));
 
                 if (p.getProperty("net.wagstrom.research.github.miner.repositories.issues","true").equals("true")) {
                     if (repo.isHasIssues()) {
                         Collection<org.eclipse.egit.github.core.Issue> issues3 = imv3.getAllIssues(projsplit[0], projsplit[1]);
                         if (issues3 != null) {
                             bp.saveRepositoryIssues(repo, issues3);
-    
+
                             Map<Integer, Date> savedIssues = bp.getIssueCommentsAddedAt(proj);
                             log.trace("SavedIssues Keys: {}", savedIssues.keySet());
-    
+
                             for (org.eclipse.egit.github.core.Issue issue : issues3) {
                                 String issueId = repo.generateId() + ":" + issue.getNumber();
                                 if (!needsUpdate(savedIssues.get(issue.getNumber()), true)) {
@@ -189,13 +179,12 @@ public class GitHubMain {
                                 log.debug("Pulling comments for issue: {} - {}", issueId, savedIssues.get(issue.getNumber()));
                                 try {
                                     // Fetch comments BOTH ways -- using the v2 and the v3 apis
-                                    bp.saveRepositoryIssueComments(proj, issue, im.getIssueComments(projsplit[0], projsplit[1], issue.getNumber()));
                                     bp.saveIssueComments(repo, issue, imv3.getIssueComments(repo, issue));
                                 } catch (NullPointerException e) {
                                     log.error("NullPointerException saving issue comments: {}:{}", proj, issue);
                                 }
                             }
-    
+
                             savedIssues = bp.getIssueEventsAddedAt(repo);
                             for (org.eclipse.egit.github.core.Issue issue : issues3) {
                                 String issueId = repo.generateId() + ":" + issue.getNumber();
@@ -231,12 +220,10 @@ public class GitHubMain {
                             if (savedRequests.containsKey(request.getNumber())) {
                                 if (!needsUpdate(savedRequests.get(request.getNumber()), true)) {
                                     log.debug("Skipping fetching pull request {} - recently updated {}", request.getNumber(), savedRequests.get(request.getNumber()));
-                                    continue;								
-                                }						
+                                    continue;
+                                }
                             }
                             try {
-                                // Fetch it BOTH ways -- using v2 and v3 api as they provide different information
-                                bp.savePullRequest(proj, pm.getPullRequest(projsplit[0], projsplit[1], request.getNumber()), true);
                                 bp.savePullRequest(repo, pmv3.getPullRequest(repo, request.getNumber()), true);
                             } catch (NullPointerException e) {
                                 log.error("NullPointerException saving pull request: {}:{}", proj, request.getNumber());
@@ -262,7 +249,7 @@ public class GitHubMain {
                         }
                         if (needsUpdate(date, true)) {
                             log.debug("Fetching {} user {}/{}: {}", new Object[]{proj, ctr++, numUsers, username});
-                            fetchAllUserData(bp, um, rm, gm, username);
+                            fetchAllUserData(bp, umv3, rmv3, gmv3, wmv3, username);
                         } else {
                             log.debug("Fecthing {} user {}/{}: {} needs no update", new Object[]{proj, ctr++, numUsers, username});
                         }
@@ -274,22 +261,23 @@ public class GitHubMain {
         // FIXME: this should check for when the user was last updated
         if (p.getProperty("net.wagstrom.research.github.miner.users","true").equals("true")) {
             for (String username : users) {
-                fetchAllUserData(bp, um, rm, gm, username);
+                fetchAllUserData(bp, umv3, rmv3, gmv3, wmv3, username);
             }
         }
 
         if (p.getProperty("net.wagstrom.research.github.miner.organizations","true").equals("true")) {
-            for (String organization : organizations) {
-                log.warn("Fetching organization: {}", organization);
-                bp.saveOrganization(om.getOrganizationInformation(organization));
+            for (String organizationName : organizations) {
+                log.warn("Fetching organization: {}", organizationName);
+                User organization = omv3.getOrganization(organizationName);
+                bp.saveUser(organization);
                 // This method fails when you're not an administrator of the organization
                 //			try {
                 //				bp.saveOrganizationOwners(organization, om.getOrganizationOwners(organization));
                 //			} catch (GitHubException e) {
                 //				log.info("Unable to fetch owners: {}", GitHubErrorPrimative.createGitHubErrorPrimative(e).getError());
                 //			}
-                bp.saveOrganizationPublicMembers(organization, om.getOrganizationPublicMembers(organization));
-                bp.saveOrganizationPublicRepositories(organization, om.getOrganizationPublicRepositories(organization));
+                bp.saveOrganizationPublicMembers(organization, omv3.getPublicMembers(organization.getLogin()));
+                bp.saveOrganizationPublicRepositories(organizationName, rmv3.getRepositories(organization.getLogin()));
                 // This fails when not an administrator of the organization
                 //			try {
                 //				List<Team> teams = om.getOrganizationTeams(organization);
@@ -312,9 +300,9 @@ public class GitHubMain {
      * @param owner
      */
     private void handleProjectOwner(org.eclipse.egit.github.core.User owner, UserMinerV3 umv3, OrganizationMinerV3 omv3) {
-        org.eclipse.egit.github.core.User u = umv3.getUser(owner.getLogin());
+        User u = umv3.getUser(owner.getLogin());
         if (u.getType().toLowerCase().equals("organization")) {
-            Collection<org.eclipse.egit.github.core.User> members = omv3.getPublicOrganizationMembers(u.getLogin());
+            Collection<User> members = omv3.getPublicMembers(u.getLogin());
             bp.saveOrganizationPublicMembers(u, members);
         } else {
             log.warn("Project owner is not an organization: {}", u.getType());
@@ -350,29 +338,29 @@ public class GitHubMain {
         return ((currentDate.getTime() - elementDate.getTime()) >= refreshTime);
     }
 
-    private void fetchAllUserData(BlueprintsDriver bp, UserMiner um, RepositoryMiner rm, GistMiner gm, String user) {
-        List<String> followers = um.getUserFollowers(user);
+    private void fetchAllUserData(BlueprintsDriver bp, UserMinerV3 umv3, RepositoryMinerV3 rmv3, GistMinerV3 gmv3, WatcherMinerV3 wmv3, String user) {
+        List<org.eclipse.egit.github.core.User> followers = umv3.getFollowers(user);
         if (followers != null) {
             bp.saveUserFollowers(user, followers);
         } else {
             log.debug("user: {} null followers", user);
         }
 
-        List<String> following = um.getUserFollowing(user);
+        List<org.eclipse.egit.github.core.User> following = umv3.getFollowing(user);
         if (following != null) {
             bp.saveUserFollowing(user, following);
         } else {
             log.debug("user: {} null fullowing", user);
         }
 
-        List<Repository> watchedRepos = um.getWatchedRepositories(user);
+        List<org.eclipse.egit.github.core.Repository> watchedRepos = wmv3.getWatched(user);
         if (watchedRepos != null) {
             bp.saveUserWatchedRepositories(user, watchedRepos);
         } else {
             log.debug("user: {} null watched repositories", user);
         }
 
-        List<Repository> userRepos = rm.getUserRepositories(user);
+        List<org.eclipse.egit.github.core.Repository> userRepos = rmv3.getRepositories(user);
         if (userRepos != null) {
             bp.saveUserRepositories(user, userRepos);
         } else {
@@ -381,23 +369,66 @@ public class GitHubMain {
         }
 
         if (p.getProperty("net.wagstrom.research.github.miner.gists","true").equals("true")) {
-            List<Gist> gists = gm.getUserGists(user);
-            if (gists != null) {
-                bp.saveUserGists(user, gists);
-            } else {
-                log.debug("user: {} null gists", user);
-            }
+            bp.saveUserGists(user, gmv3.getGists(user));
         }
 
         // yes, the user is saved last, this way if any of the other parts
         // fail we don't accidentally say the user was updated
-        User userInfo = um.getUserInformation(user);
+        User userInfo = umv3.getUser(user);
         if (userInfo != null) {
             bp.saveUser(userInfo, true);
         } else {
             log.debug("user: {} null user information", user);
         }
     }
+    //    private void fetchAllUserData(BlueprintsDriver bp, UserMiner um, RepositoryMiner rm, GistMiner gm, String user) {
+    //        List<String> followers = um.getUserFollowers(user);
+    //        if (followers != null) {
+    //            bp.saveUserFollowers(user, followers);
+    //        } else {
+    //            log.debug("user: {} null followers", user);
+    //        }
+    //
+    //        List<String> following = um.getUserFollowing(user);
+    //        if (following != null) {
+    //            bp.saveUserFollowing(user, following);
+    //        } else {
+    //            log.debug("user: {} null fullowing", user);
+    //        }
+    //
+    //        List<Repository> watchedRepos = um.getWatchedRepositories(user);
+    //        if (watchedRepos != null) {
+    //            bp.saveUserWatchedRepositories(user, watchedRepos);
+    //        } else {
+    //            log.debug("user: {} null watched repositories", user);
+    //        }
+    //
+    //        List<Repository> userRepos = rm.getUserRepositories(user);
+    //        if (userRepos != null) {
+    //            bp.saveUserRepositories(user, userRepos);
+    //        } else {
+    //            log.debug("user: {} null user repositries", user);
+    //
+    //        }
+    //
+    //        if (p.getProperty("net.wagstrom.research.github.miner.gists","true").equals("true")) {
+    //            List<Gist> gists = gm.getUserGists(user);
+    //            if (gists != null) {
+    //                bp.saveUserGists(user, gists);
+    //            } else {
+    //                log.debug("user: {} null gists", user);
+    //            }
+    //        }
+    //
+    //        // yes, the user is saved last, this way if any of the other parts
+    //        // fail we don't accidentally say the user was updated
+    //        User userInfo = um.getUserInformation(user);
+    //        if (userInfo != null) {
+    //            bp.saveUser(userInfo, true);
+    //        } else {
+    //            log.debug("user: {} null user information", user);
+    //        }
+    //    }
 
     protected BlueprintsDriver connectToGraph(Properties p) {
         // pass through all the db.XYZ properties to the database

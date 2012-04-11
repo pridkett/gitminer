@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.wagstrom.research.github;
+package net.wagstrom.research.github.v2;
 
 import java.util.List;
 
@@ -24,6 +24,10 @@ import com.github.api.v2.schema.Repository;
 import com.github.api.v2.schema.User;
 import com.github.api.v2.services.RepositoryService;
 
+/**
+ * @author Patrick Wagstrom
+ * @deprecated
+ */
 public class RepositoryMiner {
     private RepositoryService service = null;
     private Logger log;

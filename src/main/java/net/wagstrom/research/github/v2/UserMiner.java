@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.wagstrom.research.github;
+package net.wagstrom.research.github.v2;
 
 import java.util.List;
 
@@ -22,9 +22,12 @@ import org.slf4j.LoggerFactory;
 
 import com.github.api.v2.schema.Repository;
 import com.github.api.v2.schema.User;
-import com.github.api.v2.services.GitHubException;
 import com.github.api.v2.services.UserService;
 
+/**
+ * @author Patrick Wagstrom
+ * @deprecated
+ */
 public class UserMiner extends BaseMiner {
     private UserService service = null;
     private Logger log;

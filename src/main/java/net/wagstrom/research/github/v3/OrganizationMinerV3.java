@@ -1,22 +1,11 @@
 package net.wagstrom.research.github.v3;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
 
-import org.eclipse.egit.github.core.Comment;
-import org.eclipse.egit.github.core.CommitComment;
-import org.eclipse.egit.github.core.IRepositoryIdProvider;
-import org.eclipse.egit.github.core.Issue;
-import org.eclipse.egit.github.core.PullRequest;
 import org.eclipse.egit.github.core.User;
 import org.eclipse.egit.github.core.client.IGitHubClient;
-import org.eclipse.egit.github.core.service.IssueService;
 import org.eclipse.egit.github.core.service.OrganizationService;
-import org.eclipse.egit.github.core.service.PullRequestService;
-import org.eclipse.egit.github.core.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +20,7 @@ public class OrganizationMinerV3 extends V3Miner {
     }
 
    
-    public Collection<User> getOrganizationMembers(String organization) {
+    public Collection<User> getMembers(String organization) {
         try {
             return service.getMembers(organization);
         } catch (IOException e) {
@@ -40,7 +29,7 @@ public class OrganizationMinerV3 extends V3Miner {
         }
     }
     
-    public Collection<User> getPublicOrganizationMembers(String organization) {
+    public Collection<User> getPublicMembers(String organization) {
         try {
             return service.getPublicMembers(organization);
         } catch (IOException e) {

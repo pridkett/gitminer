@@ -1,4 +1,4 @@
-package net.wagstrom.research.github;
+package net.wagstrom.research.github.v2;
 
 import java.util.List;
 
@@ -9,6 +9,10 @@ import com.github.api.v2.schema.Gist;
 import com.github.api.v2.services.GistService;
 import com.github.api.v2.services.GitHubException;
 
+/**
+ * @author Patrick Wagstrom
+ * @deprecated
+ */
 public class GistMiner {
     private GistService service = null;
     private Logger log;

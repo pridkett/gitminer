@@ -5,8 +5,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.net.ConnectException;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.HashSet;
 
@@ -14,10 +12,7 @@ import net.wagstrom.research.github.ApiThrottle;
 import net.wagstrom.research.github.InvocationHandlerBase;
 
 import org.eclipse.egit.github.core.client.IGitHubClient;
-import org.eclipse.egit.github.core.client.GitHubClient;
 import org.eclipse.egit.github.core.client.RequestException;
-import org.eclipse.egit.github.core.service.GitHubService;
-import org.eclipse.egit.github.core.service.IssueService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

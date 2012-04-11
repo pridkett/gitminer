@@ -1,14 +1,15 @@
-package net.wagstrom.research.github;
+package net.wagstrom.research.github.v2;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.net.ConnectException;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.HashSet;
+
+import net.wagstrom.research.github.ApiThrottle;
+import net.wagstrom.research.github.InvocationHandlerBase;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

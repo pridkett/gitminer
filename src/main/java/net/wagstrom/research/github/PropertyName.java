@@ -20,6 +20,7 @@ public final class PropertyName {
     public static final String COMMIT_ID = "commitId";
     public static final String COMMITS = "commits";
     public static final String COMPANY = "company";
+    public static final String CONTRIBUTIONS = "contributions";
     public static final String CREATED_AT = "createdAt";
     public static final String DATE = "date";
     public static final String DELETIONS = "deletions";
@@ -35,6 +36,8 @@ public final class PropertyName {
     public static final String FORKS = "forks";
     public static final String FULLNAME = "fullname";
     public static final String GITHUB_ID = "gitHubId";
+    public static final String GIT_PULL_URL = "gitPullUrl";
+    public static final String GIT_PUSH_URL = "gitPushUrl";
     public static final String GIT_URL = "gitUrl";
     public static final String GRAVATAR_ID = "gravatarId";
     public static final String HAS_DOWNLOADS = "hasDownloads";
@@ -45,6 +48,7 @@ public final class PropertyName {
     public static final String ID_NUM = "id_num";
     public static final String ISSUE_CREATED_AT = "issueCreatedAt";
     public static final String ISSUE_UPDATED_AT = "issueUpdatedAt";
+    public static final String ISSUE_URL = "issueUrl";
     public static final String IS_FORK = "isFork";
     public static final String IS_MERGE = "isMerge";
     public static final String IS_PRIVATE = "isPrivate";
@@ -53,6 +57,7 @@ public final class PropertyName {
     public static final String LOCATION = "location";
     public static final String LOGIN = "login";
     public static final String MASTER_BRANCH = "masterBranch";
+    public static final String MEMBERS = "members";
     public static final String MESSAGE = "message";
     public static final String MERGED_AT = "merged_at";
     public static final String MIRROR_URL = "mirrorUrl";
@@ -67,6 +72,7 @@ public final class PropertyName {
     public static final String PARENT = "parent";
     public static final String PATCH_URL = "patchUrl";
     public static final String PATH = "path";
+    public static final String PERMISSION = "permission";
     public static final String POSITION = "position";
     public static final String PRIVATE_GIST_COUNT = "private_gist_count";
     public static final String PUBLIC_GIST_COUNT = "public_gist_count";
@@ -74,6 +80,7 @@ public final class PropertyName {
     public static final String PUSHED_AT = "pushedAt";
     public static final String REF = "ref";
     public static final String REPO = "repo";
+    public static final String REPOSITORIES = "repositories";
     public static final String REPO_TYPE = "repoType";
     public static final String SCORE = "score";
     public static final String SHA = "sha";

@@ -1,4 +1,4 @@
-package net.wagstrom.research.github;
+package net.wagstrom.research.github.v2;
 
 import java.util.Collection;
 import java.util.List;
@@ -10,6 +10,10 @@ import com.github.api.v2.schema.Issue.State;
 import com.github.api.v2.schema.PullRequest;
 import com.github.api.v2.services.PullRequestService;
 
+/**
+ * @author Patrick Wagstrom
+ * @deprecated
+ */
 public class PullMiner {
     private PullRequestService service = null;
     private Logger log;
