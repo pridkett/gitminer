@@ -939,11 +939,12 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         Vertex repoVtx = getOrCreateRepository(repo);
         if (collaborators == null) {
             log.warn("saveRepositoryCollaborators - collaborators are null");
-        }
-        for (User user : collaborators) {
-            Vertex userVtx = getOrCreateUser(user);
-            createEdgeIfNotExist(null, repoVtx, userVtx, EdgeType.REPOCOLLABORATOR);
-            mapper.put(user, userVtx);
+        } else {
+            for (User user : collaborators) {
+                Vertex userVtx = getOrCreateUser(user);
+                createEdgeIfNotExist(null, repoVtx, userVtx, EdgeType.REPOCOLLABORATOR);
+                mapper.put(user, userVtx);
+            }
         }
         return mapper;
     }
@@ -962,12 +963,13 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         Vertex repoVtx = getOrCreateRepository(repo);
         if (contributors == null) {
             log.warn("saveRepositoryCollaborators - collaborators are null");
-        }
-        for (Contributor contributor : contributors) {
-            Vertex contributorVtx = saveContributor(contributor);
-            Edge contributorEdge = createEdgeIfNotExist(null, repoVtx, contributorVtx, EdgeType.REPOCONTRIBUTOR);
-            setProperty(contributorEdge, PropertyName.CONTRIBUTIONS, contributor.getContributions());
-            mapper.put(contributor, contributorVtx);
+        } else {
+            for (Contributor contributor : contributors) {
+                Vertex contributorVtx = saveContributor(contributor);
+                Edge contributorEdge = createEdgeIfNotExist(null, repoVtx, contributorVtx, EdgeType.REPOCONTRIBUTOR);
+                setProperty(contributorEdge, PropertyName.CONTRIBUTIONS, contributor.getContributions());
+                mapper.put(contributor, contributorVtx);
+            }
         }
         return mapper;
     }
@@ -1337,7 +1339,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         }
         setProperty(node, PropertyName.URL, user.getUrl());
         setProperty(node, PropertyName.FULLNAME, user.getName());
-        if (user.getAvatarUrl() != null && user.getAvatarUrl().trim() != "") {
+        if (user.getAvatarUrl() != null && !user.getAvatarUrl().trim().equals("")) {
             setProperty(node, PropertyName.GRAVATAR_ID, user.getAvatarUrl());
             Vertex gravatarVtx = saveGravatar(user.getAvatarUrl());
             createEdgeIfNotExist(node, gravatarVtx, EdgeType.GRAVATAR);

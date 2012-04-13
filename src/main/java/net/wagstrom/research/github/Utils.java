@@ -1,5 +1,6 @@
 package net.wagstrom.research.github;
 
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -10,8 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Utils {
-    private static final Logger log = LoggerFactory.getLogger(Utils.class);
-    private static final Pattern gravatarPattern = Pattern.compile("([a-f0-9]{32})");
+    private static final Logger log = LoggerFactory.getLogger(Utils.class); // NOPMD
+    private static final Pattern GRAVATAR_PATTERN = Pattern.compile("([a-f0-9]{32})");
 
     /**
      * takes an email address and creates the appropriate gravatar hash
@@ -22,10 +23,12 @@ public class Utils {
     public static String gravatarHash(final String email) {
         try {
             MessageDigest digest = MessageDigest.getInstance("MD5");
-            digest.update(email.trim().toLowerCase().getBytes());
+            digest.update(email.trim().toLowerCase().getBytes("UTF-8"));
             return new BigInteger(1, digest.digest()).toString(16);
         } catch (NoSuchAlgorithmException e) {
             log.error("No such algorithm MD5", e);
+        } catch (UnsupportedEncodingException e) {
+            log.error("Error decoding from UTF-8", e);
         }
         return null;
     }
@@ -43,7 +46,7 @@ public class Utils {
      * @return
      */
     public static String gravatarIdExtract(final String gravatarId) {
-        Matcher matcher = gravatarPattern.matcher(gravatarId);
+        Matcher matcher = GRAVATAR_PATTERN.matcher(gravatarId);
         if (matcher.find()) {
             return matcher.group(0);
         }
