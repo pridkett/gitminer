@@ -23,7 +23,7 @@ public class ApiThrottle {
     private int limitRemaining;
     private Calendar lastReset = null;
     private Calendar lastCall = null;
-    private Logger log;
+    private static final Logger log = LoggerFactory.getLogger(ApiThrottle.class); // NOPMD
     private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
     private SimpleDateFormat dateFormatter = null;
     private long internalMaxRate = -1;
@@ -32,7 +32,6 @@ public class ApiThrottle {
     public ApiThrottle() {
         limit = -1;
         limitRemaining = -1;
-        log = LoggerFactory.getLogger(this.getClass());
         dateFormatter = new SimpleDateFormat(DATE_FORMAT);
     }
 

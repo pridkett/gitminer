@@ -6,15 +6,14 @@ import java.net.ConnectException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class InvocationHandlerBase {
-    private Logger log;
+public abstract class AbstractInvocationHandler {
+    private static final Logger log = LoggerFactory.getLogger(AbstractInvocationHandler.class); // NOPMD
     protected static final long SLEEP_DELAY = 5000;
     protected static final long MAX_SLEEP_DELAY = SLEEP_DELAY * 5;
 
     protected long failSleepDelay = SLEEP_DELAY;
     
-    public InvocationHandlerBase() {
-        log = LoggerFactory.getLogger(InvocationHandlerBase.class);    
+    public AbstractInvocationHandler() {
     }
     
     private void failSleep() {
@@ -54,7 +53,7 @@ public abstract class InvocationHandlerBase {
         } else if (e.getCause() != null && e.getCause().getCause() instanceof ConnectException) {
             log.error("Connection exception (deep): Method: {}, Args: {}", new Object[]{method.getName(), args, e});
             failSleep();
-            return invoke(proxy, method, args);         
+            return invoke(proxy, method, args);
         }
 
         log.error("Unhandled exception: Method: {} Args: {}", new Object[]{method.getName(), args, e});

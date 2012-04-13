@@ -24,7 +24,7 @@ public class App
 	@Option(name="-l", usage="file for logback configuration")
 	private String logbackFile = null;
 	
-	public static void main( String[] args )
+	public static void main(final String[] args )
     {
 		App a = new App();
 		a.run(args);
@@ -34,7 +34,7 @@ public class App
 		log = LoggerFactory.getLogger(App.class);
 	}
 	
-	public void run(String[] args) {
+	public void run(final String[] args) {
 		CmdLineParser parser = new CmdLineParser(this);
 		try {
 			log.trace("Parsing arguments...");

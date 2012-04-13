@@ -29,7 +29,7 @@ import java.util.Properties;
  * @author patrick
  */
 public class GithubProperties {
-    static Properties _githubProperties = null;
+    private static Properties internalProps = null;
 
     /**
      * static method that returns the configuration properties
@@ -37,17 +37,18 @@ public class GithubProperties {
      * 
      * @return a {java.util.Propeties} reference
      */
-    public static Properties props() {
-        if (_githubProperties != null) return _githubProperties;
-        _githubProperties = new Properties();
-        ClassLoader loader = Thread.currentThread().getContextClassLoader();
-        InputStream properties = loader.getResourceAsStream("configuration.properties");
-        try {
-            _githubProperties.load(properties);
-        } catch (IOException e) {
-            e.printStackTrace();
+    public static synchronized Properties props() {
+        if (internalProps == null) {
+            internalProps = new Properties();
+            ClassLoader loader = Thread.currentThread().getContextClassLoader();
+            InputStream properties = loader.getResourceAsStream("configuration.properties");
+            try {
+                internalProps.load(properties);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-        return _githubProperties;
+        return internalProps;
     }
 
     /**
@@ -59,14 +60,15 @@ public class GithubProperties {
      * @param filename
      * @return
      */
-    public static Properties props(String filename) {
-        if (_githubProperties != null) return _githubProperties;
-        _githubProperties = new Properties();
-        try {
-            _githubProperties.load(new FileInputStream(filename));
-        } catch (IOException e) {
-            e.printStackTrace();
+    public static synchronized Properties props(final String filename) {
+        if (internalProps == null) {
+            internalProps = new Properties();
+            try {
+                internalProps.load(new FileInputStream(filename));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-        return _githubProperties;		
+        return internalProps;
     }
 }

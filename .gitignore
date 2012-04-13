@@ -5,3 +5,4 @@ target/
 .project
 .settings
 graph.*db
+graph.*db*.tar.gz

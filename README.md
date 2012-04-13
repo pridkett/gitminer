@@ -1,5 +1,11 @@
 # Github Mining Tools
 
+**Important (April 13, 2012):** Small changes have been made to the packaging of the code
+submitted along with the FSE2012 paper. Please see [artifacts.txt](https://github.com/pridkett/gitminer/blob/master/artifacts.md)
+for more information.
+
+**Almost as important:** The rest of this document is out of date.
+
 # Getting Going
 This project uses Apache Maven to manage all dependencies and versioning. The
 simplest way to get going is to run the following command:

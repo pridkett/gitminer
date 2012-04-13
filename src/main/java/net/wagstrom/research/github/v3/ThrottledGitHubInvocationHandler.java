@@ -9,14 +9,14 @@ import java.util.Arrays;
 import java.util.HashSet;
 
 import net.wagstrom.research.github.ApiThrottle;
-import net.wagstrom.research.github.InvocationHandlerBase;
+import net.wagstrom.research.github.AbstractInvocationHandler;
 
 import org.eclipse.egit.github.core.client.IGitHubClient;
 import org.eclipse.egit.github.core.client.RequestException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ThrottledGitHubInvocationHandler extends InvocationHandlerBase implements InvocationHandler {
+public class ThrottledGitHubInvocationHandler extends AbstractInvocationHandler implements InvocationHandler {
     IGitHubClient wrapped;
     ApiThrottle throttle;
     private Logger log;

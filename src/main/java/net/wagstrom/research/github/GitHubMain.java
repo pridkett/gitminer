@@ -29,13 +29,14 @@ import net.wagstrom.research.github.v3.IssueMinerV3;
 import net.wagstrom.research.github.v3.OrganizationMinerV3;
 import net.wagstrom.research.github.v3.PullMinerV3;
 import net.wagstrom.research.github.v3.RepositoryMinerV3;
+import net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler;
 import net.wagstrom.research.github.v3.UserMinerV3;
 import net.wagstrom.research.github.v3.WatcherMinerV3;
 
 import org.eclipse.egit.github.core.IssueEvent;
 import org.eclipse.egit.github.core.User;
-import org.eclipse.egit.github.core.client.IGitHubClient;
 import org.eclipse.egit.github.core.client.GitHubClient;
+import org.eclipse.egit.github.core.client.IGitHubClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,15 +49,14 @@ import com.ibm.research.govsci.graph.GraphShutdownHandler;
  *
  */
 public class GitHubMain {
-    Logger log = null;
-    ApiThrottle throttle = null;
-    ApiThrottle v3throttle = null;
-    long refreshTime = 0; // minimum age of a resource in milliseconds
-    Properties p;
+    private static final Logger log = LoggerFactory.getLogger(GitHubMain.class); // NOPMD
+    private final ApiThrottle throttle;
+    private final ApiThrottle v3throttle;
+    private long refreshTime = 0; // minimum age of a resource in milliseconds
+    private Properties p;
     protected BlueprintsDriver bp;
 
     public GitHubMain() {
-        log = LoggerFactory.getLogger(this.getClass());		
         throttle = new ApiThrottle();
         v3throttle = new ApiThrottle();
     }
@@ -133,14 +133,14 @@ public class GitHubMain {
 
         GitHubClient ghc = new GitHubClient();
 
-        IssueMinerV3 imv3 = new IssueMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
-        PullMinerV3 pmv3 = new PullMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
-        RepositoryMinerV3 rmv3 = new RepositoryMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
-        UserMinerV3 umv3 = new UserMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
-        OrganizationMinerV3 omv3 = new OrganizationMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
-        GistMinerV3 gmv3 = new GistMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
-        WatcherMinerV3 wmv3 = new WatcherMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
-        CollaboratorMinerV3 cmv3 = new CollaboratorMinerV3(net.wagstrom.research.github.v3.ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+        IssueMinerV3 imv3 = new IssueMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+        PullMinerV3 pmv3 = new PullMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+        RepositoryMinerV3 rmv3 = new RepositoryMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+        UserMinerV3 umv3 = new UserMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+        OrganizationMinerV3 omv3 = new OrganizationMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+        GistMinerV3 gmv3 = new GistMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+        WatcherMinerV3 wmv3 = new WatcherMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+        CollaboratorMinerV3 cmv3 = new CollaboratorMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
 
         if (p.getProperty("net.wagstrom.research.github.miner.repositories","true").equals("true")) {
             for (String proj : projects) {

@@ -59,28 +59,28 @@ import com.tinkerpop.pipes.PipeFunction;
  */
 public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
-    private Logger log = null;
+    private final static Logger log = LoggerFactory.getLogger(BlueprintsDriver.class); // NOPMD
 
-    private Index <Vertex> useridx = null;
-    private Index <Vertex> repoidx = null;
-    private Index <Vertex> orgidx = null;
-    private Index <Vertex> teamidx = null;
-    private Index <Vertex> gistidx = null;
-    private Index <Vertex> gistfileidx = null;
-    private Index <Vertex> commentidx = null;
-    private Index <Vertex> issueidx = null;
-    private Index <Vertex> issuelabelidx = null;
-    private Index <Vertex> pullrequestidx = null;
-    private Index <Vertex> discussionidx = null;
-    private Index <Vertex> commitidx = null;
-    private Index <Vertex> pullrequestreviewcommentidx = null;
-    private Index <Vertex> emailidx = null;
-    private Index <Vertex> markeridx = null;
-    private Index <Vertex> milestoneidx = null;
-    private Index <Vertex> issueeventidx = null;
-    private Index <Vertex> gravataridx = null;
-    private Index <Vertex> gituseridx = null;
-    private Index <Vertex> nameidx = null;
+    private final Index <Vertex> useridx;
+    private final Index <Vertex> repoidx;
+    private final Index <Vertex> orgidx;
+    private final Index <Vertex> teamidx;
+    private final Index <Vertex> gistidx;
+    private final Index <Vertex> gistfileidx;
+    private final Index <Vertex> commentidx;
+    private final Index <Vertex> issueidx;
+    private final Index <Vertex> issuelabelidx;
+    private final Index <Vertex> pullrequestidx;
+    private final Index <Vertex> discussionidx;
+    private final Index <Vertex> commitidx;
+    private final Index <Vertex> pullrequestreviewcommentidx;
+    private final Index <Vertex> emailidx;
+    private final Index <Vertex> markeridx;
+    private final Index <Vertex> milestoneidx;
+    private final Index <Vertex> issueeventidx;
+    private final Index <Vertex> gravataridx;
+    private final Index <Vertex> gituseridx;
+    private final Index <Vertex> nameidx;
 
     /**
      * Base constructor for BlueprintsDriver
@@ -89,11 +89,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param dburl The url of the database to use
      * @param config additional configuration parameters to be passed to the database
      */
-    public BlueprintsDriver(String dbengine, String dburl, Map<String, String> config) {
+    public BlueprintsDriver(final String dbengine, final String dburl, final Map<String, String> config) {
         super(dbengine, dburl, config);
         // FIXME: eventually this should be configurable
         setMaxBufferSize(100000);
-        log = LoggerFactory.getLogger(this.getClass());
 
         useridx = getOrCreateIndex(IndexNames.USER);
         repoidx = getOrCreateIndex(IndexNames.REPOSITORY);
@@ -126,32 +125,35 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * right now this ONLY works if you're looking at dates, which is a common
      * occurance.
      * 
-     * @param it The iterable to iterate over. Usually and ArrayList<Vertex>
-     * @param m The map that will map class T to Date. Usually T is String or Integer
+     * @param iterable The iterable to iterate over. Usually and ArrayList<Vertex>
+     * @param map The map that will map class T to Date. Usually T is String or Integer
      * @param idkey The property of Elements in it that contains the value of T in the map
      * @param datekey The property of Element in it that contains the value of Date in the map
      * @return the updated map
      */
     @SuppressWarnings("unchecked")
-    private <T, I extends Element> Map<T, Date> addValuesFromIterable(Iterable<I> it, Map<T, Date> m, String idkey, String datekey) {
-        for (I v : it) {
-            Set<String> keys = v.getPropertyKeys();
+    private <T, I extends Element> Map<T, Date> addValuesFromIterable(
+            final Iterable<I> iterable, final Map<T, Date> map,
+            final String idkey, final String datekey) {
+        for (I vertex : iterable) {
+            final Set<String> keys = vertex.getPropertyKeys();
             try {
                 if (!keys.contains(idkey)) {
-                    log.warn("Node found with no idkey: {}", v);
+                    log.warn("Node found with no idkey: {}", vertex);
                     continue;
                 }
                 if (keys.contains(datekey)) {
-                    Date d = propertyToDate(v.getProperty(datekey));
-                    m.put((T)v.getProperty(idkey), d);
+                    final Date vertexDate = propertyToDate(vertex.getProperty(datekey));
+                    map.put((T) vertex.getProperty(idkey), vertexDate);
                 } else {
-                    m.put((T)v.getProperty(idkey), null);
+                    map.put((T) vertex.getProperty(idkey), null);
                 }
             } catch (Exception e) {
-                log.error("Invalid {} for user: {}", datekey, (String)v.getProperty(idkey));
+                log.error("Invalid {} for user: {}", datekey,
+                        (String) vertex.getProperty(idkey));
             }
         }
-        return m;
+        return map;
     }
 
 //    public Vertex createCommentFromDiscussion(Discussion disc) {
@@ -213,16 +215,16 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param reponame the name of the repository to mine
      * @return a Map that maps issue_ids to the date that the comments were downloaded
      */
-    public Map<Integer, Date> getIssueCommentsAddedAt(String reponame) {
-        Vertex node = getOrCreateRepository(reponame);
-        HashMap<Integer, Date> m = new HashMap<Integer, Date>();
+    public Map<Integer, Date> getIssueCommentsAddedAt(final String reponame) {
+        final Vertex node = getOrCreateRepository(reponame);
+        final HashMap<Integer, Date> map = new HashMap<Integer, Date>();
 
-        GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
+        final GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.ISSUE.toString());
 
-        addValuesFromIterable(pipe, m, PropertyName.NUMBER, PropertyName.SYS_COMMENTS_ADDED);
+        addValuesFromIterable(pipe, map, PropertyName.NUMBER, PropertyName.SYS_COMMENTS_ADDED);
 
-        return m;
+        return map;
     }
 
     /**
@@ -233,69 +235,76 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param reponame the name of the repository to mine
      * @return a Map that maps issue_ids to the date that the events were downloaded
      */
-    public Map<Integer, Date> getIssueEventsAddedAt(IRepositoryIdProvider repo) {
-        Vertex node = getOrCreateRepository(repo.generateId());
-        HashMap<Integer, Date> m = new HashMap<Integer, Date>();
+    public Map<Integer, Date> getIssueEventsAddedAt(final IRepositoryIdProvider repo) {
+        final Vertex node = getOrCreateRepository(repo.generateId());
+        final HashMap<Integer, Date> map = new HashMap<Integer, Date>();
 
         GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.ISSUE.toString());
 
-        addValuesFromIterable(pipe, m, PropertyName.NUMBER, PropertyName.SYS_EVENTS_ADDED);
+        addValuesFromIterable(pipe, map, PropertyName.NUMBER, PropertyName.SYS_EVENTS_ADDED);
 
-        return m;
+        return map;
     }
 
-    public Vertex getOrCreateComment(long commentId) {
+    public Vertex getOrCreateComment(final long commentId) {
         return getOrCreateVertexHelper(IdCols.COMMENT, commentId, VertexType.COMMENT, commentidx);
     }
 
-    public Vertex getOrCreateCommit(String commitId) {
+    public Vertex getOrCreateCommit(final String commitId) {
         log.debug("Fetching or creating commit: {}", commitId);
-        // FIXME: update current database to replace commit_id with hash
         return getOrCreateVertexHelper(IdCols.COMMIT, commitId, VertexType.COMMIT, commitidx);
     }
 
-    public Vertex getOrCreateDiscussion(String discussionId) {
+    public Vertex getOrCreateDiscussion(final String discussionId) {
         return getOrCreateVertexHelper(IdCols.DISCUSSION, discussionId, VertexType.DISCUSSION, discussionidx);
     }
 
-    public Vertex getOrCreateEmail(String email) {
+    public Vertex getOrCreateEmail(final String email) {
         return getOrCreateVertexHelper(IdCols.EMAIL, email, VertexType.EMAIL, emailidx);
     }
 
-    private Vertex getOrCreateEvent(long id) {
-        return getOrCreateVertexHelper(IdCols.EVENT, id, VertexType.ISSUE_EVENT, issueeventidx);
+    private Vertex getOrCreateEvent(final long eventId) {
+        return getOrCreateVertexHelper(IdCols.EVENT, eventId, VertexType.ISSUE_EVENT, issueeventidx);
     }
 
-    public Vertex getOrCreateGist(String repoId) {
+    public Vertex getOrCreateGist(final String repoId) {
         return getOrCreateVertexHelper(IdCols.GIST, repoId, VertexType.GIST, gistidx);
     }
 
-    public Vertex getOrCreateGistFile(String repoid, String filename) {
-        String gistFileId = repoid + "/" + filename;
+    public Vertex getOrCreateGistFile(final String repoid, final String filename) {
+        final String gistFileId = repoid + "/" + filename;
         return getOrCreateVertexHelper(IdCols.GISTFILE,  gistFileId, VertexType.GISTFILE, gistfileidx);
     }
 
-    private Vertex getOrCreateIssue(String project, Issue issue) {
-        String issueId = project + ":" + issue.getNumber();
+    private Vertex getOrCreateIssue(final String project, final Issue issue) {
+        final String issueId = project + ":" + issue.getNumber();
         return getOrCreateVertexHelper(IdCols.ISSUE, issueId, VertexType.ISSUE, issueidx);
     }
 
-    private Vertex getOrCreateIssue(
-            Repository repo,
-            Issue issue) {
-        String issueId = repo.generateId() + ":" + issue.getNumber();
-        return getOrCreateVertexHelper(IdCols.ISSUE, issueId, VertexType.ISSUE, issueidx);
+    private Vertex getOrCreateIssue(final Repository repo, final Issue issue) {
+        final String issueId = repo.generateId() + ":" + issue.getNumber();
+        return getOrCreateVertexHelper(IdCols.ISSUE, issueId, VertexType.ISSUE,
+                issueidx);
     }
 
 
 
     // FIXME: labels vary by projects, so this may require an additional identifier
-    private Vertex getOrCreateIssueLabel(Label label) {
+    private Vertex getOrCreateIssueLabel(final Label label) {
         return getOrCreateVertexHelper(IdCols.LABEL, label.getName(), VertexType.LABEL, issuelabelidx);
     }
 
-    public Vertex getOrCreateIssueLabel(String label) {
+    /**
+     * The Id for a label is simple the label such as "todo" or "WONTFIX"
+     * 
+     * Labels are case sensitive. For giggles we can traverse projects
+     * that have the same label.
+     * 
+     * @param label
+     * @return
+     */
+    public Vertex getOrCreateIssueLabel(final String label) {
         return getOrCreateVertexHelper(IdCols.LABEL, label, VertexType.LABEL, issuelabelidx);
     }
 
@@ -305,57 +314,57 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param milestone
      * @return
      */
-    private Vertex getOrCreateMilestone(String milestone) {
+    private Vertex getOrCreateMilestone(final String milestone) {
         return getOrCreateVertexHelper(IdCols.MILESTONE, milestone, VertexType.MILESTONE, milestoneidx);
     }
 
-    public Vertex getOrCreateOrganization(String login) {
+    public Vertex getOrCreateOrganization(final String login) {
         return getOrCreateVertexHelper(IdCols.ORGANIZATION, login, VertexType.ORGANIZATION, orgidx);
     }
 
-    public Vertex getOrCreatePullRequest(String idval) {
+    public Vertex getOrCreatePullRequest(final String idval) {
         return getOrCreateVertexHelper(IdCols.PULLREQUEST, idval, VertexType.PULLREQUEST, pullrequestidx);
     }
 
-    private Vertex getOrCreatePullRequestMarker(PullRequestMarker head) {
+    private Vertex getOrCreatePullRequestMarker(final PullRequestMarker head) {
         return getOrCreateVertexHelper(IdCols.PULLREQUESTMARKER, head.getSha(), VertexType.PULLREQUESTMARKER, markeridx);
     }
 
-    public Vertex getOrCreatePullRequestReviewComment(String commentId) {
+    public Vertex getOrCreatePullRequestReviewComment(final String commentId) {
         log.debug("Fetching or creating PullRequestReviewComment: {}", commentId);
         return getOrCreateVertexHelper(IdCols.PULLREQUESTREVIEWCOMMENT, commentId, VertexType.PULLREQUESTREVIEWCOMMENT, pullrequestreviewcommentidx);
     }
 
-    public Vertex getOrCreateRepository(IRepositoryIdProvider repo) {
+    public Vertex getOrCreateRepository(final IRepositoryIdProvider repo) {
         return getOrCreateVertexHelper(IdCols.REPOSITORY, repo.generateId(), VertexType.REPOSITORY, repoidx);
     }
 
-    public Vertex getOrCreateRepository(String reponame) {
+    public Vertex getOrCreateRepository(final String reponame) {
         return getOrCreateVertexHelper(IdCols.REPOSITORY, reponame, VertexType.REPOSITORY, repoidx);
     }
 
-    public Vertex getOrCreateTeam(Team team) {
+    public Vertex getOrCreateTeam(final Team team) {
         return getOrCreateVertexHelper(IdCols.TEAM, team.getId(), VertexType.TEAM, teamidx);
     }
     
-    public Vertex getOrCreateTeam(String teamId) {
+    public Vertex getOrCreateTeam(final String teamId) {
         return getOrCreateVertexHelper(IdCols.TEAM, teamId, VertexType.TEAM, teamidx);
     }
 
-    private Vertex getOrCreateUser(User user) {
+    private Vertex getOrCreateUser(final User user) {
         return getOrCreateVertexHelper(IdCols.USER, user.getLogin(), VertexType.USER, useridx);
     }
 
-    public Vertex getOrCreateUser(String login) {
+    public Vertex getOrCreateUser(final String login) {
         return getOrCreateVertexHelper(IdCols.USER, login, VertexType.USER, useridx);
     }
 
-    public Vertex getOrCreateGitUser( String name, String email ) {
+    public Vertex getOrCreateGitUser(final String name, final String email ) {
         String key = name + " <" + email + ">";
         return getOrCreateVertexHelper(IdCols.GITUSER, key, VertexType.GIT_USER, gituseridx);
     }
 
-    public Vertex getOrCreateName( String name ) {
+    public Vertex getOrCreateName(final String name ) {
         return getOrCreateVertexHelper(IdCols.NAME, name, VertexType.NAME, nameidx);
     }
 
@@ -372,50 +381,50 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param reponame the name of the repository, eg mxcl/homebrew
      * @return a mapping of usernames to the date they last had a full update
      */
-    public Map<String, Date> getProjectUsersLastFullUpdate(String reponame) {
+    public Map<String, Date> getProjectUsersLastFullUpdate(final String reponame) {
         Vertex node = getOrCreateRepository(reponame);
-        HashMap<String, Date> m = new HashMap<String, Date>();
+        HashMap<String, Date> map = new HashMap<String, Date>();
         GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
 
         // first: get all the users watching the project
         pipe.start(node).in(EdgeType.REPOWATCHED.toString());
-        addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
+        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
 
         // add the collaborators
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.REPOCOLLABORATOR.toString());
-        addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
+        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
         // add the contributors
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.REPOCONTRIBUTOR.toString());
-        addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
+        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
         // add the issue owners
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.ISSUE.toString()).in(EdgeType.ISSUEOWNER.toString()).dedup();
-        addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
+        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
         // add the individuals who commented on the issues
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.ISSUE.toString()).out(EdgeType.ISSUECOMMENT.toString()).in(EdgeType.ISSUECOMMENTOWNER.toString()).dedup();
-        addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
+        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
         // add the pull request owners
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.PULLREQUEST.toString()).in(EdgeType.PULLREQUESTOWNER.toString()).dedup();
-        addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
+        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
         // add the pull request commenters
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.PULLREQUEST.toString()).out(EdgeType.PULLREQUESTDISCUSSION.toString()).in().filter(new PipeFunction<Vertex, Boolean>() {
-            public Boolean compute(Vertex argument) {
-                return (argument.getProperty(PropertyName.TYPE.toString()).equals(VertexType.USER.toString()));
+            public Boolean compute(final Vertex argument) {
+                return argument.getProperty(PropertyName.TYPE.toString()).equals(VertexType.USER.toString());
             }
         }).dedup();
-        addValuesFromIterable(pipe, m, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
+        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
 
-        return m;
+        return map;
     }
 
     /**
@@ -425,14 +434,14 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param reponame
      * @return
      */
-    public Map<Integer, Date> getPullRequestDiscussionsAddedAt(String reponame) {
+    public Map<Integer, Date> getPullRequestDiscussionsAddedAt(final String reponame) {
         Vertex node = getOrCreateRepository(reponame);
-        HashMap<Integer, Date> m = new HashMap<Integer, Date>();
+        HashMap<Integer, Date> map = new HashMap<Integer, Date>();
 
         GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.PULLREQUEST.toString());
-        addValuesFromIterable(pipe, m, PropertyName.NUMBER, PropertyName.SYS_DISCUSSIONS_ADDED);
-        return m;
+        addValuesFromIterable(pipe, map, PropertyName.NUMBER, PropertyName.SYS_DISCUSSIONS_ADDED);
+        return map;
     }
 
     /**
@@ -441,12 +450,12 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param repoId - the name of the repo, eg: defunkt/resque
      * @return
      */
-    public Date getRepositoryLastUpdated(String reponame) {
+    public Date getRepositoryLastUpdated(final String reponame) {
         Vertex node = getOrCreateRepository(reponame);
         return propertyToDate(node.getProperty("last_updated"));
     }
 
-    protected Vertex saveCommentHelper(Comment comment, String edgetype) {
+    protected Vertex saveCommentHelper(final Comment comment, final String edgetype) {
         Vertex node = getOrCreateComment(comment.getId());
         setProperty(node, PropertyName.BODY, comment.getBody());
         setProperty(node, PropertyName.BODY_HTML, comment.getBodyHtml());
@@ -471,7 +480,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param commit
      * @return
      */
-    public Vertex saveCommit(Commit commit) {
+    public Vertex saveCommit(final Commit commit) {
         log.trace("saveCommit: enter");
         Vertex node = getOrCreateCommit(commit.getSha());
         if (commit.getAuthor() != null) {
@@ -518,7 +527,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 //        return node;
 //    }
 
-    public Vertex saveGist(Gist gist) {
+    public Vertex saveGist(final Gist gist) {
         Vertex node = getOrCreateGist(gist.getId());
         
         setProperty(node, PropertyName.CREATED_AT, gist.getCreatedAt());
@@ -538,8 +547,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return node;
     }
 
-    public Collection<Vertex> saveGistComments(Gist gist,
-            List<Comment> comments) {
+    public Collection<Vertex> saveGistComments(final Gist gist,
+            final List<Comment> comments) {
         ArrayList<Vertex> commentList = new ArrayList<Vertex>();
         Vertex node = getOrCreateGist(gist.getId());
         for (Comment comment : comments) {
@@ -549,14 +558,13 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         }
         return commentList;
     }
-    
-    public Vertex saveGistComment(Comment comment) {
+
+    public Vertex saveGistComment(final Comment comment) {
         return saveCommentHelper(comment, EdgeType.GISTCOMMENTOWNER);
     }
 
-    public Vertex saveGistFile(String repoid, GistFile gistFile) {
-        Vertex node = getOrCreateGistFile(repoid, gistFile.getFilename());
-        return node;
+    public Vertex saveGistFile(final String repoid, final GistFile gistFile) {
+        return getOrCreateGistFile(repoid, gistFile.getFilename());
     }
 
     /**
@@ -568,8 +576,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param issue
      * @return
      */
-    private Vertex saveIssue(Repository repo,
-            Issue issue) {
+    private Vertex saveIssue(final Repository repo,
+            final Issue issue) {
         Vertex issuenode = getOrCreateIssue(repo.generateId(), issue);
         if (issue.getAssignee() != null) {
             setProperty(issuenode, PropertyName.ASSIGNEE, issue.getAssignee().getLogin());
@@ -591,15 +599,15 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         }
         setProperty(issuenode, PropertyName.GITHUB_ID, issue.getId());
         if (issue.getMilestone() != null) {
-            Milestone m = issue.getMilestone();
-            Vertex msVtx = saveMilestone(repo, m);
+            Milestone milestone = issue.getMilestone();
+            Vertex msVtx = saveMilestone(repo, milestone);
             createEdgeIfNotExist(issuenode, msVtx, EdgeType.MILESTONE);
         }
         setProperty(issuenode, PropertyName.NUMBER, issue.getNumber());
         // Fix for the v3 API always creating a pull request object
         if (issue.getPullRequest() != null && issue.getPullRequest().getId() != 0L) {
-            PullRequest pr = issue.getPullRequest();
-            Vertex prnode = savePullRequest(repo, pr);
+            PullRequest pullRequest = issue.getPullRequest();
+            Vertex prnode = savePullRequest(repo, pullRequest);
             createEdgeIfNotExist(issuenode, prnode, EdgeType.PULLREQUEST);
         }
         setProperty(issuenode, PropertyName.STATE, issue.getState().toString());
@@ -614,21 +622,21 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return issuenode;
     }
 
-    public Vertex saveIssueComment(Comment comment) {
+    public Vertex saveIssueComment(final Comment comment) {
         return saveCommentHelper(comment, EdgeType.ISSUECOMMENTOWNER);
     }
 
-    public void saveIssueComments(Repository repo,
-            Issue issue,
-            Collection<Comment> issueComments) {
+    public void saveIssueComments(final Repository repo,
+            final Issue issue,
+            final Collection<Comment> issueComments) {
         for (Comment comment : issueComments) {
             saveIssueComment(repo, issue, comment);
         }
     }
 
-    private Vertex saveIssueComment(Repository repo,
-            Issue issue,
-            Comment comment) {
+    private Vertex saveIssueComment(final Repository repo,
+            final Issue issue,
+            final Comment comment) {
         // FIXME: this shouldn't be saveIssue, should just be a fetch
         Vertex issuenode = saveIssue(repo, issue);
         Vertex commentnode = this.getOrCreateComment(comment.getId());
@@ -647,9 +655,9 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return commentnode;
     }
 
-    public void saveIssueEvents(Repository repo,
-            Issue issue,
-            Collection<IssueEvent> issueEvents) {
+    public void saveIssueEvents(final Repository repo,
+            final Issue issue,
+            final Collection<IssueEvent> issueEvents) {
         Vertex issuenode = getOrCreateIssue(repo, issue);
         for (IssueEvent event : issueEvents) {
             saveIssueEvent(repo, issuenode, event);
@@ -657,9 +665,9 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         setProperty(issuenode, PropertyName.SYS_EVENTS_ADDED, new Date());
     }
 
-    private Vertex saveIssueEvent(Repository repo,
-            Vertex issuenode,
-            IssueEvent event) {
+    private Vertex saveIssueEvent(final Repository repo,
+            final Vertex issuenode,
+            final IssueEvent event) {
         Vertex eventnode = getOrCreateEvent(event.getId());
         createEdgeIfNotExist(issuenode, eventnode, EdgeType.ISSUEEVENT);
         if (event.getActor() != null) {
@@ -682,19 +690,19 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return null;
     }
 
-    private Vertex saveMilestone(Repository repo, Milestone m) {
-        Vertex msnode = getOrCreateMilestone(repo.generateId() + ":" + m.getTitle());
-        setProperty(msnode, PropertyName.CLOSED_ISSUES, m.getClosedIssues());
-        setProperty(msnode, PropertyName.CREATED_AT, m.getCreatedAt());
-        if (m.getCreator() != null) {
-            Vertex u = saveUser(m.getCreator());
-            createEdgeIfNotExist(msnode, u, EdgeType.CREATOR);
+    private Vertex saveMilestone(final Repository repo, final Milestone milestone) {
+        Vertex msnode = getOrCreateMilestone(repo.generateId() + ":" + milestone.getTitle());
+        setProperty(msnode, PropertyName.CLOSED_ISSUES, milestone.getClosedIssues());
+        setProperty(msnode, PropertyName.CREATED_AT, milestone.getCreatedAt());
+        if (milestone.getCreator() != null) {
+            Vertex userVtx = saveUser(milestone.getCreator());
+            createEdgeIfNotExist(msnode, userVtx, EdgeType.CREATOR);
         }
-        setProperty(msnode, PropertyName.DESCRIPTION, m.getDescription());
-        setProperty(msnode, PropertyName.DUE_DATE, m.getDueOn());
-        setProperty(msnode, PropertyName.NUMBER, m.getNumber());
-        setProperty(msnode, PropertyName.OPEN_ISSUES, m.getOpenIssues());
-        setProperty(msnode, PropertyName.STATE, m.getState());
+        setProperty(msnode, PropertyName.DESCRIPTION, milestone.getDescription());
+        setProperty(msnode, PropertyName.DUE_DATE, milestone.getDueOn());
+        setProperty(msnode, PropertyName.NUMBER, milestone.getNumber());
+        setProperty(msnode, PropertyName.OPEN_ISSUES, milestone.getOpenIssues());
+        setProperty(msnode, PropertyName.STATE, milestone.getState());
         setProperty(msnode, PropertyName.UPDATED_AT, new Date());
 
         return msnode;
@@ -707,8 +715,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param members a list of the organization members
      */
     public void saveOrganizationPublicMembers(
-            User organization,
-            Collection<User> members) {
+            final User organization,
+            final Collection<User> members) {
         Vertex org = saveUser(organization);
         for (User user : members) {
             Vertex usernode = saveUser(user);
@@ -718,7 +726,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
     }
     
     
-    protected Map<String, Vertex> saveOrganizationMembersHelper(String organization, List<User> owners, String edgetype) {
+    protected Map<String, Vertex> saveOrganizationMembersHelper(final String organization, final List<User> owners, final String edgetype) {
         Vertex org = getOrCreateOrganization(organization);
         HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
         for (User owner : owners) {
@@ -730,11 +738,11 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
     }
 
 
-    public Map<String, Vertex> saveOrganizationOwners(String organization, List<User> owners) {
+    public Map<String, Vertex> saveOrganizationOwners(final String organization, final List<User> owners) {
         return saveOrganizationMembersHelper(organization, owners, EdgeType.ORGANIZATIONOWNER);
     }
 
-    public Map<String, Vertex> saveOrganizationPublicMembers(String organization, List<User> members) {
+    public Map<String, Vertex> saveOrganizationPublicMembers(final String organization, final List<User> members) {
         return saveOrganizationMembersHelper(organization, members, EdgeType.ORGANIZATIONMEMBER);
     }
 
@@ -745,7 +753,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param repositories
      * @return
      */
-    public Map<String, Vertex> saveOrganizationPublicRepositories(String organization, List<Repository> repositories) {
+    public Map<String, Vertex> saveOrganizationPublicRepositories(final String organization, final List<Repository> repositories) {
         Vertex source = getOrCreateOrganization(organization);
         HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
         for (Repository repo : repositories) {
@@ -756,7 +764,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return mapper;
     }
 
-    public Map<String, Vertex> saveOrganizationTeams(String organization, List<Team> teams) {
+    public Map<String, Vertex> saveOrganizationTeams(final String organization, final List<Team> teams) {
         Vertex org = getOrCreateOrganization(organization);
         HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
         for (Team team: teams) {
@@ -767,11 +775,11 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return mapper;
     }
 
-    public Vertex savePullRequestComment(Comment comment) {
+    public Vertex savePullRequestComment(final Comment comment) {
         return saveCommentHelper(comment, EdgeType.PULLREQUESTCOMMENTOWNER);
     }
 
-    private Vertex savePullRequestMarker(PullRequestMarker head) {
+    private Vertex savePullRequestMarker(final PullRequestMarker head) {
         Vertex markernode = getOrCreatePullRequestMarker(head);
         setProperty(markernode, PropertyName.LABEL, head.getLabel());
         setProperty(markernode, PropertyName.SHA, head.getSha());
@@ -826,7 +834,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param repo
      * @return
      */
-    public Vertex saveRepository(Repository repo) {
+    public Vertex saveRepository(final Repository repo) {
         Vertex node = getOrCreateRepository(repo.generateId());
 
         setProperty(node, PropertyName.FULLNAME, repo.generateId());
@@ -951,17 +959,17 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return contributorVtx;
     }
 
-    public Map<String,Vertex> saveRepositoryContributors(String reponame, List<User> contributors) {
-        HashMap<String, Vertex> mapper = new HashMap<String, Vertex>();
-        Vertex repo = getOrCreateRepository(reponame);
+    public Map<String,Vertex> saveRepositoryContributors(final String reponame, final List<User> contributors) {
+        final HashMap<String, Vertex> mapper = new HashMap<String, Vertex>();
+        final Vertex repo = getOrCreateRepository(reponame);
         if (contributors == null) {
             log.warn("saveRepositoryContributors contributors are null");
-            return mapper;
-        }
-        for (User user : contributors) {
-            Vertex usernode = saveUser(user);
-            createEdgeIfNotExist(null, repo, usernode, EdgeType.REPOCONTRIBUTOR);
-            mapper.put(user.getLogin(), usernode);
+        } else {
+            for (User user : contributors) {
+                Vertex usernode = saveUser(user);
+                createEdgeIfNotExist(null, repo, usernode, EdgeType.REPOCONTRIBUTOR);
+                mapper.put(user.getLogin(), usernode);
+            }
         }
         return mapper;
     }
@@ -975,18 +983,19 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @return
      */
     public Map<Repository,Vertex> saveRepositoryForks(
-            Repository repo,
-            List<Repository> forks) {
-        Vertex repoVtx = getOrCreateRepository(repo);
-        HashMap<Repository,Vertex> mapper = new HashMap<Repository,Vertex>();
+            final Repository repo,
+            final List<Repository> forks) {
+        final Vertex repoVtx = getOrCreateRepository(repo);
+        final HashMap<Repository,Vertex> mapper = new HashMap<Repository,Vertex>();
         if (forks == null) {
             log.warn("saveRepositoryForks forks are null");
-            return mapper;
-        }
-        for (Repository fork : forks) {
-            Vertex forkVtx = saveRepository(fork);
-            createEdgeIfNotExist(null, repoVtx, forkVtx, EdgeType.REPOFORK);
-            mapper.put(fork, forkVtx);
+
+        } else {
+            for (Repository fork : forks) {
+                Vertex forkVtx = saveRepository(fork);
+                createEdgeIfNotExist(null, repoVtx, forkVtx, EdgeType.REPOFORK);
+                mapper.put(fork, forkVtx);
+            }
         }
         return mapper;
     }
@@ -1003,14 +1012,13 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param comments
      * @return
      */
-    public Map<Long,Vertex> saveRepositoryIssueComments(String project, Issue issue, Collection<Comment> comments) {
-        Vertex issuenode = getOrCreateIssue(project, issue);
-        HashMap<Long,Vertex> mapper = new HashMap<Long,Vertex>();
+    public Map<Long,Vertex> saveRepositoryIssueComments(final String project, final Issue issue, final Collection<Comment> comments) {
+        final Vertex issuenode = getOrCreateIssue(project, issue);
+        final HashMap<Long,Vertex> mapper = new HashMap<Long,Vertex>();
         for (Comment comment : comments) {
             Vertex commentnode = saveIssueComment(comment);
             createEdgeIfNotExist(issuenode, commentnode, EdgeType.ISSUECOMMENT);
-            mapper.put(new Long(comment.getId()), commentnode);
-
+            mapper.put(Long.valueOf(comment.getId()), commentnode);
         }
         setProperty(issuenode, PropertyName.SYS_COMMENTS_ADDED, new Date());
         return mapper;
@@ -1022,15 +1030,15 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param issue
      * @param issueComments
      */
-    public Map<Long, Vertex> saveRepositoryIssueComments(String project,
-            Issue issue,
-            List<Comment> comments) {
-        Vertex issuenode = getOrCreateIssue(project, issue);
-        HashMap<Long,Vertex> mapper = new HashMap<Long,Vertex>();
+    public Map<Long, Vertex> saveRepositoryIssueComments(final String project,
+            final Issue issue,
+            final List<Comment> comments) {
+        final Vertex issuenode = getOrCreateIssue(project, issue);
+        final HashMap<Long,Vertex> mapper = new HashMap<Long,Vertex>();
         for (Comment comment : comments) {
             Vertex commentnode = saveIssueComment(comment);
             createEdgeIfNotExist(issuenode, commentnode, EdgeType.ISSUECOMMENT);
-            mapper.put(new Long(comment.getId()), commentnode);
+            mapper.put(Long.valueOf(comment.getId()), commentnode);
 
         }
         setProperty(issuenode, PropertyName.SYS_COMMENTS_ADDED, new Date());
@@ -1046,10 +1054,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @return
      */
     public Map<String, Vertex> saveRepositoryIssues(
-            Repository repo,
-            Collection<Issue> issues) {
-        Vertex proj = getOrCreateRepository(repo);
-        HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
+            final Repository repo,
+            final Collection<Issue> issues) {
+        final Vertex proj = getOrCreateRepository(repo);
+        final HashMap<String,Vertex> mapper = new HashMap<String,Vertex>();
         for (Issue issue : issues) {
             String issueId = repo.generateId() + ":" + issue.getNumber();
             Vertex issuenode = saveIssue(repo, issue);
@@ -1158,7 +1166,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             createEdgeIfNotExist(pullnode, basenode, EdgeType.PULLREQUESTBASE);
         }
 
-        if (full == true) {
+        if (full) {
             setProperty(pullnode, PropertyName.SYS_DISCUSSIONS_ADDED.toString(), new Date());
             setProperty(pullnode, PropertyName.SYS_UPDATE_COMPLETE.toString(), new Date());
         }

@@ -34,7 +34,7 @@ import ch.qos.logback.core.util.StatusPrinter;
  * 
  */
 public class Github {
-    private Logger log = null;
+    private static final Logger log = LoggerFactory.getLogger(Github.class); // NOPMD
 
 
     @Option(name="-c", usage="properties file for configuration")
@@ -52,7 +52,6 @@ public class Github {
     }
 
     public Github() {
-        log = LoggerFactory.getLogger(Github.class);
     }
 
     public void run(String[] args) {
@@ -84,10 +83,10 @@ public class Github {
             }
             GitHubMain main = new GitHubMain();
 
-            main.main();					
+            main.main();
         } catch (CmdLineException e) {
-            System.err.println(e.getMessage());
-            System.err.println("\ngithub [options...] arguments...");
+            System.err.println(e.getMessage()); // NOPMD
+            System.err.println("\ngithub [options...] arguments..."); //NOPMD
             parser.printUsage(System.err);
         }
     }
