@@ -61,26 +61,27 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
     private final static Logger log = LoggerFactory.getLogger(BlueprintsDriver.class); // NOPMD
 
-    private final Index <Vertex> useridx;
-    private final Index <Vertex> repoidx;
-    private final Index <Vertex> orgidx;
-    private final Index <Vertex> teamidx;
-    private final Index <Vertex> gistidx;
-    private final Index <Vertex> gistfileidx;
-    private final Index <Vertex> commentidx;
-    private final Index <Vertex> issueidx;
-    private final Index <Vertex> issuelabelidx;
-    private final Index <Vertex> pullrequestidx;
-    private final Index <Vertex> discussionidx;
-    private final Index <Vertex> commitidx;
-    private final Index <Vertex> pullrequestreviewcommentidx;
-    private final Index <Vertex> emailidx;
-    private final Index <Vertex> markeridx;
-    private final Index <Vertex> milestoneidx;
-    private final Index <Vertex> issueeventidx;
-    private final Index <Vertex> gravataridx;
-    private final Index <Vertex> gituseridx;
-    private final Index <Vertex> nameidx;
+    protected final Index <Vertex> useridx;
+    protected final Index <Vertex> repoidx;
+    protected final Index <Vertex> orgidx;
+    protected final Index <Vertex> teamidx;
+    protected final Index <Vertex> gistidx;
+    protected final Index <Vertex> gistfileidx;
+    protected final Index <Vertex> commentidx;
+    protected final Index <Vertex> issueidx;
+    protected final Index <Vertex> issuelabelidx;
+    protected final Index <Vertex> pullrequestidx;
+    protected final Index <Vertex> discussionidx;
+    protected final Index <Vertex> commitidx;
+    protected final Index <Vertex> pullrequestreviewcommentidx;
+    protected final Index <Vertex> emailidx;
+    protected final Index <Vertex> markeridx;
+    protected final Index <Vertex> milestoneidx;
+    protected final Index <Vertex> issueeventidx;
+    protected final Index <Vertex> gravataridx;
+    protected final Index <Vertex> gituseridx;
+    protected final Index <Vertex> nameidx;
+    protected final Index <Vertex> fileidx;
 
     /**
      * Base constructor for BlueprintsDriver
@@ -115,6 +116,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         gravataridx = getOrCreateIndex(IndexNames.GRAVATAR);
         gituseridx = getOrCreateIndex(IndexNames.GITUSER);
         nameidx = getOrCreateIndex(IndexNames.NAME);
+        fileidx = getOrCreateIndex(IndexNames.FILE);
     }	
 
     /**
@@ -251,17 +253,33 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return getOrCreateVertexHelper(IdCols.COMMENT, commentId, VertexType.COMMENT, commentidx);
     }
 
-    public Vertex getOrCreateCommit(final String commitId) {
-        log.debug("Fetching or creating commit: {}", commitId);
-        return getOrCreateVertexHelper(IdCols.COMMIT, commitId, VertexType.COMMIT, commitidx);
+    public Vertex getOrCreateCommit(final String hash) {
+        return getOrCreateVertexHelper(IdCols.COMMIT, hash, VertexType.COMMIT, commitidx);
     }
 
     public Vertex getOrCreateDiscussion(final String discussionId) {
         return getOrCreateVertexHelper(IdCols.DISCUSSION, discussionId, VertexType.DISCUSSION, discussionidx);
     }
 
+    /**
+     * gets the vertex for an email address
+     * 
+     * This has a fairly major side effect in that it also will create
+     * the vertex for the associated gravatar too.
+     * 
+     * NOTE: no parsing of the address is done. So capitalization makes
+     * a difference here.
+     * 
+     * @param email the email address to fetch
+     * @return
+     */
     public Vertex getOrCreateEmail(final String email) {
-        return getOrCreateVertexHelper(IdCols.EMAIL, email, VertexType.EMAIL, emailidx);
+        Vertex emailVtx = getOrCreateVertexHelper(IdCols.EMAIL, email, VertexType.EMAIL, emailidx);
+        if (!email.trim().equals("")) {
+            Vertex gravatarVtx = saveGravatar(email);
+            createEdgeIfNotExist(emailVtx, gravatarVtx, EdgeType.GRAVATARHASH);
+        }
+        return emailVtx;
     }
 
     private Vertex getOrCreateEvent(final long eventId) {
@@ -275,6 +293,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
     public Vertex getOrCreateGistFile(final String repoid, final String filename) {
         final String gistFileId = repoid + "/" + filename;
         return getOrCreateVertexHelper(IdCols.GISTFILE,  gistFileId, VertexType.GISTFILE, gistfileidx);
+    }
+
+    public Vertex getOrCreateGravatar(final String gravatarHash) {
+        return getOrCreateVertexHelper(IdCols.GRAVATAR, gravatarHash, VertexType.GRAVATAR, gravataridx);
     }
 
     private Vertex getOrCreateIssue(final String project, final Issue issue) {
@@ -565,6 +587,16 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
     public Vertex saveGistFile(final String repoid, final GistFile gistFile) {
         return getOrCreateGistFile(repoid, gistFile.getFilename());
+    }
+
+    public Vertex saveGravatar(final String gravatarHash) {
+        String ghash;
+        if (gravatarHash.indexOf("@") == -1) {
+            ghash = Utils.gravatarIdExtract(gravatarHash);
+        } else {
+            ghash = Utils.gravatarHash(gravatarHash);
+        }
+        return getOrCreateGravatar(ghash);
     }
 
     /**
@@ -950,8 +982,11 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      */
     private Vertex saveContributor(Contributor contributor) {
         Vertex contributorVtx = getOrCreateUser(contributor.getLogin());
-        setProperty(contributorVtx, PropertyName.GRAVATAR_ID, contributor.getAvatarUrl());
-        log.info("Saving avatar URL as: {}", contributor.getAvatarUrl());
+        if (contributor.getAvatarUrl() != null && !contributor.getAvatarUrl().trim().equals("")) {
+            setProperty(contributorVtx, PropertyName.GRAVATAR_ID, contributor.getAvatarUrl());
+            Vertex gravatarVtx = saveGravatar(contributor.getAvatarUrl());
+            createEdgeIfNotExist(contributorVtx, gravatarVtx, EdgeType.GRAVATAR);
+        }
         setProperty(contributorVtx, PropertyName.NAME, contributor.getName());
         setProperty(contributorVtx, PropertyName.GITHUB_ID, contributor.getId());
         // setProperty(contributorVtx, PropertyName.contributor.getType();
@@ -1281,7 +1316,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         setProperty(node, PropertyName.BLOG, user.getBlog());
         setProperty(node, PropertyName.COMPANY, user.getCompany());
         setProperty(node, PropertyName.CREATED_AT, user.getCreatedAt());
-        if (user.getEmail() != null) {
+        if (user.getEmail() != null && !user.getEmail().trim().equals("")) {
             setProperty(node, PropertyName.EMAIL, user.getEmail());
             Vertex email = getOrCreateEmail(user.getEmail());
             createEdgeIfNotExist(node, email, EdgeType.EMAIL);
@@ -1297,14 +1332,16 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             setProperty(node, PropertyName.PRIVATE_GIST_COUNT, user.getPrivateGists());
             setProperty(node, PropertyName.PUBLIC_GIST_COUNT, user.getPublicGists());
             setProperty(node, PropertyName.PUBLIC_REPO_COUNT, user.getPublicRepos());
-            // FIXME: I don't think there is a getScore method in the v3 api
-            //			setProperty(node, PropertyName.SCORE, user.getScore());
             setProperty(node, PropertyName.TOTAL_PRIVATE_REPO_COUNT, user.getTotalPrivateRepos());
             setProperty(node, PropertyName.SYS_LAST_FULL_UPDATE.toString(), new Date());
         }
         setProperty(node, PropertyName.URL, user.getUrl());
         setProperty(node, PropertyName.FULLNAME, user.getName());
-        setProperty(node, PropertyName.GRAVATAR_ID, user.getAvatarUrl());
+        if (user.getAvatarUrl() != null && user.getAvatarUrl().trim() != "") {
+            setProperty(node, PropertyName.GRAVATAR_ID, user.getAvatarUrl());
+            Vertex gravatarVtx = saveGravatar(user.getAvatarUrl());
+            createEdgeIfNotExist(node, gravatarVtx, EdgeType.GRAVATAR);
+        }
         setProperty(node, PropertyName.GITHUB_ID, user.getId()); // note name change
         setProperty(node, PropertyName.LOCATION, user.getLocation());
         setProperty(node, PropertyName.LOGIN, user.getLogin());

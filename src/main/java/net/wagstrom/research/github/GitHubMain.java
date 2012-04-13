@@ -50,14 +50,12 @@ import com.ibm.research.govsci.graph.GraphShutdownHandler;
  */
 public class GitHubMain {
     private static final Logger log = LoggerFactory.getLogger(GitHubMain.class); // NOPMD
-    private final ApiThrottle throttle;
     private final ApiThrottle v3throttle;
     private long refreshTime = 0; // minimum age of a resource in milliseconds
-    private Properties p;
+    private Properties props;
     protected BlueprintsDriver bp;
 
     public GitHubMain() {
-        throttle = new ApiThrottle();
         v3throttle = new ApiThrottle();
     }
 
@@ -66,19 +64,10 @@ public class GitHubMain {
         ArrayList <String> projects = new ArrayList<String> ();
         ArrayList <String> users = new ArrayList<String> ();
         ArrayList <String> organizations = new ArrayList<String> ();
-        p = GithubProperties.props();
+        props = GithubProperties.props();
 
-        // set the maximum rate as specificed in the configuration properties file
-        int maxCalls = Integer.parseInt(p.getProperty("net.wagstrom.research.github.apiThrottle.maxCalls", "0"));
-        int maxCallsInterval = Integer.parseInt(p.getProperty("net.wagstrom.research.github.apiThrottle.maxCallsInterval", "0"));
-        if (maxCalls > 0 && maxCallsInterval > 0) {
-            log.info("Setting Max Call Rate: {}/{}", maxCalls, maxCallsInterval);
-            throttle.setMaxRate(maxCalls, maxCallsInterval);
-        }
-        throttle.setId("v2");
-
-        int v3MaxCalls = Integer.parseInt(p.getProperty("net.wagstrom.research.github.apiThrottle.maxCalls.v3", "0"));
-        int v3MaxCallsInterval = Integer.parseInt(p.getProperty("net.wagstrom.research.github.apiThrottle.maxCallsInterval.v3", "0"));
+        int v3MaxCalls = Integer.parseInt(props.getProperty("net.wagstrom.research.github.apiThrottle.maxCalls.v3", "0"));
+        int v3MaxCallsInterval = Integer.parseInt(props.getProperty("net.wagstrom.research.github.apiThrottle.maxCallsInterval.v3", "0"));
         if (v3MaxCalls >0 && v3MaxCallsInterval > 0) {
             log.info("Setting v3 Max Call Rate: {}/{}", v3MaxCalls, v3MaxCallsInterval);			
             v3throttle.setMaxRate(v3MaxCalls, v3MaxCallsInterval);
@@ -86,45 +75,32 @@ public class GitHubMain {
         v3throttle.setId("v3");
 
         // set the minimum age for an artifact in milliseconds
-        double minAgeDouble = Double.parseDouble(p.getProperty("net.wagstrom.research.github.refreshTime", "0.0"));
+        double minAgeDouble = Double.parseDouble(props.getProperty("net.wagstrom.research.github.refreshTime", "0.0"));
         refreshTime = (long)minAgeDouble * 86400 * 1000;
         log.info("Minimum artifact refresh time: {}ms", refreshTime);
 
         // get the list of projects
-        try {
-            for (String proj : p.getProperty("net.wagstrom.research.github.projects").split(",")) {
-                if (!proj.trim().equals("")) {
-                    projects.add(proj.trim());
-                }
+        for (String proj : props.getProperty("net.wagstrom.research.github.projects", "").split(",")) {
+            if (!proj.trim().equals("")) {
+                projects.add(proj.trim());
             }
-        } catch (NullPointerException e) {
-            log.warn("property net.wagstrom.research.github.projects undefined - no projects will be mined");
         }
 
-        // get the list of users
-        try{
-            for (String user : p.getProperty("net.wagstrom.research.github.users").split(",")) {
-                if (!user.trim().equals("")) {
-                    users.add(user.trim());
-                }
+        for (String user : props.getProperty("net.wagstrom.research.github.users", "").split(",")) {
+            if (!user.trim().equals("")) {
+                users.add(user.trim());
             }
-        } catch (NullPointerException e) {
-            log.warn("property net.wagstrom.research.github.users undefined - no extra users will be mined");
         }
 
         // get the list of organizations
-        try {
-            for (String organization : p.getProperty("net.wagstrom.research.github.organizations").split(",")){
-                if (!organization.trim().equals("")) {
-                    organizations.add(organization.trim());
-                }
+        for (String organization : props.getProperty("net.wagstrom.research.github.organizations", "").split(",")){
+            if (!organization.trim().equals("")) {
+                organizations.add(organization.trim());
             }
-        } catch (NullPointerException e) {
-            log.warn("property net.wagstrom.research.github.organizations undefined - no extra organizations will be mined");
         }
 
 
-        connectToGraph(p);
+        connectToGraph(props);
 
         // make sure that it gets shutdown properly
         GraphShutdownHandler gsh = new GraphShutdownHandler();
@@ -142,7 +118,7 @@ public class GitHubMain {
         WatcherMinerV3 wmv3 = new WatcherMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
         CollaboratorMinerV3 cmv3 = new CollaboratorMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
 
-        if (p.getProperty("net.wagstrom.research.github.miner.repositories","true").equals("true")) {
+        if (props.getProperty("net.wagstrom.research.github.miner.repositories","true").equals("true")) {
             for (String proj : projects) {
                 String [] projsplit = proj.split("/");
 
@@ -152,16 +128,20 @@ public class GitHubMain {
                 log.warn("handling project owner...");
                 handleProjectOwner(repo.getOwner(), umv3, omv3);
 
-                if (p.getProperty("net.wagstrom.research.github.miner.repositories.collaborators", "true").equals("true"))
+                if (props.getProperty("net.wagstrom.research.github.miner.repositories.collaborators", "true").equals("true")) {
                     bp.saveRepositoryCollaborators(repo, cmv3.getCollaborators(repo));
-                if (p.getProperty("net.wagstrom.research.github.miner.repositories.contributors", "true").equals("true"))
+                }
+                if (props.getProperty("net.wagstrom.research.github.miner.repositories.contributors", "true").equals("true")) {
                     bp.saveRepositoryContributors(repo, rmv3.getContributors(repo));
-                if (p.getProperty("net.wagstrom.research.github.miner.repositories.watchers", "true").equals("true"))
+                }
+                if (props.getProperty("net.wagstrom.research.github.miner.repositories.watchers", "true").equals("true")) {
                     bp.saveRepositoryWatchers(repo, wmv3.getWatchers(repo));
-                if (p.getProperty("net.wagstrom.research.github.miner.repositories.forks", "true").equals("true"))
+                }
+                if (props.getProperty("net.wagstrom.research.github.miner.repositories.forks", "true").equals("true")) {
                     bp.saveRepositoryForks(repo, rmv3.getForks(repo));
+                }
 
-                if (p.getProperty("net.wagstrom.research.github.miner.repositories.issues","true").equals("true")) {
+                if (props.getProperty("net.wagstrom.research.github.miner.repositories.issues","true").equals("true")) {
                     if (repo.isHasIssues()) {
                         Collection<org.eclipse.egit.github.core.Issue> issues3 = imv3.getAllIssues(projsplit[0], projsplit[1]);
                         if (issues3 != null) {
@@ -209,7 +189,7 @@ public class GitHubMain {
                     }
                 }
 
-                if (p.getProperty("net.wagstrom.research.github.miner.repositories.pullrequests", "true").equals("true")) {
+                if (props.getProperty("net.wagstrom.research.github.miner.repositories.pullrequests", "true").equals("true")) {
                     Collection<org.eclipse.egit.github.core.PullRequest> requests3 = pmv3.getAllPullRequests(repo);
                     if (requests3 != null) {
                         bp.savePullRequests(repo, requests3);
@@ -234,7 +214,7 @@ public class GitHubMain {
                     }
                 }
 
-                if (p.getProperty("net.wagstrom.research.github.miner.repositories.users", "true").equals("true")) {
+                if (props.getProperty("net.wagstrom.research.github.miner.repositories.users", "true").equals("true")) {
                     log.trace("calling getProjectUsersLastFullUpdate");
                     Map<String, Date> allProjectUsers = bp.getProjectUsersLastFullUpdate(proj);
                     log.trace("keyset: {}", allProjectUsers.keySet());
@@ -259,13 +239,13 @@ public class GitHubMain {
         }
 
         // FIXME: this should check for when the user was last updated
-        if (p.getProperty("net.wagstrom.research.github.miner.users","true").equals("true")) {
+        if (props.getProperty("net.wagstrom.research.github.miner.users","true").equals("true")) {
             for (String username : users) {
                 fetchAllUserData(bp, umv3, rmv3, gmv3, wmv3, username);
             }
         }
 
-        if (p.getProperty("net.wagstrom.research.github.miner.organizations","true").equals("true")) {
+        if (props.getProperty("net.wagstrom.research.github.miner.organizations","true").equals("true")) {
             for (String organizationName : organizations) {
                 log.warn("Fetching organization: {}", organizationName);
                 User organization = omv3.getOrganization(organizationName);
@@ -299,13 +279,13 @@ public class GitHubMain {
     /**
      * @param owner
      */
-    private void handleProjectOwner(org.eclipse.egit.github.core.User owner, UserMinerV3 umv3, OrganizationMinerV3 omv3) {
-        User u = umv3.getUser(owner.getLogin());
-        if (u.getType().toLowerCase().equals("organization")) {
-            Collection<User> members = omv3.getPublicMembers(u.getLogin());
-            bp.saveOrganizationPublicMembers(u, members);
+    private void handleProjectOwner(final User owner, final UserMinerV3 umv3, final OrganizationMinerV3 omv3) {
+        User user = umv3.getUser(owner.getLogin());
+        if (user.getType().toLowerCase().equals("organization")) {
+            Collection<User> members = omv3.getPublicMembers(user.getLogin());
+            bp.saveOrganizationPublicMembers(user, members);
         } else {
-            log.warn("Project owner is not an organization: {}", u.getType());
+            log.warn("Project owner is not an organization: {}", user.getType());
         }
     }
 
@@ -315,7 +295,7 @@ public class GitHubMain {
      * @param elementDate Date to check
      * @return boolean whether or not the element needs to be updated
      */
-    private boolean needsUpdate(Date elementDate) {
+    private boolean needsUpdate(final Date elementDate) {
         return needsUpdate(elementDate, false);
     }
 
@@ -332,14 +312,16 @@ public class GitHubMain {
      * @param nullTrueFalse return value if elementDate is null
      * @return whether or not it has been at least refreshTime milliseconds since elementDate
      */
-    private boolean needsUpdate(Date elementDate, boolean nullTrueFalse) {
+    private boolean needsUpdate(final Date elementDate, final boolean nullTrueFalse) {
         Date currentDate = new Date();
-        if (elementDate == null) return nullTrueFalse;		
+        if (elementDate == null) {
+            return nullTrueFalse;
+        }
         return ((currentDate.getTime() - elementDate.getTime()) >= refreshTime);
     }
 
-    private void fetchAllUserData(BlueprintsDriver bp, UserMinerV3 umv3, RepositoryMinerV3 rmv3, GistMinerV3 gmv3, WatcherMinerV3 wmv3, String user) {
-        List<org.eclipse.egit.github.core.User> followers = umv3.getFollowers(user);
+    private void fetchAllUserData(final BlueprintsDriver bp, final UserMinerV3 umv3, final RepositoryMinerV3 rmv3, final GistMinerV3 gmv3, final WatcherMinerV3 wmv3, final String user) {
+        List<User> followers = umv3.getFollowers(user);
         if (followers != null) {
             bp.saveUserFollowers(user, followers);
         } else {
@@ -368,7 +350,7 @@ public class GitHubMain {
 
         }
 
-        if (p.getProperty("net.wagstrom.research.github.miner.gists","true").equals("true")) {
+        if (props.getProperty("net.wagstrom.research.github.miner.gists","true").equals("true")) {
             bp.saveUserGists(user, gmv3.getGists(user));
         }
 

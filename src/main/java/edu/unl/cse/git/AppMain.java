@@ -26,7 +26,7 @@ public class AppMain {
 		return null;
 	}
 	
-	private BlueprintsDriver connectToGraph( Properties p ) {
+	private CommitBlueprintsDriver connectToGraph( Properties p ) {
 		String dbengine = getProperty( p, "edu.unl.cse.git.dbengine");
 		String dburl = getProperty( p, "edu.unl.cse.git.dburl");
 		
@@ -39,13 +39,13 @@ public class AppMain {
             }
         }
 		
-		return new BlueprintsDriver(dbengine, dburl, dbprops);
+		return new CommitBlueprintsDriver(dbengine, dburl, dbprops);
 	}
 	
 	public void main() {
 		Properties p = GithubProperties.props();
 		
-		BlueprintsDriver bp = connectToGraph(p);
+		CommitBlueprintsDriver bp = connectToGraph(p);
 		
 		String[] repositories = getProperty( p, "edu.unl.cse.git.repositories" ).split(",");
 		for ( String reponame : repositories ) {
