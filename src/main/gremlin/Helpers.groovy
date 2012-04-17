@@ -86,7 +86,7 @@ class Helpers {
                                      filter{it.type==VertexType.USER.toString()}.dedup().toList()
         def mergers = repo.out(EdgeType.ISSUE). \
                        out(EdgeType.ISSUEEVENT). \
-                       filter{it.event=="merged"}.in(EdgeType.ISSUEEVENTACTOR).dedup()
+                       filter{it.event=="merged"}.in(EdgeType.ISSUEEVENTACTOR).dedup().toList()
         def forkOwners = repo.out(EdgeType.REPOFORK). \
                           in(EdgeType.REPOOWNER).dedup().toList()
     
