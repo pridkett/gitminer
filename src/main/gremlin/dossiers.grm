@@ -68,59 +68,75 @@ def getAllGitAccounts(IndexableGraph g, Vertex user) {
     return allGitAccounts
 }
 
-def belongsToRepo(Vertex repo, Vertex v) {
-    def result
-    switch (v.type) {
+def belongsToRepo(Vertex repo, Element e) {
+    switch (e.label) {
+        case null:
+            // kill null first as this is likely a vertex
+            break
+        case EdgeType.DISCUSSIONUSER:
+            return belongsToRepo(repo, e.inV.next())
+        case EdgeType.ISSUECOMMENTOWNER:
+            return belongsToRepo(repo, e.inV.next())
+        case EdgeType.ISSUEEVENTACTOR:
+            return belongsToRepo(repo, e.inV.next())
+        case EdgeType.ISSUEEVENT:
+            return belongsToRepo(repo, e.inV.next())
+        case EdgeType.COMMITAUTHOR:
+            return belongsToRepo(repo, e.outV.next())
+        case EdgeType.COMMITTER:
+            return belongsToRepo(repo, e.outV.next())
+    }
+    switch (e.type) {
+        case null:
+            // kill null first as this is likely an edge
+            break
         // discussion_user
         case VertexType.COMMENT:
             // comment -> issue -> repository
-            result = v.in(EdgeType.ISSUECOMMENT).in(EdgeType.ISSUE).next() == repo
-            break
+            return e.in(EdgeType.ISSUECOMMENT).in(EdgeType.ISSUE).next() == repo
         case VertexType.COMMIT:
             // commit -> repository
-            result = v.out(EdgeType.REPOSITORY).next() == repo
-            break
+            return e.out(EdgeType.REPOSITORY).next() == repo
         case VertexType.PULLREQUESTREVIEWCOMMENT:
             // pull request, not handling
-            result = false
-            break
+            return false
         // issue_comment_owner
         // - comment
         // issue_event_actor
         case VertexType.ISSUE_EVENT:
             // issue event -> issue -> repository
-            result = v.in("ISSUE_EVENT").in("ISSUE").next() == repo
-            break
+            return e.in("ISSUE_EVENT").in("ISSUE").next() == repo
         // issue_event
         // - issue_event
         // git_user
         // - commit
     }
-    return result
 }
 def getDossier(IndexableGraph g, Vertex repo, Vertex user) {
     // need to find a groovy equivalent of apply to clean this up
-    gh_dossier = user.both(EdgeType.DISCUSSIONUSER, \
-                           EdgeType.ISSUECOMMENTOWNER, \
-                           EdgeType.ISSUEEVENTACTOR, \
-                           EdgeType.ISSUEEVENT). \
+    gh_dossier = user.bothE(EdgeType.DISCUSSIONUSER, \
+                            EdgeType.ISSUECOMMENTOWNER, \
+                            EdgeType.ISSUEEVENTACTOR, \
+                            EdgeType.ISSUEEVENT). \
                       filter{ belongsToRepo(repo, it) }. \
-                      groupCount{it.type}.cap.next()
+                      groupCount{it.label}.cap.next()
     g_dossier = getAllGitAccounts(g, user). \
                     //_().in(EdgeType.COMMITAUTHOR, \
                            //EdgeType.COMMITTER). \
-                    _().in(EdgeType.COMMITTER). \
-                    groupCount{it.type}.cap.next()
+                    _().inE(EdgeType.COMMITTER). \
+                    filter{ belongsToRepo(repo, it) }. \
+                    groupCount{it.label}.cap.next()
     return merge(gh_dossier, g_dossier)
 }
 
 def getDossierAsCSV(Vertex repo, Vertex user, Map dossier) {
     return [repo.name, \
             user.login, \
-            dossier[VertexType.COMMENT], \
-            dossier[VertexType.COMMIT], \
-            dossier[VertexType.ISSUE_EVENT], \
-            dossier[VertexType.ISSUE_EVENT] ].join(",")
+            dossier[EdgeType.DISCUSSIONUSER] ?: 0, \
+            dossier[EdgeType.ISSUECOMMENTOWNER] ?: 0, \
+            dossier[EdgeType.ISSUEEVENTACTOR] ?: 0, \
+            dossier[EdgeType.ISSUEEVENT] ?: 0, \
+            dossier[EdgeType.COMMITTER] ?: 0 ].join(",")
 }
 
 g = new Neo4jGraph(Defaults.DBPATH)
