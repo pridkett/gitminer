@@ -75,11 +75,21 @@ def belongsToRepo(Vertex repo, Element e) {
             break
         case EdgeType.DISCUSSIONUSER:
             return belongsToRepo(repo, e.inV.next())
+        case EdgeType.ISSUEASSIGNEE:
+            return belongsToRepo(repo, e.inV.next())
         case EdgeType.ISSUECOMMENTOWNER:
             return belongsToRepo(repo, e.inV.next())
         case EdgeType.ISSUEEVENTACTOR:
             return belongsToRepo(repo, e.inV.next())
-        case EdgeType.ISSUEEVENT:
+        case EdgeType.ISSUEOWNER:
+            return belongsToRepo(repo, e.inV.next())
+        case EdgeType.PULLREQUESTCOMMENTOWNER:
+            return belongsToRepo(repo, e.inV.next())
+        case EdgeType.PULLREQUESTISSUEUSER:
+            return belongsToRepo(repo, e.inV.next())
+        case EdgeType.PULLREQUESTOWNER:
+            return belongsToRepo(repo, e.inV.next())
+        case EdgeType.PULLREQUESTREVIEWCOMMENTOWNER:
             return belongsToRepo(repo, e.inV.next())
         case EdgeType.COMMITAUTHOR:
             return belongsToRepo(repo, e.outV.next())
@@ -98,7 +108,7 @@ def belongsToRepo(Vertex repo, Element e) {
             // commit -> repository
             return e.out(EdgeType.REPOSITORY).next() == repo
         case VertexType.PULLREQUESTREVIEWCOMMENT:
-            // pull request, not handling
+            // really not sure how to handle this...
             return false
         // issue_comment_owner
         // - comment
@@ -106,6 +116,12 @@ def belongsToRepo(Vertex repo, Element e) {
         case VertexType.ISSUE_EVENT:
             // issue event -> issue -> repository
             return e.in("ISSUE_EVENT").in("ISSUE").next() == repo
+        case VertexType.ISSUE:
+            // issue -> repository
+            return e.in("ISSUE").next() == repo
+        case VertexType.PULLREQUEST:
+            // pullrequest -> repository
+            return e.in("PULLREQUEST").next() == repo
         // issue_event
         // - issue_event
         // git_user
@@ -115,9 +131,14 @@ def belongsToRepo(Vertex repo, Element e) {
 def getDossier(IndexableGraph g, Vertex repo, Vertex user) {
     // need to find a groovy equivalent of apply to clean this up
     gh_dossier = user.bothE(EdgeType.DISCUSSIONUSER, \
+                            EdgeType.ISSUEASSIGNEE, \
                             EdgeType.ISSUECOMMENTOWNER, \
                             EdgeType.ISSUEEVENTACTOR, \
-                            EdgeType.ISSUEEVENT). \
+                            EdgeType.ISSUEOWNER, \
+                            EdgeType.PULLREQUESTCOMMENTOWNER, \
+                            EdgeType.PULLREQUESTISSUEUSER, \
+                            EdgeType.PULLREQUESTOWNER, \
+                            EdgeType.PULLREQUESTREVIEWCOMMENTOWNER). \
                       filter{ belongsToRepo(repo, it) }. \
                       groupCount{it.label}.cap.next()
     g_dossier = getAllGitAccounts(g, user). \
@@ -133,9 +154,14 @@ def getDossierAsCSV(Vertex repo, Vertex user, Map dossier) {
     return [repo.name, \
             user.login, \
             dossier[EdgeType.DISCUSSIONUSER] ?: 0, \
+            dossier[EdgeType.ISSUEASSIGNEE] ?: 0, \
             dossier[EdgeType.ISSUECOMMENTOWNER] ?: 0, \
             dossier[EdgeType.ISSUEEVENTACTOR] ?: 0, \
-            dossier[EdgeType.ISSUEEVENT] ?: 0, \
+            dossier[EdgeType.ISSUEOWNER] ?: 0, \
+            dossier[EdgeType.PULLREQUESTCOMMENTOWNER] ?: 0, \
+            dossier[EdgeType.PULLREQUESTISSUEUSER] ?: 0, \
+            dossier[EdgeType.PULLREQUESTOWNER] ?: 0, \
+            dossier[EdgeType.PULLREQUESTREVIEWCOMMENTOWNER] ?: 0, \
             dossier[EdgeType.COMMITTER] ?: 0 ].join(",")
 }
 
