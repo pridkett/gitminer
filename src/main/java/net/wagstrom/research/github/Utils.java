@@ -21,16 +21,17 @@ public class Utils {
      * @return
      */
     public static String gravatarHash(final String email) {
+        String hash = null;
         try {
             MessageDigest digest = MessageDigest.getInstance("MD5");
             digest.update(email.trim().toLowerCase().getBytes("UTF-8"));
-            return new BigInteger(1, digest.digest()).toString(16);
+            hash = new BigInteger(1, digest.digest()).toString(16);
         } catch (NoSuchAlgorithmException e) {
             log.error("No such algorithm MD5", e);
         } catch (UnsupportedEncodingException e) {
             log.error("Error decoding from UTF-8", e);
         }
-        return null;
+        return hash;
     }
     
     /**
@@ -46,10 +47,11 @@ public class Utils {
      * @return
      */
     public static String gravatarIdExtract(final String gravatarId) {
+        String hash = null;
         Matcher matcher = GRAVATAR_PATTERN.matcher(gravatarId);
         if (matcher.find()) {
-            return matcher.group(0);
+            hash = matcher.group(0);
         }
-        return null;
+        return hash;
     }
 }

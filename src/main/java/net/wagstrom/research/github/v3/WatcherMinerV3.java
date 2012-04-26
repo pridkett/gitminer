@@ -12,30 +12,32 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class WatcherMinerV3 extends AbstractMiner {
-    private WatcherService service;
-    
+    private final WatcherService service;
+
     private static final Logger log = LoggerFactory.getLogger(WatcherMinerV3.class); // NOPMD
 
-    public WatcherMinerV3(IGitHubClient ghc) {
+    public WatcherMinerV3(final IGitHubClient ghc) {
+        super();
         service = new WatcherService(ghc);
     }
 
-    
-    public List<User> getWatchers(IRepositoryIdProvider repo) {
+    public List<User> getWatchers(final IRepositoryIdProvider repo) {
+        List<User> watchers = null;
         try {
-            return service.getWatchers(repo);
+            watchers = service.getWatchers(repo);
         } catch (IOException e) {
             log.error("IOException in getting watchers for repository: {}", repo.generateId(), e);
-            return null;
         }
+        return watchers;
     }
-    
-    public List<Repository> getWatched(String login) {
+
+    public List<Repository> getWatched(final String login) {
+        List<Repository> repos = null;
         try {
-            return service.getWatched(login);
+            repos = service.getWatched(login);
         } catch (IOException e) {
             log.error("IOException in getWatched: {}", login, e);
-            return null;
         }
+        return repos;
     }
 }

@@ -21,6 +21,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Simple container class for properties file
  * 
@@ -30,6 +33,7 @@ import java.util.Properties;
  */
 public class GithubProperties {
     private static Properties internalProps = null;
+    private static final Logger log = LoggerFactory.getLogger(GithubProperties.class); // NOPMD
 
     /**
      * static method that returns the configuration properties
@@ -45,7 +49,7 @@ public class GithubProperties {
             try {
                 internalProps.load(properties);
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("Exception loading properties: ", e);
             }
         }
         return internalProps;
@@ -62,11 +66,22 @@ public class GithubProperties {
      */
     public static synchronized Properties props(final String filename) {
         if (internalProps == null) {
+            FileInputStream input = null;
             internalProps = new Properties();
             try {
-                internalProps.load(new FileInputStream(filename));
+                try {
+                    input = new FileInputStream(filename);
+                    internalProps.load(input);
+                } catch (IOException e) {
+                    log.error("Exception loading properties from file {}: ", filename, e);
+                } finally {
+                    if (input != null) {
+                        input.close();
+                    }
+                }
+             
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("Exception closing FileInputStream: {}", e);
             }
         }
         return internalProps;

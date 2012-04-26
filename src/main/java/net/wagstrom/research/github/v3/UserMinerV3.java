@@ -10,39 +10,42 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class UserMinerV3 extends AbstractMiner {
-    private UserService service;
-    
+    private final UserService service;
+
     private static final Logger log = LoggerFactory.getLogger(UserMinerV3.class); // NOPMD
 
-    public UserMinerV3(IGitHubClient ghc) {
+    public UserMinerV3(final IGitHubClient ghc) {
+        super();
         service = new UserService(ghc);
     }
 
-    
-    public User getUser(String login) {
+    public User getUser(final String login) {
+        User user = null;
         try {
-            return service.getUser(login);
+            user = service.getUser(login);
         } catch (IOException e) {
             log.error("IOException in getting user {} {}", login, e);
-            return null;
         }
+        return user;
     }
-    
-    public List<User> getFollowers(String login) {
+
+    public List<User> getFollowers(final String login) {
+        List<User> followers = null;
         try {
-            return service.getFollowers(login);
+            followers = service.getFollowers(login);
         } catch (IOException e) {
             log.error("IOException in getFollowers: {}", login, e);
-            return null;
         }
+        return followers;
     }
-    
-    public List<User> getFollowing(String login) {
+
+    public List<User> getFollowing(final String login) {
+        List<User> following = null;
         try {
-            return service.getFollowing(login);
+            following = service.getFollowing(login);
         } catch (IOException e) {
             log.error("IOException in getFollowing: {}", login, e);
-            return null;
         }
+        return following;
     }
 }

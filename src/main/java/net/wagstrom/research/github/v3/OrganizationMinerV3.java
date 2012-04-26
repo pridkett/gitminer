@@ -10,39 +10,42 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class OrganizationMinerV3 extends AbstractMiner {
-    private OrganizationService service;
-    
+    private final OrganizationService service;
+
     private static final Logger log = LoggerFactory.getLogger(OrganizationMinerV3.class); // NOPMD
 
-    public OrganizationMinerV3(IGitHubClient ghc) {
+    public OrganizationMinerV3(final IGitHubClient ghc) {
+        super();
         service = new OrganizationService(ghc);
     }
 
-   
-    public Collection<User> getMembers(String organization) {
+    public Collection<User> getMembers(final String organization) {
+        Collection<User> members = null;
         try {
-            return service.getMembers(organization);
+            members = service.getMembers(organization);
         } catch (IOException e) {
             log.error("IOException getting organization members for {}: {}", organization, e);
-            return null;
         }
+        return members;
     }
-    
-    public Collection<User> getPublicMembers(String organization) {
+
+    public Collection<User> getPublicMembers(final String organization) {
+        Collection<User> members = null;
         try {
-            return service.getPublicMembers(organization);
+            members = service.getPublicMembers(organization);
         } catch (IOException e) {
             log.error("IOException getting public organization members for {}: {}", organization, e);
-            return null;
         }
+        return members;
     }
-    
-    public User getOrganization(String organization) {
+
+    public User getOrganization(final String organization) {
+        User org = null;
         try {
-            return service.getOrganization(organization);
+            org = service.getOrganization(organization);
         } catch (IOException e) {
             log.error("IOException getting organization {}: {}", organization, e);
-            return null;
         }
+        return org;
     }
 }

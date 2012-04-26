@@ -17,98 +17,101 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class IssueMinerV3 extends AbstractMiner {
-    private static final String ISSUES_DISABLED_MESSAGE = "Issues are disabled for this repo";
+    private static final String ISSUES_DISABLED = "Issues are disabled for this repo";
     private IssueService service;
 
     private Logger log = LoggerFactory.getLogger(IssueMinerV3.class); // NOPMD
 
     private IssueMinerV3() {
+        super();
     }
 
-    public IssueMinerV3(IssueService service) {
+    public IssueMinerV3(final IssueService service) {
         this();
         this.service = service;
     }
 
-    public IssueMinerV3(IGitHubClient ghc) {
+    public IssueMinerV3(final IGitHubClient ghc) {
         this();
         service = new IssueService(ghc);
     }
 
-    public Collection<Issue> getIssues(String username, String reponame, String state) {
+    public Collection<Issue> getIssues(final String username, final String reponame, final String state) {
         HashMap<String, String> params = new HashMap<String, String>();
+        Collection<Issue> issues = null;
         params.put(IssueService.FILTER_STATE, state);
         try {
-            return service.getIssues(username, reponame, params);
+            issues = service.getIssues(username, reponame, params);
         } catch (RequestException r) {
-            if (r.getError().getMessage().equals(ISSUES_DISABLED_MESSAGE)) {
+            if (r.getError().getMessage().equals(ISSUES_DISABLED)) {
                 log.warn("Issues disabled for repository {}/{}", username, reponame);
-                return null;
             }
             log.error("Request exception in getIssues {}/{}", new Object[]{username, reponame, r});
             log.warn("Message: {}", r.getError().getMessage());
-            return null;
         } catch (IOException e) {
             log.error("IOException in getIssues {}/{}", new Object[]{username, reponame, e});
-            return null;
         } catch (NullPointerException e) {
             log.error("NullPointerException in getIssues {}/{}", new Object[]{username, reponame, e});
-            return null;
         }
+        return issues;
     }
 
-    public Collection<Issue> getOpenIssues(String username, String reponame) {
+    public Collection<Issue> getOpenIssues(final String username, final String reponame) {
         return getIssues(username, reponame, IssueService.STATE_OPEN);
     }
 
-    public Collection<Issue> getClosedIssues(String username, String reponame) {
+    public Collection<Issue> getClosedIssues(final String username, final String reponame) {
         return getIssues(username, reponame, IssueService.STATE_CLOSED);
     }
 
-    public Collection<Issue> getAllIssues(String username, String reponame) {
+    public Collection<Issue> getAllIssues(final String username, final String reponame) {
         Collection<Issue> openIssues = getOpenIssues(username, reponame);
         Collection<Issue> closedIssues = getClosedIssues(username, reponame);
         // simple hack to check if openIssues returned a null set
-        if (openIssues != null) {
-            openIssues.addAll(closedIssues);
-            return openIssues;
+        if (openIssues == null) {
+            // if no open issues, just return the closed ones
+            openIssues = closedIssues;
         } else {
-            return closedIssues;
+            openIssues.addAll(closedIssues);
         }
+        return openIssues;
     }
 
-    public Issue getIssue(String username, String reponame, int issueId) {
+    public Issue getIssue(final String username, final String reponame, final int issueId) {
+        Issue issue = null;
         try {
-            return service.getIssue(username, reponame, issueId);
+            issue = service.getIssue(username, reponame, issueId);
         } catch (IOException e) {
             log.error("IO Exception Fetching issue {}/{}:{}", new Object[]{username, reponame, issueId, e});
-            return null;
         }
+        return issue;
     }
 
-    public List<Comment> getIssueComments(IRepositoryIdProvider repo, Issue issue) {
+    public List<Comment> getIssueComments(final IRepositoryIdProvider repo, final Issue issue) {
         return getComments(repo, issue.getNumber());
     }
     
-    public List<Comment> getPullRequestComments(IRepositoryIdProvider repo, PullRequest pr) {
-        return getComments(repo, pr.getNumber());
+    public List<Comment> getPullRequestComments(final IRepositoryIdProvider repo, final PullRequest pullrequest) {
+        return getComments(repo, pullrequest.getNumber());
     }
     
-    protected List<Comment> getComments(IRepositoryIdProvider repo, int id) {
+    protected List<Comment> getComments(final IRepositoryIdProvider repo, final int issueId) {
+        List<Comment> comments = null;
         try {
-            return service.getComments(repo, id);
+            comments = service.getComments(repo, issueId);
         } catch (IOException e) {
-            log.error("Exception fetching comments for issue/pullrequest {}:{}", new Object[]{repo.generateId(), id, e});
-            return null;
+            log.error("Exception fetching comments for issue/pullrequest {}:{}", new Object[]{repo.generateId(), issueId, e});
         }
+        return comments;
     }
 
-    public Collection<IssueEvent> getIssueEvents(IRepositoryIdProvider repo, Issue issue) {
+    public Collection<IssueEvent> getIssueEvents(final IRepositoryIdProvider repo, final Issue issue) {
+        Collection<IssueEvent> events = null;
         try {
-            return service.getIssueEvents(repo, issue);
+            events = service.getIssueEvents(repo, issue);
         } catch (IOException e) {
             log.error("Exception fetching events for issue {}:{}", new Object[]{repo.generateId(), issue.getNumber(), e});
-            return null;
         }
+        return events;
     }
 }

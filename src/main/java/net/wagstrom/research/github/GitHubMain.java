@@ -205,9 +205,9 @@ public class GitHubMain {
                                 }
                             }
                             try {
-                                PullRequest pr = pmv3.getPullRequest(repo, request.getNumber());
-                                bp.savePullRequest(repo, pr, true);
-                                bp.savePullRequestComments(repo, pr, imv3.getPullRequestComments(repo, pr));
+                                PullRequest pullRequest= pmv3.getPullRequest(repo, request.getNumber());
+                                bp.savePullRequest(repo, pullRequest, true);
+                                bp.savePullRequestComments(repo, pullRequest, imv3.getPullRequestComments(repo, pullRequest));
                                 
                             } catch (NullPointerException e) {
                                 log.error("NullPointerException saving pull request: {}:{}", proj, request.getNumber());

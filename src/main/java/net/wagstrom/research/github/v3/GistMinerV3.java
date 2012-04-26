@@ -10,21 +10,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class GistMinerV3 extends AbstractMiner {
-    private GistService service;
+    private final GistService service;
 
     private static final Logger log = LoggerFactory.getLogger(GistMinerV3.class); // NOPMD
 
-    public GistMinerV3(IGitHubClient ghc) {
+    public GistMinerV3(final IGitHubClient ghc) {
+        super();
         service = new GistService(ghc);
     }
 
-    public List<Gist> getGists(String user) {
+    public List<Gist> getGists(final String user) {
+        List<Gist> gists = null;
         try {
-            return service.getGists(user);// TODO Auto-generated method stub
+            gists = service.getGists(user);
         } catch (IOException e) {
             log.error("IOException in getGists: {}", user, e);
-            return null;
         }
+        return gists;
     }
 
 }
