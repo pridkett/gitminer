@@ -344,8 +344,9 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return getOrCreateVertexHelper(IdCols.ORGANIZATION, login, VertexType.ORGANIZATION, orgidx);
     }
 
-    public Vertex getOrCreatePullRequest(final String idval) {
-        return getOrCreateVertexHelper(IdCols.PULLREQUEST, idval, VertexType.PULLREQUEST, pullrequestidx);
+    public Vertex getOrCreatePullRequest(final Repository repo, final PullRequest request) {
+        String pullRequestId = repo.generateId() + ":" + request.getNumber();
+        return getOrCreateVertexHelper(IdCols.PULLREQUEST, pullRequestId, VertexType.PULLREQUEST, pullrequestidx);
     }
 
     private Vertex getOrCreatePullRequestMarker(final PullRequestMarker head) {
@@ -483,6 +484,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         setProperty(node, PropertyName.BODY_HTML, comment.getBodyHtml());
         setProperty(node, PropertyName.BODY_TEXT, comment.getBodyText());
         setProperty(node, PropertyName.URL, comment.getUrl());
+        setProperty(node, PropertyName.GITHUB_ID, comment.getId());
         setProperty(node, PropertyName.CREATED_AT, comment.getCreatedAt());
         setProperty(node, PropertyName.UPDATED_AT, comment.getUpdatedAt());
         if (comment.getUser() != null) {
@@ -671,19 +673,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             final Comment comment) {
         // FIXME: this shouldn't be saveIssue, should just be a fetch
         Vertex issuenode = saveIssue(repo, issue);
-        Vertex commentnode = this.getOrCreateComment(comment.getId());
+        Vertex commentnode = saveCommentHelper(comment, EdgeType.ISSUECOMMENTOWNER);
         createEdgeIfNotExist(issuenode, commentnode, EdgeType.ISSUECOMMENT);
-        setProperty(commentnode, PropertyName.BODY, comment.getBody());
-        setProperty(commentnode, PropertyName.BODY_HTML, comment.getBodyHtml());
-        setProperty(commentnode, PropertyName.BODY_TEXT, comment.getBodyText());
-        setProperty(commentnode, PropertyName.CREATED_AT, comment.getCreatedAt());
-        setProperty(commentnode, PropertyName.GITHUB_ID, comment.getId());
-        setProperty(commentnode, PropertyName.URL, comment.getUrl());
-        setProperty(commentnode, PropertyName.UPDATED_AT, comment.getUpdatedAt());
-        if (comment.getUser() != null) {
-            Vertex user = saveUser(comment.getUser());
-            createEdgeIfNotExist(user, commentnode, EdgeType.ISSUECOMMENTOWNER);
-        }
         return commentnode;
     }
 
@@ -807,8 +798,21 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return mapper;
     }
 
-    public Vertex savePullRequestComment(final Comment comment) {
-        return saveCommentHelper(comment, EdgeType.PULLREQUESTCOMMENTOWNER);
+    public void savePullRequestComments(Repository repo,
+            PullRequest pullRequest, List<Comment> pullRequestComments) {
+        for (Comment comment : pullRequestComments) {
+            savePullRequestComment(repo, pullRequest, comment);
+        }
+    }
+    
+    public Vertex savePullRequestComment(final Repository repo,
+            final PullRequest pullRequest,
+            final Comment comment) {
+            // FIXME: this shouldn't be saveIssue, should just be a fetch
+            Vertex pullRequestNode = getOrCreatePullRequest(repo, pullRequest);
+            Vertex commentnode = saveCommentHelper(comment, EdgeType.PULLREQUESTCOMMENTOWNER);
+            createEdgeIfNotExist(pullRequestNode, commentnode, EdgeType.PULLREQUESTISSUECOMMENT);
+            return commentnode;
     }
 
     private Vertex savePullRequestMarker(final PullRequestMarker head) {
@@ -861,8 +865,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 //        return node;
 //    }
 
+
     /**
-     * {@link #saveRepository(Repository)} modified to V3 api
+     * saves a repository to the graph database
+     * 
      * @param repo
      * @return
      */
@@ -1125,7 +1131,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         String reponame = repo.generateId();
 
         Vertex reponode = getOrCreateRepository(reponame);
-        Vertex pullnode = getOrCreatePullRequest(reponame + ":" + request.getNumber());
+        Vertex pullnode = getOrCreatePullRequest(repo, request);
         // getBase()
         
         setProperty(pullnode, PropertyName.BODY, request.getBody());

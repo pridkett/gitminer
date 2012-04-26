@@ -19,23 +19,22 @@ import org.slf4j.LoggerFactory;
 public class ThrottledGitHubInvocationHandler extends AbstractInvocationHandler implements InvocationHandler {
     IGitHubClient wrapped;
     ApiThrottle throttle;
-    private Logger log;
+    private static final Logger log = LoggerFactory.getLogger(ThrottledGitHubInvocationHandler.class); // NOPMD
  
     // this acts as a shared white list of methods that don't get throttled
-    private static final HashSet<String> methods = new HashSet<String>(Arrays.asList("getRateLimit", "getRateLimitRemaining", "getRequestHeaders"));
+    private static final HashSet<String> METHODS = new HashSet<String>(Arrays.asList("getRateLimit", "getRateLimitRemaining", "getRequestHeaders"));
 
 
     public ThrottledGitHubInvocationHandler(IGitHubClient s, ApiThrottle t) {
         super();
         wrapped = s;
         throttle = t;
-        log = LoggerFactory.getLogger(ThrottledGitHubInvocationHandler.class);
     }
 
     public Object invoke(Object proxy, Method method, Object[] args)
             throws Throwable {
         log.trace("Method invoked: {}", method.getName());
-        if (methods.contains(method.getName()))
+        if (METHODS.contains(method.getName()))
             return method.invoke(wrapped, args);
         throttle.callWait();
         try {

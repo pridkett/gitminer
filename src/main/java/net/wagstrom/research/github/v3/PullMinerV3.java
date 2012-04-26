@@ -13,14 +13,13 @@ import org.eclipse.egit.github.core.service.PullRequestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class PullMinerV3 extends V3Miner {
+public class PullMinerV3 extends AbstractMiner {
     private PullRequestService service;
 
-    private Logger log;
+    private static final Logger log = LoggerFactory.getLogger(PullMinerV3.class); // NOPMD
 
     public PullMinerV3(IGitHubClient ghc) {
         service = new PullRequestService(ghc);
-        log = LoggerFactory.getLogger(PullMinerV3.class);
     }
 
     public Collection<PullRequest> getOpenPullRequests(IRepositoryIdProvider repository) {

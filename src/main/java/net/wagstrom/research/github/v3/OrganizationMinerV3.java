@@ -9,14 +9,13 @@ import org.eclipse.egit.github.core.service.OrganizationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class OrganizationMinerV3 extends V3Miner {
+public class OrganizationMinerV3 extends AbstractMiner {
     private OrganizationService service;
     
-    private Logger log;
+    private static final Logger log = LoggerFactory.getLogger(OrganizationMinerV3.class); // NOPMD
 
     public OrganizationMinerV3(IGitHubClient ghc) {
         service = new OrganizationService(ghc);
-        log = LoggerFactory.getLogger(OrganizationMinerV3.class);
     }
 
    

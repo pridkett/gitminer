@@ -7,19 +7,17 @@ import org.eclipse.egit.github.core.IRepositoryIdProvider;
 import org.eclipse.egit.github.core.Repository;
 import org.eclipse.egit.github.core.User;
 import org.eclipse.egit.github.core.client.IGitHubClient;
-import org.eclipse.egit.github.core.service.UserService;
 import org.eclipse.egit.github.core.service.WatcherService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class WatcherMinerV3 extends V3Miner {
+public class WatcherMinerV3 extends AbstractMiner {
     private WatcherService service;
     
-    private Logger log;
+    private static final Logger log = LoggerFactory.getLogger(WatcherMinerV3.class); // NOPMD
 
     public WatcherMinerV3(IGitHubClient ghc) {
         service = new WatcherService(ghc);
-        log = LoggerFactory.getLogger(WatcherMinerV3.class);
     }
 
     

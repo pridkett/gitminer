@@ -9,14 +9,13 @@ import org.eclipse.egit.github.core.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class UserMinerV3 extends V3Miner {
+public class UserMinerV3 extends AbstractMiner {
     private UserService service;
     
-    private Logger log;
+    private static final Logger log = LoggerFactory.getLogger(UserMinerV3.class); // NOPMD
 
     public UserMinerV3(IGitHubClient ghc) {
         service = new UserService(ghc);
-        log = LoggerFactory.getLogger(UserMinerV3.class);
     }
 
     

@@ -6,9 +6,8 @@ import java.util.Map;
 import net.wagstrom.research.github.BlueprintsDriver;
 import net.wagstrom.research.github.EdgeType;
 import net.wagstrom.research.github.IdCols;
-import net.wagstrom.research.github.VertexType;
 import net.wagstrom.research.github.PropertyName;
-import net.wagstrom.research.github.IndexNames;
+import net.wagstrom.research.github.VertexType;
 
 import org.eclipse.jgit.lib.AnyObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
@@ -16,10 +15,8 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ibm.research.govsci.graph.BlueprintsBase;
 import com.ibm.research.govsci.graph.Shutdownable;
 import com.tinkerpop.blueprints.pgm.Edge;
-import com.tinkerpop.blueprints.pgm.Index;
 import com.tinkerpop.blueprints.pgm.Vertex;
 
 public class CommitBlueprintsDriver extends BlueprintsDriver implements Shutdownable {

@@ -23,7 +23,7 @@ public class RepositoryLoader {
 	final static String METHOD = "http://";
 	final static String BASE = "github.com/";
 	final static File LOCAL_STORE = new File(GithubProperties.props().getProperty("edu.unl.cse.git.localStore", "/tmp/repo_loader" ));
-	final static Logger log = LoggerFactory.getLogger(RepositoryLoader.class);
+	final static Logger log = LoggerFactory.getLogger(RepositoryLoader.class); // NOPMD
 	
 	static public Git getRepository( String username, String repoName ) {
 		return getRepository( username +  repoName );

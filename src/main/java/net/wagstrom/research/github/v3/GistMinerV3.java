@@ -9,14 +9,13 @@ import org.eclipse.egit.github.core.service.GistService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GistMinerV3 extends V3Miner {
+public class GistMinerV3 extends AbstractMiner {
     private GistService service;
 
-    private Logger log;
+    private static final Logger log = LoggerFactory.getLogger(GistMinerV3.class); // NOPMD
 
     public GistMinerV3(IGitHubClient ghc) {
         service = new GistService(ghc);
-        log = LoggerFactory.getLogger(GistMinerV3.class);
     }
 
     public List<Gist> getGists(String user) {

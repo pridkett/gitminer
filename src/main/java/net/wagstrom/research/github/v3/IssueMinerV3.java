@@ -9,20 +9,20 @@ import org.eclipse.egit.github.core.Comment;
 import org.eclipse.egit.github.core.IRepositoryIdProvider;
 import org.eclipse.egit.github.core.Issue;
 import org.eclipse.egit.github.core.IssueEvent;
+import org.eclipse.egit.github.core.PullRequest;
 import org.eclipse.egit.github.core.client.IGitHubClient;
 import org.eclipse.egit.github.core.client.RequestException;
 import org.eclipse.egit.github.core.service.IssueService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class IssueMinerV3 extends V3Miner {
+public class IssueMinerV3 extends AbstractMiner {
     private static final String ISSUES_DISABLED_MESSAGE = "Issues are disabled for this repo";
     private IssueService service;
 
-    private Logger log;
+    private Logger log = LoggerFactory.getLogger(IssueMinerV3.class); // NOPMD
 
     private IssueMinerV3() {
-        log = LoggerFactory.getLogger(IssueMinerV3.class);		
     }
 
     public IssueMinerV3(IssueService service) {
@@ -87,10 +87,18 @@ public class IssueMinerV3 extends V3Miner {
     }
 
     public List<Comment> getIssueComments(IRepositoryIdProvider repo, Issue issue) {
+        return getComments(repo, issue.getNumber());
+    }
+    
+    public List<Comment> getPullRequestComments(IRepositoryIdProvider repo, PullRequest pr) {
+        return getComments(repo, pr.getNumber());
+    }
+    
+    protected List<Comment> getComments(IRepositoryIdProvider repo, int id) {
         try {
-            return service.getComments(repo, issue.getNumber());
+            return service.getComments(repo, id);
         } catch (IOException e) {
-            log.error("Exception fetching comments for issue {}:{}", new Object[]{repo.generateId(), issue.getNumber(), e});
+            log.error("Exception fetching comments for issue/pullrequest {}:{}", new Object[]{repo.generateId(), id, e});
             return null;
         }
     }

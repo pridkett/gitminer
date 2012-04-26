@@ -12,14 +12,13 @@ import org.eclipse.egit.github.core.service.RepositoryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RepositoryMinerV3 extends V3Miner {
+public class RepositoryMinerV3 extends AbstractMiner {
     private RepositoryService service;
 
-    private Logger log;
+    private static final Logger log = LoggerFactory.getLogger(RepositoryMinerV3.class); // NOPMD
 
     public RepositoryMinerV3(IGitHubClient ghc) {
         service = new RepositoryService(ghc);
-        log = LoggerFactory.getLogger(RepositoryMinerV3.class);
     }
 
     public Repository getRepository(IRepositoryIdProvider repo) {

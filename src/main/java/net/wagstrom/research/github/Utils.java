@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Utils {
-    private static final Logger log = LoggerFactory.getLogger(Utils.class); // NOPMD
+    private static final Logger log = LoggerFactory.getLogger(Utils.class);  // NOPMD
     private static final Pattern GRAVATAR_PATTERN = Pattern.compile("([a-f0-9]{32})");
 
     /**

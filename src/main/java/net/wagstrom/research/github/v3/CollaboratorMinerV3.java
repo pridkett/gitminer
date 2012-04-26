@@ -10,14 +10,13 @@ import org.eclipse.egit.github.core.service.CollaboratorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CollaboratorMinerV3 extends V3Miner {
+public class CollaboratorMinerV3 extends AbstractMiner {
     private CollaboratorService service;
     
-    private Logger log;
+    private static final Logger log = LoggerFactory.getLogger(CollaboratorMinerV3.class); // NOPMD
 
     public CollaboratorMinerV3(IGitHubClient ghc) {
         service = new CollaboratorService(ghc);
-        log = LoggerFactory.getLogger(CollaboratorMinerV3.class);
     }
 
     

@@ -34,6 +34,7 @@ import net.wagstrom.research.github.v3.UserMinerV3;
 import net.wagstrom.research.github.v3.WatcherMinerV3;
 
 import org.eclipse.egit.github.core.IssueEvent;
+import org.eclipse.egit.github.core.PullRequest;
 import org.eclipse.egit.github.core.User;
 import org.eclipse.egit.github.core.client.GitHubClient;
 import org.eclipse.egit.github.core.client.IGitHubClient;
@@ -204,7 +205,10 @@ public class GitHubMain {
                                 }
                             }
                             try {
-                                bp.savePullRequest(repo, pmv3.getPullRequest(repo, request.getNumber()), true);
+                                PullRequest pr = pmv3.getPullRequest(repo, request.getNumber());
+                                bp.savePullRequest(repo, pr, true);
+                                bp.savePullRequestComments(repo, pr, imv3.getPullRequestComments(repo, pr));
+                                
                             } catch (NullPointerException e) {
                                 log.error("NullPointerException saving pull request: {}:{}", proj, request.getNumber());
                             }
