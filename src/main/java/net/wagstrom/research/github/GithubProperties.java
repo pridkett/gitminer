@@ -31,9 +31,14 @@ import org.slf4j.LoggerFactory;
  * 
  * @author patrick
  */
-public class GithubProperties {
+public final class GithubProperties {
     private static Properties internalProps = null;
     private static final Logger log = LoggerFactory.getLogger(GithubProperties.class); // NOPMD
+
+    /**
+     * all methods in this class are static. Do not instantiate.
+     */
+    private GithubProperties() {};
 
     /**
      * static method that returns the configuration properties

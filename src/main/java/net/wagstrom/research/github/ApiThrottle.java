@@ -59,8 +59,9 @@ public class ApiThrottle {
      * 
      */
     public void callWait() throws InterruptedException {
-        if (lastReset != null)
+        if (lastReset != null) {
             log.debug("[{}] API Estimates: Limit: {} Remaining: {} Last Reset: {}", new Object[] {idstr, limit, limitRemaining, dateFormatter.format(lastReset.getTime())});
+        }
         if (limitRemaining < 1 && limit != -1) {
             Calendar sleepEnd = (Calendar)lastReset.clone();
             int timeDiff = 3600;
@@ -86,7 +87,6 @@ public class ApiThrottle {
             }
         }
         lastCall = Calendar.getInstance();
-        return;
     }
 
     public void setRateLimit(int limit) {

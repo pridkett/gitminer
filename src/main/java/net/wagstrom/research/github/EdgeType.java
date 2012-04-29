@@ -16,16 +16,27 @@
 package net.wagstrom.research.github;
 
 public final class EdgeType {
+    /**
+     * This is static class for constants only
+     */
+    private EdgeType() {}
+
     public static final String CHANGED =  "CHANGED";
     public static final String COMMITAUTHOR = "AUTHOR"; // COMMIT->USER also used by RepositoryLoader
+    public static final String COMMITCOMMENTOWNER = "COMMIT_COMMENT_OWNER";
+    public static final String COMMITCOMMENTREPO = "COMMIT_COMMENT_REPO";
     public static final String COMMITPARENT = "COMMIT_PARENT"; // also used by RepositoryLoader
     public static final String COMMITTER = "COMMITTER"; // COMMIT->USER also used by RepositoryLoader
     public static final String CREATOR = "CREATOR";
     public static final String DISCUSSIONCOMMIT = "DISCUSSION_COMMIT";
     public static final String DISCUSSIONUSER = "DISCUSSION_USER";
     public static final String EMAIL = "EMAIL"; // USER->EMAIL also used by RepositoryLoader
-    public static final String EVENTCOMMENT = "EVENT_COMMIT";
+    public static final String EVENTCOMMENT = "EVENT_COMMENT";
     public static final String EVENTCOMMIT = "EVENT_COMMIT";
+    public static final String EVENTCOMMITCOMMENT = "EVENT_COMMIT_COMMENT";
+    public static final String EVENTISSUE = "EVENT_ISSUE";
+    public static final String EVENTPULLREQUEST = "EVENT_PULL_REQUEST";
+    public static final String EVENTREPO = "EVENT_REPO";
     public static final String FOLLOWER = "FOLLOWER";
     public static final String FOLLOWING = "FOLLOWING";
     public static final String GISTCOMMENT = "GIST_COMMENT";
@@ -73,4 +84,5 @@ public final class EdgeType {
     public static final String REPOFORK = "REPO_FORK";
     public static final String REPOSOURCE = "REPO_SOURCE";
     public static final String TEAMMEMBER = "TEAM_MEMBER";
+    public static final String USEREVENT = "USER_EVENT";
 }

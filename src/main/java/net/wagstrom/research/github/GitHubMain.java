@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import net.wagstrom.research.github.v3.CollaboratorMinerV3;
+import net.wagstrom.research.github.v3.EventMinerV3;
 import net.wagstrom.research.github.v3.GistMinerV3;
 import net.wagstrom.research.github.v3.IssueMinerV3;
 import net.wagstrom.research.github.v3.OrganizationMinerV3;
@@ -38,6 +39,7 @@ import org.eclipse.egit.github.core.PullRequest;
 import org.eclipse.egit.github.core.User;
 import org.eclipse.egit.github.core.client.GitHubClient;
 import org.eclipse.egit.github.core.client.IGitHubClient;
+import org.eclipse.egit.github.core.event.Event;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,6 +120,7 @@ public class GitHubMain {
         GistMinerV3 gmv3 = new GistMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
         WatcherMinerV3 wmv3 = new WatcherMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
         CollaboratorMinerV3 cmv3 = new CollaboratorMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
+        EventMinerV3 emv3 = new EventMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
 
         if (props.getProperty("net.wagstrom.research.github.miner.repositories","true").equals("true")) {
             for (String proj : projects) {
@@ -206,9 +209,8 @@ public class GitHubMain {
                             }
                             try {
                                 PullRequest pullRequest= pmv3.getPullRequest(repo, request.getNumber());
-                                bp.savePullRequest(repo, pullRequest, true);
+                                bp.savePullRequest(repo, null, pullRequest, true);
                                 bp.savePullRequestComments(repo, pullRequest, imv3.getPullRequestComments(repo, pullRequest));
-                                
                             } catch (NullPointerException e) {
                                 log.error("NullPointerException saving pull request: {}:{}", proj, request.getNumber());
                             }
@@ -246,6 +248,9 @@ public class GitHubMain {
         if (props.getProperty("net.wagstrom.research.github.miner.users","true").equals("true")) {
             for (String username : users) {
                 fetchAllUserData(bp, umv3, rmv3, gmv3, wmv3, username);
+                if (props.getProperty("net.wagstrom.research.github.miner.users.events", "true").equals("true")) {
+                    fetchAllUserEvents(bp, emv3, username);
+                }
             }
         }
 
@@ -324,6 +329,16 @@ public class GitHubMain {
         return ((currentDate.getTime() - elementDate.getTime()) >= refreshTime);
     }
 
+    private void fetchAllUserEvents(final BlueprintsDriver bp, final EventMinerV3 emv3,
+            final String username) {
+        List<Event> events = emv3.getUserEvents(username);
+        if (events != null) {
+            bp.saveUserEvents(username, events);
+        } else {
+            log.debug("user: {} null events", username);
+        }
+    }
+    
     private void fetchAllUserData(final BlueprintsDriver bp, final UserMinerV3 umv3, final RepositoryMinerV3 rmv3, final GistMinerV3 gmv3, final WatcherMinerV3 wmv3, final String user) {
         List<User> followers = umv3.getFollowers(user);
         if (followers != null) {

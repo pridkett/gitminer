@@ -77,7 +77,7 @@ public class Github {
                     lc.reset(); 
                     configurator.doConfigure(logbackFile);
                 } catch (JoranException je) {
-                    je.printStackTrace();
+                    log.error("JoranException caught: ", je);
                 }
                 StatusPrinter.printInCaseOfErrorsOrWarnings(lc);
             }

@@ -26,6 +26,7 @@ import java.util.Set;
 
 import org.eclipse.egit.github.core.Comment;
 import org.eclipse.egit.github.core.Commit;
+import org.eclipse.egit.github.core.CommitComment;
 import org.eclipse.egit.github.core.CommitUser;
 import org.eclipse.egit.github.core.Contributor;
 import org.eclipse.egit.github.core.Gist;
@@ -40,6 +41,15 @@ import org.eclipse.egit.github.core.PullRequestMarker;
 import org.eclipse.egit.github.core.Repository;
 import org.eclipse.egit.github.core.Team;
 import org.eclipse.egit.github.core.User;
+import org.eclipse.egit.github.core.event.CommitCommentPayload;
+import org.eclipse.egit.github.core.event.CreatePayload;
+import org.eclipse.egit.github.core.event.Event;
+import org.eclipse.egit.github.core.event.EventPayload;
+import org.eclipse.egit.github.core.event.EventRepository;
+import org.eclipse.egit.github.core.event.IssueCommentPayload;
+import org.eclipse.egit.github.core.event.IssuesPayload;
+import org.eclipse.egit.github.core.event.PullRequestPayload;
+import org.eclipse.egit.github.core.event.PushPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,6 +92,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
     protected final Index <Vertex> gituseridx;
     protected final Index <Vertex> nameidx;
     protected final Index <Vertex> fileidx;
+    protected final Index <Vertex> eventidx;
 
     /**
      * Base constructor for BlueprintsDriver
@@ -117,6 +128,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         gituseridx = getOrCreateIndex(IndexNames.GITUSER);
         nameidx = getOrCreateIndex(IndexNames.NAME);
         fileidx = getOrCreateIndex(IndexNames.FILE);
+        eventidx = getOrCreateIndex(IndexNames.EVENT);
     }	
 
     /**
@@ -151,8 +163,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
                     map.put((T) vertex.getProperty(idkey), null);
                 }
             } catch (Exception e) {
-                log.error("Invalid {} for user: {}", datekey,
-                        (String) vertex.getProperty(idkey));
+                log.error("Invalid {} for user: {}", new Object[]{datekey,
+                        (String) vertex.getProperty(idkey), e});
             }
         }
         return map;
@@ -282,8 +294,12 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return emailVtx;
     }
 
-    private Vertex getOrCreateEvent(final long eventId) {
-        return getOrCreateVertexHelper(IdCols.EVENT, eventId, VertexType.ISSUE_EVENT, issueeventidx);
+    private Vertex getOrCreateEvent(final Event event) {
+        return getOrCreateVertexHelper(IdCols.EVENT, event.getId(), VertexType.EVENT, eventidx);
+    }
+    
+    private Vertex getOrCreateIssueEvent(final IssueEvent event) {
+        return getOrCreateVertexHelper(IdCols.EVENT, event.getId(), VertexType.ISSUE_EVENT, issueeventidx);
     }
 
     public Vertex getOrCreateGist(final String repoId) {
@@ -345,8 +361,12 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
     }
 
     public Vertex getOrCreatePullRequest(final Repository repo, final PullRequest request) {
-        String pullRequestId = repo.generateId() + ":" + request.getNumber();
-        return getOrCreateVertexHelper(IdCols.PULLREQUEST, pullRequestId, VertexType.PULLREQUEST, pullrequestidx);
+        return getOrCreatePullRequest(repo.generateId(), request);
+    }
+    
+    public Vertex getOrCreatePullRequest(final String reponame, final PullRequest request) {
+        String pullRequestId = reponame + ":" + request.getNumber();
+        return getOrCreateVertexHelper(IdCols.PULLREQUEST, pullRequestId, VertexType.PULLREQUEST, pullrequestidx);        
     }
 
     private Vertex getOrCreatePullRequestMarker(final PullRequestMarker head) {
@@ -362,6 +382,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return getOrCreateVertexHelper(IdCols.REPOSITORY, repo.generateId(), VertexType.REPOSITORY, repoidx);
     }
 
+    public Vertex getOrCreateRepository(final EventRepository repo) {
+        return getOrCreateVertexHelper(IdCols.REPOSITORY, repo.getName(), VertexType.REPOSITORY, repoidx);
+    }
+    
     public Vertex getOrCreateRepository(final String reponame) {
         return getOrCreateVertexHelper(IdCols.REPOSITORY, reponame, VertexType.REPOSITORY, repoidx);
     }
@@ -593,7 +617,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
     public Vertex saveGravatar(final String gravatarHash) {
         String ghash;
-        if (gravatarHash.indexOf("@") == -1) {
+        if (gravatarHash.indexOf('@') == -1) {
             ghash = Utils.gravatarIdExtract(gravatarHash);
         } else {
             ghash = Utils.gravatarHash(gravatarHash);
@@ -601,6 +625,15 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return getOrCreateGravatar(ghash);
     }
 
+    private Vertex saveIssue(final Vertex repoVtx, final Issue issue) {
+        return saveIssue(null, repoVtx, issue);
+    }
+
+    private Vertex saveIssue(final Repository repo,
+            final Issue issue) {
+        return saveIssue(repo, null, issue);
+    }
+    
     /**
      * Saves a v3 API issue to the database
      * 
@@ -611,8 +644,21 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @return
      */
     private Vertex saveIssue(final Repository repo,
+            final Vertex repoVertex,
             final Issue issue) {
-        Vertex issuenode = getOrCreateIssue(repo.generateId(), issue);
+        String reponame;
+        Vertex repoVtx = repoVertex;
+        if (repoVtx == null) {
+            repoVtx = getOrCreateRepository(repo);
+        }
+        if (repo != null) {
+            reponame = repo.generateId();
+        } else {
+            reponame = (String)repoVtx.getProperty(PropertyName.FULLNAME);
+            log.warn("Guessing repo name: {}", reponame);
+        }
+
+        Vertex issuenode = getOrCreateIssue(reponame, issue);
         if (issue.getAssignee() != null) {
             setProperty(issuenode, PropertyName.ASSIGNEE, issue.getAssignee().getLogin());
             Vertex userNode = getOrCreateUser(issue.getAssignee());
@@ -633,16 +679,24 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         }
         setProperty(issuenode, PropertyName.GITHUB_ID, issue.getId());
         if (issue.getMilestone() != null) {
-            Milestone milestone = issue.getMilestone();
-            Vertex msVtx = saveMilestone(repo, milestone);
-            createEdgeIfNotExist(issuenode, msVtx, EdgeType.MILESTONE);
+            if (repo != null) {
+                Milestone milestone = issue.getMilestone();
+                Vertex msVtx = saveMilestone(repo, milestone);
+                createEdgeIfNotExist(issuenode, msVtx, EdgeType.MILESTONE);
+            } else {
+                log.warn("Attempting to save a milestone with a null repo");
+            }
         }
         setProperty(issuenode, PropertyName.NUMBER, issue.getNumber());
         // Fix for the v3 API always creating a pull request object
         if (issue.getPullRequest() != null && issue.getPullRequest().getId() != 0L) {
-            PullRequest pullRequest = issue.getPullRequest();
-            Vertex prnode = savePullRequest(repo, pullRequest);
-            createEdgeIfNotExist(issuenode, prnode, EdgeType.PULLREQUEST);
+            if (repo != null) {
+                PullRequest pullRequest = issue.getPullRequest();
+                Vertex prnode = savePullRequest(repo, pullRequest);
+                createEdgeIfNotExist(issuenode, prnode, EdgeType.PULLREQUEST);
+            } else {
+                log.warn("Attempting to save an issue PullRequest with a null repo");
+            }
         }
         setProperty(issuenode, PropertyName.STATE, issue.getState().toString());
         setProperty(issuenode, PropertyName.TITLE, issue.getTitle());
@@ -691,7 +745,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
     private Vertex saveIssueEvent(final Repository repo,
             final Vertex issuenode,
             final IssueEvent event) {
-        Vertex eventnode = getOrCreateEvent(event.getId());
+        Vertex eventnode = getOrCreateIssueEvent(event);
         createEdgeIfNotExist(issuenode, eventnode, EdgeType.ISSUEEVENT);
         if (event.getActor() != null) {
             Vertex usernode = saveUser(event.getActor());
@@ -798,9 +852,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return mapper;
     }
 
-    public void savePullRequestComments(Repository repo,
-            PullRequest pullRequest, List<Comment> pullRequestComments) {
-        for (Comment comment : pullRequestComments) {
+    public void savePullRequestComments(final Repository repo,
+            final PullRequest pullRequest,
+            final List<Comment> comments) {
+        for (Comment comment : comments) {
             savePullRequestComment(repo, pullRequest, comment);
         }
     }
@@ -939,8 +994,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @return a map of the User object to Vertex in database
      */
     public Map<User, Vertex> saveRepositoryCollaborators(
-            Repository repo,
-            List<User> collaborators) {
+            final Repository repo,
+            final List<User> collaborators) {
         HashMap<User, Vertex> mapper = new HashMap<User, Vertex>();
         Vertex repoVtx = getOrCreateRepository(repo);
         if (collaborators == null) {
@@ -963,8 +1018,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @return a map of the User object to Vertex in database
      */
     public Map<Contributor, Vertex> saveRepositoryContributors(
-            Repository repo,
-            List<Contributor> contributors) {
+            final Repository repo,
+            final List<Contributor> contributors) {
         HashMap<Contributor, Vertex> mapper = new HashMap<Contributor, Vertex>();
         Vertex repoVtx = getOrCreateRepository(repo);
         if (contributors == null) {
@@ -988,7 +1043,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param contributor
      * @return
      */
-    private Vertex saveContributor(Contributor contributor) {
+    private Vertex saveContributor(final Contributor contributor) {
         Vertex contributorVtx = getOrCreateUser(contributor.getLogin());
         if (contributor.getAvatarUrl() != null && !contributor.getAvatarUrl().trim().equals("")) {
             setProperty(contributorVtx, PropertyName.GRAVATAR_ID, contributor.getAvatarUrl());
@@ -1110,10 +1165,15 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return mapper;
     }
 
+    private Vertex savePullRequest(final Vertex repoVtx,
+            final PullRequest request) {
+        return savePullRequest(null, repoVtx, request, false);
+    }
+    
     private Vertex savePullRequest(
-            Repository repo,
-            PullRequest request) {
-        return savePullRequest(repo, request, false);
+            final Repository repo,
+            final PullRequest request) {
+        return savePullRequest(repo, null, request, false);
     }
 
     /**
@@ -1124,14 +1184,25 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @return
      */
     public Vertex savePullRequest(
-            Repository repo,
-            PullRequest request, boolean full) {
+            final Repository repo,
+            final Vertex repoVertex,
+            final PullRequest request,
+            final boolean full) {
         log.trace("Saving pull request {}", request.getNumber());
         log.trace(request.toString());
-        String reponame = repo.generateId();
 
-        Vertex reponode = getOrCreateRepository(reponame);
-        Vertex pullnode = getOrCreatePullRequest(repo, request);
+        Vertex reponode = repoVertex;
+        String reponame;
+        if (repo == null) {
+            reponame = (String)repoVertex.getProperty(PropertyName.FULLNAME);
+        } else {
+            reponame = repo.generateId();
+        }
+        
+        if (reponode == null) {
+            reponode = getOrCreateRepository(reponame);
+        }
+        Vertex pullnode = getOrCreatePullRequest(reponame, request);
         // getBase()
         
         setProperty(pullnode, PropertyName.BODY, request.getBody());
@@ -1224,8 +1295,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param requests3
      */
     public void savePullRequests(
-            Repository repo,
-            Collection<PullRequest> requests3) {
+            final Repository repo,
+            final Collection<PullRequest> requests3) {
         for (PullRequest request : requests3) {
             savePullRequest(repo, request);
         }
@@ -1239,7 +1310,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @return a map of the username to their representative vertices
      * @deprecated
      */
-    public Map<String, Vertex> saveRepositoryWatchers(String project, List<String> users) {
+    public Map<String, Vertex> saveRepositoryWatchers(final String project, final List<String> users) {
         Vertex proj = getOrCreateRepository(project);
         HashMap<String,Vertex> mapper= new HashMap<String,Vertex>();
         for (String user : users) {
@@ -1259,8 +1330,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @return a mapping of the users to the repository
      */
     public Map<User, Vertex> saveRepositoryWatchers(
-            Repository repo,
-            List<User> watchers) {
+            final Repository repo,
+            final List<User> watchers) {
         Vertex repoVtx = getOrCreateRepository(repo);
         HashMap<User,Vertex> mapper= new HashMap<User,Vertex>();
         for (User user : watchers) {
@@ -1271,7 +1342,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return mapper;
     }
     
-    public Vertex saveTeam(Team team) {
+    public Vertex saveTeam(final Team team) {
         Vertex node = getOrCreateTeam(team);
         setProperty(node, PropertyName.NAME, team.getName());
         setProperty(node, PropertyName.PERMISSION, team.getPermission());
@@ -1282,7 +1353,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return node;
     }
 
-    public Map<User,Vertex> saveTeamMembers(Team team, List<User> users) {
+    public Map<User,Vertex> saveTeamMembers(final Team team, final List<User> users) {
         Vertex teamnode = getOrCreateTeam(team);
         HashMap<User,Vertex> mapper = new HashMap<User,Vertex>();
         for (User user : users) {
@@ -1293,8 +1364,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return mapper;
     }
 
-    public Map<Repository,Vertex> saveTeamRepositories(Team team,
-            List<Repository> repos) {
+    public Map<Repository,Vertex> saveTeamRepositories(final Team team,
+            final List<Repository> repos) {
         Vertex teamnode = getOrCreateTeam(team);
         HashMap<Repository,Vertex> mapper = new HashMap<Repository,Vertex>();
         for (Repository repo : repos) {
@@ -1305,7 +1376,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return mapper;
     }
 
-    private Vertex saveUser(CommitUser user) {
+    private Vertex saveUser(final CommitUser user) {
         String sName = user.getName();
         String sEmail = user.getEmail();
         Vertex gitUser = getOrCreateGitUser( sName, sEmail );
@@ -1316,7 +1387,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return gitUser;
     }
 
-    public Vertex saveUser(User user, boolean overwrite) {
+    public Vertex saveUser(final User user, final boolean overwrite) {
         Vertex node = getOrCreateUser(user.getLogin());
         log.debug("Saving User: {}", user.toString());
 
@@ -1374,16 +1445,16 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param user
      * @return
      */
-    public Vertex saveUser(User user) {
+    public Vertex saveUser(final User user) {
         return saveUser(user, false);
     }
 
-    public Map<User, Vertex> saveUserFollowers(String user,
-            List<User> followers) {
+    public Map<User, Vertex> saveUserFollowers(final String user,
+            final List<User> followers) {
         return saveUserFollowersFollowing(user, followers, EdgeType.FOLLOWER);
     }
 
-    public Map<User, Vertex> saveUserFollowersFollowing(String sourceuser, List<User> users, String edgetype) {
+    public Map<User, Vertex> saveUserFollowersFollowing(final String sourceuser, final List<User> users, final String edgetype) {
         Vertex source = getOrCreateUser(sourceuser);
         HashMap<User, Vertex> mapper= new HashMap<User, Vertex>();
         for (User user : users) {
@@ -1394,12 +1465,12 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return mapper;
     }
 
-    public Map<User, Vertex> saveUserFollowing(String sourceuser,
-            List<User> users) {
+    public Map<User, Vertex> saveUserFollowing(final String sourceuser,
+            final List<User> users) {
         return saveUserFollowersFollowing(sourceuser, users, EdgeType.FOLLOWING);
     }
 
-    public Map<Gist, Vertex> saveUserGists(String user, List<Gist> gists) {
+    public Map<Gist, Vertex> saveUserGists(final String user, final List<Gist> gists) {
         Vertex usernode = getOrCreateUser(user);
         HashMap<Gist, Vertex> mapper = new HashMap<Gist, Vertex>();
         for (Gist gist : gists) {
@@ -1410,13 +1481,13 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return mapper;
     }
 
-    public Map<Repository, Vertex> saveUserRepositories(String user,
-            List<Repository> repos) {
+    public Map<Repository, Vertex> saveUserRepositories(final String user,
+            final List<Repository> repos) {
         return saveUserRepositoriesHelper(user, repos, EdgeType.REPOOWNER);
     }
 
-    private Map<Repository, Vertex> saveUserRepositoriesHelper(String user,
-            List<Repository> repositories,String edgetype) {
+    private Map<Repository, Vertex> saveUserRepositoriesHelper(final String user,
+            final List<Repository> repositories, final String edgetype) {
         
         Vertex source = getOrCreateUser(user);
         HashMap<Repository,Vertex> mapper = new HashMap<Repository, Vertex>();
@@ -1428,9 +1499,148 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return mapper;
     }
 
-    public Map<Repository, Vertex> saveUserWatchedRepositories(String user,
-            List<Repository> watchedRepos) {
+    public Map<Repository, Vertex> saveUserWatchedRepositories(final String user,
+            final List<Repository> watchedRepos) {
         return saveUserRepositoriesHelper(user, watchedRepos, EdgeType.REPOWATCHED);
+    }
+
+    public void saveUserEvents(final String username, final List<Event> events) {
+        Vertex user = getOrCreateUser(username);
+        for (Event event : events) {
+            saveEvent(user, event);
+        }
+    }
+    
+    public Vertex saveEvent(final Vertex user, final Event event) {
+        String eventType = event.getType();
+        Vertex eventVertex = getOrCreateEvent(event);
+        Vertex repoVertex = null;
+        if (event.getActor() != null) {
+            Vertex userVertex = getOrCreateUser(event.getActor());
+            createEdgeIfNotExist(userVertex, eventVertex, EdgeType.USEREVENT);
+        }
+        
+        setProperty(eventVertex, PropertyName.CREATED_AT, event.getCreatedAt());
+        if (event.getOrg() != null) {
+            Vertex orgVertex = getOrCreateUser(event.getOrg());
+            createEdgeIfNotExist(orgVertex, eventVertex, EdgeType.USEREVENT);
+        }
+        
+        if (event.getRepo() != null) {
+            repoVertex = getOrCreateRepository(event.getRepo());
+            setProperty(repoVertex, PropertyName.GITHUB_ID, event.getRepo().getId());
+            setProperty(repoVertex, PropertyName.FULLNAME, event.getRepo().getName());
+            setProperty(repoVertex, PropertyName.URL, event.getRepo().getUrl());
+            createEdgeIfNotExist(eventVertex, repoVertex, EdgeType.EVENTREPO);
+        }
+        
+        setProperty(eventVertex, PropertyName.EVENT_TYPE, event.getType());
+        
+        // Please Java7 become standard soon...
+        if (eventType.equals(EventType.COMMIT_COMMENT_EVENT)) {
+            CommitCommentPayload ccp = (CommitCommentPayload)event.getPayload();
+            CommitComment comment = ccp.getComment();
+            Vertex commitCommentVertex = saveCommitComment(repoVertex, comment);
+            createEdgeIfNotExist(eventVertex, commitCommentVertex, EdgeType.EVENTCOMMITCOMMENT);
+            
+        } else if (eventType.equals(EventType.CREATE_EVENT)) {
+            CreatePayload cp = (CreatePayload)event.getPayload();
+            setProperty(eventVertex, PropertyName.DESCRIPTION, cp.getDescription());
+            setProperty(eventVertex, PropertyName.MASTER_BRANCH, cp.getMasterBranch());
+            setProperty(eventVertex, PropertyName.REF, cp.getRef());
+            setProperty(eventVertex, PropertyName.REF_TYPE, cp.getRefType());
+            if (cp.getRefType().equals("repository")) {
+                log.warn("XXXXXXXXXXXXXXXXXXXXXXX");
+                log.warn("refType == repository. RepoVtx: {}", repoVertex);
+            }
+        } else if (eventType.equals(EventType.DELETE_EVENT)) {
+            log.warn("Ignoring payload for DELETE_EVENT");
+        } else if (eventType.equals(EventType.DOWNLOAD_EVENT)) {
+            log.warn("Ignoring payload for DOWNLOAD_EVENT");
+        } else if (eventType.equals(EventType.FOLLOW_EVENT)) {
+            log.warn("Ignoring payload for FOLLOW_EVENT");
+        } else if (eventType.equals(EventType.FORK_APPLY_EVENT)) {
+            log.warn("Ignoring payload for FORK_APPLY_EVENT");
+        } else if (eventType.equals(EventType.FORK_EVENT)) {
+            log.warn("Ignoring payload for FORK_EVENT");
+        } else if (eventType.equals(EventType.GIST_EVENT)) {
+            log.warn("Ignoring payload for GIST_EVENT");
+        } else if (eventType.equals(EventType.GOLLUM_EVENT)) {
+            log.warn("Ignoring payload for GOLLUM_EVENT");
+        } else if (eventType.equals(EventType.ISSUE_COMMENT_EVENT)) {
+            IssueCommentPayload icp = (IssueCommentPayload)event.getPayload();
+            setProperty(eventVertex, PropertyName.ACTION, icp.getAction());
+            Vertex issueVertex = saveIssue(repoVertex, icp.getIssue());
+            createEdgeIfNotExist(eventVertex, issueVertex, EdgeType.EVENTISSUE);
+            Vertex commentVertex = saveIssueComment(icp.getComment());
+            createEdgeIfNotExist(issueVertex, commentVertex, EdgeType.ISSUECOMMENT);
+            createEdgeIfNotExist(eventVertex, commentVertex, EdgeType.EVENTCOMMENT);
+        } else if (eventType.equals(EventType.ISSUES_EVENT)) {
+            IssuesPayload ip = (IssuesPayload)event.getPayload();
+            setProperty(eventVertex, PropertyName.EVENT_ACTION, ip.getAction());
+            if (ip.getIssue() != null && repoVertex != null) {
+                Vertex issueVertex = saveIssue(repoVertex, ip.getIssue());
+                createEdgeIfNotExist(eventVertex, issueVertex, EdgeType.EVENTISSUE);
+            }
+        } else if (eventType.equals(EventType.MEMBER_EVENT)) {
+            log.warn("Ignoring payload for MEMBER_EVENT");
+        } else if (eventType.equals(EventType.PUBLIC_EVENT)) {
+            log.warn("Ignoring payload for PUBLIC_EVENT");
+        } else if (eventType.equals(EventType.PULL_REQUEST_EVENT)) {
+            PullRequestPayload prp = (PullRequestPayload)event.getPayload();
+            setProperty(eventVertex, PropertyName.EVENT_ACTION, prp.getAction());
+            setProperty(eventVertex, PropertyName.NUMBER, prp.getNumber());
+            if (prp.getPullRequest() != null && repoVertex != null) {
+                Vertex pullVertex = savePullRequest(repoVertex, prp.getPullRequest());
+                createEdgeIfNotExist(eventVertex, pullVertex, EdgeType.EVENTPULLREQUEST);
+            }
+        } else if (eventType.equals(EventType.PULL_REQUEST_REVIEW_COMMENT_EVENT)) {
+            log.warn("Ignoring payload for PULL_REQUEST_REVIEW_COMMENT_EVENT");
+        } else if (eventType.equals(EventType.PUSH_EVENT)) {
+            PushPayload pp = (PushPayload)event.getPayload();
+            if (pp.getCommits() != null && repoVertex != null) {
+                for (Commit commit : pp.getCommits()) {
+                    Vertex commitVertex = saveCommit(commit);
+                    createEdgeIfNotExist(eventVertex, commitVertex, EdgeType.EVENTCOMMIT);
+                    createEdgeIfNotExist(commitVertex, repoVertex, EdgeType.REPOSITORY);
+                }
+            }
+            
+            setProperty(eventVertex, PropertyName.HEAD, pp.getHead());
+            setProperty(eventVertex, PropertyName.REF, pp.getRef());
+            setProperty(eventVertex, PropertyName.SIZE, pp.getSize());
+        } else if (eventType.equals(EventType.TEAM_ADD_EVENT)) {
+            log.warn("Ignoring payload for TEAM_ADD_EVENT");
+        } else if (eventType.equals(EventType.WATCH_EVENT)) {
+            log.warn("Ignoring payload for WATCH_EVENT");
+        } else {
+            log.warn("Unhandled event type: {}", eventType);
+        }
+        // log.warn("Event: {} type: {}", event.getId(), event.getType());
+        // log.warn("Payload: {}", event.getPayload().toString());
+        return eventVertex;
+    }
+
+    /**
+     * Saves a CommitComment object to the database
+     * 
+     * CommitComment objects most typically come from the EventService API. They are
+     * an extension of the Comment object.
+     * 
+     * @param repoVertex
+     * @param comment
+     * @return
+     */
+    private Vertex saveCommitComment(Vertex repoVertex, CommitComment comment) {
+        Vertex commentVtx = saveCommentHelper(comment, EdgeType.COMMITCOMMENTOWNER);
+        setProperty(commentVtx, PropertyName.COMMIT_ID, comment.getCommitId());
+        setProperty(commentVtx, PropertyName.LINE, comment.getLine());
+        setProperty(commentVtx, PropertyName.PATH, comment.getPath());
+        setProperty(commentVtx, PropertyName.POSITION, comment.getPosition());
+        if (repoVertex != null) {
+            createEdgeIfNotExist(commentVtx, repoVertex, EdgeType.COMMITCOMMENTREPO);
+        }
+        return commentVtx;
     }
 
 }

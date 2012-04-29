@@ -16,6 +16,11 @@
 package net.wagstrom.research.github;
 
 public final class IdCols {
+    /**
+     * This is static class for constants only
+     */
+    private IdCols() {};
+    
     public static final String COMMENT = "comment_id";
     public static final String COMMIT = "hash";
     public static final String DISCUSSION = "discussion_id";

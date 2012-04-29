@@ -16,6 +16,12 @@
 package net.wagstrom.research.github;
 
 public final class PropertyName {
+    /**
+     * This is static class for constants only
+     */
+    private PropertyName() {};
+    
+    public static final String ACTION = "action";
     public static final String ACTIONS = "actions";
     public static final String ADDITIONS = "additions";
     public static final String AUTHORED_DATE = "authoredDate";
@@ -46,6 +52,8 @@ public final class PropertyName {
     public static final String DUE_DATE = "dueDate";
     public static final String EMAIL = "email";
     public static final String EVENT = "event";
+    public static final String EVENT_ACTION = "eventAction";
+    public static final String EVENT_TYPE = "eventType";
     public static final String FOLLOWERS = "followers";
     public static final String FOLLOWING = "following";
     public static final String FORKS = "forks";
@@ -58,6 +66,7 @@ public final class PropertyName {
     public static final String HAS_DOWNLOADS = "hasDownloads";
     public static final String HAS_ISSUES = "hasIssues";
     public static final String HAS_WIKI = "hasWiki";
+    public static final String HEAD = "head";
     public static final String HOMEPAGE = "homepage";
     public static final String HTML_URL = "htmlUrl";
     public static final String ID_NUM = "id_num";
@@ -69,6 +78,7 @@ public final class PropertyName {
     public static final String IS_PRIVATE = "isPrivate";
     public static final String LABEL = "label";
     public static final String LANGUAGE = "language";
+    public static final String LINE = "line";
     public static final String LOCATION = "location";
     public static final String LOGIN = "login";
     public static final String MASTER_BRANCH = "masterBranch";
@@ -94,6 +104,7 @@ public final class PropertyName {
     public static final String PUBLIC_REPO_COUNT = "public_repo_count";
     public static final String PUSHED_AT = "pushedAt";
     public static final String REF = "ref";
+    public static final String REF_TYPE = "ref_type";
     public static final String REPO = "repo";
     public static final String REPOSITORIES = "repositories";
     public static final String REPO_TYPE = "repoType";

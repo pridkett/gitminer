@@ -17,10 +17,16 @@
 package net.wagstrom.research.github;
 
 public final class VertexType {
+    /**
+     * This is static class for constants only
+     */
+    private VertexType() {};
+    
     public static final String COMMIT = "COMMIT"; // also used by RepositoryLoader
     public static final String FILE = "FILE"; // used for RepositoryLoader
     public static final String GIT_USER = "GIT_USER"; // also used by RepositoryLoader
     public static final String EMAIL = "EMAIL"; // also used by RepositoryLoader
+    public static final String EVENT = "EVENT";
     public static final String NAME = "NAME"; // used by RepositoryLoader
     public static final String USER = "USER";
     public static final String REPOSITORY = "REPOSITORY";

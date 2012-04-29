@@ -20,89 +20,89 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RepositoryLoader {
-	final static String METHOD = "http://";
-	final static String BASE = "github.com/";
-	final static File LOCAL_STORE = new File(GithubProperties.props().getProperty("edu.unl.cse.git.localStore", "/tmp/repo_loader" ));
-	final static Logger log = LoggerFactory.getLogger(RepositoryLoader.class); // NOPMD
-	
-	static public Git getRepository( String username, String repoName ) {
-		return getRepository( username +  repoName );
-	}
-	
-	static public Git getRepository( String name ) {
-		if ( !repositoryIsCloned( name ) ) { 
-			return cloneRepository( name );
-		}
-		return updateRepository( name );
-	}
+    private final static String METHOD = "http://";
+    private final static String BASE = "github.com/";
+    private final static File LOCAL_STORE = new File(GithubProperties.props().getProperty("edu.unl.cse.git.localStore", "/tmp/repo_loader" ));
+    private final static Logger log = LoggerFactory.getLogger(RepositoryLoader.class); // NOPMD
 
-	static private boolean repositoryIsCloned( String name ) {
-		// simple for now, determine if more robust checking is needed...
-		return new File( LOCAL_STORE, name ).exists();
-	}
-	
-	static private Git cloneRepository( String name ) {
-		return Git.cloneRepository()
-				.setBare( true )
-				.setCloneAllBranches( true )
-				.setURI( METHOD + BASE + name + ".git" )
-				.setDirectory( new File( LOCAL_STORE, name ) )
-				.call();
-	}
-	
-	static private Git updateRepository( String name ) {
-		try {
-			Git repo = Git.open( new File( LOCAL_STORE, name ) );
-			//TODO i'm unsure about this...
-			//repo.fetch();
-			return repo;
-		} catch (IOException e) {
-			log.error("Exception encountered opening repository:", e);
-		}
-		return null;
-	}
-	
-	static public Iterable<RevCommit> getCommits( String reponame ) {
-		try {
-			return RepositoryLoader.getRepository( reponame ).log().call();
-		} catch (NoHeadException e) {
-			e.printStackTrace();
-			System.exit( 1 );
-		} catch (JGitInternalException e) {
-			e.printStackTrace();
-			System.exit( 1 );
-		}
-		return null;
-	}
-	
-	static public String fileToken( String reponame, String fileName ) {
-		// need to split the username away from the repository name before forming into token
-		return reponame.split( "/" )[1] + "--" + fileName;
-	}
-	
-	static public List<String> filesChanged( String reponame, RevCommit cmt ) {
-		try {
-			List<String> changed = new ArrayList<String>();
-			TreeWalk walker = new TreeWalk( getRepository( reponame ).getRepository() );
-			walker.setFilter( TreeFilter.ANY_DIFF );
-			walker.setRecursive( true );
-			walker.addTree( cmt.getTree() );
-			for ( RevCommit parent : cmt.getParents() ) {
-				walker.addTree( parent.getTree() );
-			}
-			while ( walker.next() ) {
-				changed.add( fileToken( reponame, walker.getPathString() ) );
-			}
-			return changed;
-		} catch (MissingObjectException e) {
-			log.error("Exception encountered getting changed files:",e);
-		} catch (IncorrectObjectTypeException e) {
-			log.error("Exception encountered getting changed files:",e);
-		} catch (CorruptObjectException e) {
-			log.error("Exception encountered getting changed files:",e);
-		} catch (IOException e) {
-			log.error("Exception encountered getting changed files:",e);
-		}
-		return null;
-	}
+    static public Git getRepository(final String username, final String repoName) {
+        return getRepository(username +  repoName);
+    }
+
+    static public Git getRepository(final String name ) {
+        if ( !repositoryIsCloned( name ) ) { 
+            return cloneRepository( name );
+        }
+        return updateRepository( name );
+    }
+
+    static private boolean repositoryIsCloned(final String name) {
+        // simple for now, determine if more robust checking is needed...
+        return new File( LOCAL_STORE, name ).exists();
+    }
+
+    static private Git cloneRepository(final String name) {
+        return Git.cloneRepository()
+                .setBare( true )
+                .setCloneAllBranches( true )
+                .setURI( METHOD + BASE + name + ".git" )
+                .setDirectory( new File( LOCAL_STORE, name ) )
+                .call();
+    }
+
+    static private Git updateRepository(final String name) {
+        try {
+            Git repo = Git.open( new File( LOCAL_STORE, name ) );
+            //TODO i'm unsure about this...
+            //repo.fetch();
+            return repo;
+        } catch (IOException e) {
+            log.error("Exception encountered opening repository:", e);
+        }
+        return null;
+    }
+
+    static public Iterable<RevCommit> getCommits(final String reponame) {
+        try {
+            return RepositoryLoader.getRepository( reponame ).log().call();
+        } catch (NoHeadException e) {
+            log.error("NoHeadException: ", e);
+            System.exit( 1 );
+        } catch (JGitInternalException e) {
+            log.error("JGitInternalException: ", e);
+            System.exit( 1 );
+        }
+        return null;
+    }
+
+    static public String fileToken(final String reponame, final String fileName) {
+        // need to split the username away from the repository name before forming into token
+        return reponame.split( "/" )[1] + "--" + fileName;
+    }
+
+    static public List<String> filesChanged(final String reponame, final RevCommit cmt) {
+        try {
+            List<String> changed = new ArrayList<String>();
+            TreeWalk walker = new TreeWalk( getRepository( reponame ).getRepository() );
+            walker.setFilter( TreeFilter.ANY_DIFF );
+            walker.setRecursive( true );
+            walker.addTree( cmt.getTree() );
+            for ( RevCommit parent : cmt.getParents() ) {
+                walker.addTree( parent.getTree() );
+            }
+            while ( walker.next() ) {
+                changed.add( fileToken( reponame, walker.getPathString() ) );
+            }
+            return changed;
+        } catch (MissingObjectException e) {
+            log.error("Exception encountered getting changed files:",e);
+        } catch (IncorrectObjectTypeException e) {
+            log.error("Exception encountered getting changed files:",e);
+        } catch (CorruptObjectException e) {
+            log.error("Exception encountered getting changed files:",e);
+        } catch (IOException e) {
+            log.error("Exception encountered getting changed files:",e);
+        }
+        return null;
+    }
 }

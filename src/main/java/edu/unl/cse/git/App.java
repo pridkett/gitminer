@@ -55,7 +55,7 @@ public class App
                     lc.reset(); 
                     configurator.doConfigure(logbackFile);
                 } catch (JoranException je) {
-                    je.printStackTrace();
+                    log.error("JoranException: ", je);
                 }
                 StatusPrinter.printInCaseOfErrorsOrWarnings(lc);
             }
