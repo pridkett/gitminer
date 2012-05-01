@@ -46,10 +46,13 @@ import org.eclipse.egit.github.core.event.CreatePayload;
 import org.eclipse.egit.github.core.event.Event;
 import org.eclipse.egit.github.core.event.EventPayload;
 import org.eclipse.egit.github.core.event.EventRepository;
+import org.eclipse.egit.github.core.event.FollowPayload;
+import org.eclipse.egit.github.core.event.GistPayload;
 import org.eclipse.egit.github.core.event.IssueCommentPayload;
 import org.eclipse.egit.github.core.event.IssuesPayload;
 import org.eclipse.egit.github.core.event.PullRequestPayload;
 import org.eclipse.egit.github.core.event.PushPayload;
+import org.eclipse.egit.github.core.event.WatchPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1385,10 +1388,14 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         String sName = user.getName();
         String sEmail = user.getEmail();
         Vertex gitUser = getOrCreateGitUser( sName, sEmail );
-        Vertex vName = getOrCreateName( sName );
-        Vertex vEmail = getOrCreateEmail( sEmail );
-        createEdgeIfNotExist( gitUser, vName, EdgeType.NAME );
-        createEdgeIfNotExist( gitUser, vEmail, EdgeType.EMAIL );
+        if (sName != null) {
+            Vertex vName = getOrCreateName( sName );
+            createEdgeIfNotExist( gitUser, vName, EdgeType.NAME );
+        }
+        if (sEmail != null) {
+            Vertex vEmail = getOrCreateEmail( sEmail );
+            createEdgeIfNotExist( gitUser, vEmail, EdgeType.EMAIL );
+        }
         return gitUser;
     }
 
@@ -1562,13 +1569,21 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         } else if (eventType.equals(EventType.DOWNLOAD_EVENT)) {
             log.warn("Ignoring payload for DOWNLOAD_EVENT");
         } else if (eventType.equals(EventType.FOLLOW_EVENT)) {
-            log.warn("Ignoring payload for FOLLOW_EVENT");
+            FollowPayload fp = (FollowPayload)event.getPayload();
+            if (fp.getTarget() != null) {
+                Vertex targetVtx = saveUser(fp.getTarget());
+                createEdgeIfNotExist(eventVertex, targetVtx, EdgeType.EVENTFOLLOWUSER);
+            }
         } else if (eventType.equals(EventType.FORK_APPLY_EVENT)) {
             log.warn("Ignoring payload for FORK_APPLY_EVENT");
         } else if (eventType.equals(EventType.FORK_EVENT)) {
             log.warn("Ignoring payload for FORK_EVENT");
         } else if (eventType.equals(EventType.GIST_EVENT)) {
-            log.warn("Ignoring payload for GIST_EVENT");
+            GistPayload gp = (GistPayload)event.getPayload();
+            if (gp.getGist() != null) {
+                Vertex gistVtx = saveGist(gp.getGist());
+                createEdgeIfNotExist(eventVertex, gistVtx, EdgeType.EVENTGIST);
+            }
         } else if (eventType.equals(EventType.GOLLUM_EVENT)) {
             log.warn("Ignoring payload for GOLLUM_EVENT");
         } else if (eventType.equals(EventType.ISSUE_COMMENT_EVENT)) {
@@ -1621,7 +1636,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         } else if (eventType.equals(EventType.TEAM_ADD_EVENT)) {
             log.warn("Ignoring payload for TEAM_ADD_EVENT");
         } else if (eventType.equals(EventType.WATCH_EVENT)) {
-            log.warn("Ignoring payload for WATCH_EVENT");
+            WatchPayload wp = (WatchPayload)event.getPayload();
+            setProperty(eventVertex, PropertyName.EVENT_ACTION, wp.getAction());
         } else {
             log.warn("Unhandled event type: {}", eventType);
         }
