@@ -42,6 +42,8 @@ public class WatcherMinerV3 extends AbstractMiner {
             watchers = service.getWatchers(repo);
         } catch (IOException e) {
             log.error("IOException in getting watchers for repository: {}", repo.generateId(), e);
+        } catch (NullPointerException npe) {
+            log.error("NullPointerException in getting watchers for repository: {}", repo.generateId(), npe);
         }
         return watchers;
     }
@@ -52,6 +54,8 @@ public class WatcherMinerV3 extends AbstractMiner {
             repos = service.getWatched(login);
         } catch (IOException e) {
             log.error("IOException in getWatched: {}", login, e);
+        } catch (NullPointerException npe) {
+            log.error("NullPointerException in getting watched for repository: {}", login, npe);
         }
         return repos;
     }
