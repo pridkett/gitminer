@@ -43,7 +43,7 @@ public class RepositoryMinerV3 extends AbstractMiner {
             repository = service.getRepository(repo);
         } catch (IOException e) {
             log.error("IO exception fetching Repository: {}", repo.generateId(), e);
-        }
+        } 
         return repository;
     }
 
@@ -63,6 +63,8 @@ public class RepositoryMinerV3 extends AbstractMiner {
             repos = service.getRepositories(login);
         } catch (IOException e) {
             log.error("IOException in getRepositories: {}", login, e);
+        } catch (NullPointerException npe) {
+            log.error("NullPointerException in getRepositories: {}", login, npe);
         }
         return repos;
     }
