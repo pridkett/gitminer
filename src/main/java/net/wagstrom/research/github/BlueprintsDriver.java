@@ -29,8 +29,10 @@ import org.eclipse.egit.github.core.Commit;
 import org.eclipse.egit.github.core.CommitComment;
 import org.eclipse.egit.github.core.CommitUser;
 import org.eclipse.egit.github.core.Contributor;
+import org.eclipse.egit.github.core.Download;
 import org.eclipse.egit.github.core.Gist;
 import org.eclipse.egit.github.core.GistFile;
+import org.eclipse.egit.github.core.GollumPage;
 import org.eclipse.egit.github.core.IRepositoryIdProvider;
 import org.eclipse.egit.github.core.Issue;
 import org.eclipse.egit.github.core.IssueEvent;
@@ -43,15 +45,23 @@ import org.eclipse.egit.github.core.Team;
 import org.eclipse.egit.github.core.User;
 import org.eclipse.egit.github.core.event.CommitCommentPayload;
 import org.eclipse.egit.github.core.event.CreatePayload;
+import org.eclipse.egit.github.core.event.DeletePayload;
+import org.eclipse.egit.github.core.event.DownloadPayload;
 import org.eclipse.egit.github.core.event.Event;
 import org.eclipse.egit.github.core.event.EventPayload;
 import org.eclipse.egit.github.core.event.EventRepository;
 import org.eclipse.egit.github.core.event.FollowPayload;
+import org.eclipse.egit.github.core.event.ForkApplyPayload;
+import org.eclipse.egit.github.core.event.ForkPayload;
 import org.eclipse.egit.github.core.event.GistPayload;
+import org.eclipse.egit.github.core.event.GollumPayload;
 import org.eclipse.egit.github.core.event.IssueCommentPayload;
 import org.eclipse.egit.github.core.event.IssuesPayload;
+import org.eclipse.egit.github.core.event.MemberPayload;
+import org.eclipse.egit.github.core.event.PublicPayload;
 import org.eclipse.egit.github.core.event.PullRequestPayload;
 import org.eclipse.egit.github.core.event.PushPayload;
+import org.eclipse.egit.github.core.event.TeamAddPayload;
 import org.eclipse.egit.github.core.event.WatchPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,6 +106,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
     protected final Index <Vertex> nameidx;
     protected final Index <Vertex> fileidx;
     protected final Index <Vertex> eventidx;
+    protected final Index <Vertex> gollumidx;
+    protected final Index <Vertex> downloadidx;
 
     /**
      * Base constructor for BlueprintsDriver
@@ -132,7 +144,9 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         nameidx = getOrCreateIndex(IndexNames.NAME);
         fileidx = getOrCreateIndex(IndexNames.FILE);
         eventidx = getOrCreateIndex(IndexNames.EVENT);
-    }	
+        gollumidx = getOrCreateIndex(IndexNames.GOLLUM);
+        downloadidx = getOrCreateIndex(IndexNames.DOWNLOAD);
+    }
 
     /**
      * A generic method that goes over an iterable and adds the appropriate value to a map
@@ -276,6 +290,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return getOrCreateVertexHelper(IdCols.DISCUSSION, discussionId, VertexType.DISCUSSION, discussionidx);
     }
 
+    private Vertex getOrCreateDownload(Download download) {
+        return getOrCreateVertexHelper(IdCols.DOWNLOAD, download.getId(), VertexType.DOWNLOAD, downloadidx);
+    }
+    
     /**
      * gets the vertex for an email address
      * 
@@ -414,6 +432,11 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
     public Vertex getOrCreateGitUser(final String name, final String email ) {
         String key = name + " <" + email + ">";
         return getOrCreateVertexHelper(IdCols.GITUSER, key, VertexType.GIT_USER, gituseridx);
+    }
+
+    private Vertex getOrCreateGolumPage(final GollumPage page) {
+        String key = page.getHtmlUrl();
+        return getOrCreateVertexHelper(IdCols.GOLLUM, key, VertexType.GOLLUM, gollumidx);
     }
 
     public Vertex getOrCreateName(final String name ) {
@@ -1565,9 +1588,15 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             setProperty(eventVertex, PropertyName.REF, cp.getRef());
             setProperty(eventVertex, PropertyName.REF_TYPE, cp.getRefType());
         } else if (eventType.equals(EventType.DELETE_EVENT)) {
-            log.warn("Ignoring payload for DELETE_EVENT");
+            DeletePayload dp = (DeletePayload)event.getPayload();
+            setProperty(eventVertex, PropertyName.REF, dp.getRef());
+            setProperty(eventVertex, PropertyName.REF_TYPE, dp.getRefType());
         } else if (eventType.equals(EventType.DOWNLOAD_EVENT)) {
-            log.warn("Ignoring payload for DOWNLOAD_EVENT");
+            DownloadPayload dp = (DownloadPayload)event.getPayload();
+            if (dp.getDownload() != null) {
+                Vertex downloadVtx = saveDownload(dp.getDownload());
+                createEdgeIfNotExist(eventVertex, downloadVtx, EdgeType.EVENTDOWNLOAD);
+            }
         } else if (eventType.equals(EventType.FOLLOW_EVENT)) {
             FollowPayload fp = (FollowPayload)event.getPayload();
             if (fp.getTarget() != null) {
@@ -1575,9 +1604,16 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
                 createEdgeIfNotExist(eventVertex, targetVtx, EdgeType.EVENTFOLLOWUSER);
             }
         } else if (eventType.equals(EventType.FORK_APPLY_EVENT)) {
-            log.warn("Ignoring payload for FORK_APPLY_EVENT");
+            ForkApplyPayload fap = (ForkApplyPayload)event.getPayload();
+            setProperty(eventVertex, PropertyName.AFTER, fap.getAfter());
+            setProperty(eventVertex, PropertyName.BEFORE, fap.getBefore());
+            setProperty(eventVertex, PropertyName.HEAD, fap.getHead());
         } else if (eventType.equals(EventType.FORK_EVENT)) {
-            log.warn("Ignoring payload for FORK_EVENT");
+            ForkPayload fp = (ForkPayload)event.getPayload();
+            if (fp.getForkee() != null) {
+                Vertex forkeeVtx = saveRepository(fp.getForkee());
+                createEdgeIfNotExist(eventVertex, forkeeVtx, EdgeType.EVENTFORKEE);
+            }
         } else if (eventType.equals(EventType.GIST_EVENT)) {
             GistPayload gp = (GistPayload)event.getPayload();
             if (gp.getGist() != null) {
@@ -1585,7 +1621,11 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
                 createEdgeIfNotExist(eventVertex, gistVtx, EdgeType.EVENTGIST);
             }
         } else if (eventType.equals(EventType.GOLLUM_EVENT)) {
-            log.warn("Ignoring payload for GOLLUM_EVENT");
+            GollumPayload gp = (GollumPayload)event.getPayload();
+            for (GollumPage page : gp.getPages()) {
+                Vertex pageVtx = saveGollumPage(page);
+                createEdgeIfNotExist(eventVertex, pageVtx, EdgeType.EVENTGOLLUM);
+            }
         } else if (eventType.equals(EventType.ISSUE_COMMENT_EVENT)) {
             IssueCommentPayload icp = (IssueCommentPayload)event.getPayload();
             setProperty(eventVertex, PropertyName.ACTION, icp.getAction());
@@ -1607,9 +1647,15 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
                 createEdgeIfNotExist(eventVertex, issueVertex, EdgeType.EVENTISSUE);
             }
         } else if (eventType.equals(EventType.MEMBER_EVENT)) {
-            log.warn("Ignoring payload for MEMBER_EVENT");
+            MemberPayload mp = (MemberPayload)event.getPayload();
+            setProperty(eventVertex, PropertyName.EVENT_ACTION, mp.getAction());
+            if (mp.getMember() != null) {
+                Vertex userVtx = saveUser(mp.getMember());
+                createEdgeIfNotExist(eventVertex, userVtx, EdgeType.EVENTMEMBER);
+            }
         } else if (eventType.equals(EventType.PUBLIC_EVENT)) {
-            log.warn("Ignoring payload for PUBLIC_EVENT");
+            // nothing to do for PUBLIC_EVENT
+            log.trace("Ignoring payload for PUBLIC_EVENT");
         } else if (eventType.equals(EventType.PULL_REQUEST_EVENT)) {
             PullRequestPayload prp = (PullRequestPayload)event.getPayload();
             setProperty(eventVertex, PropertyName.EVENT_ACTION, prp.getAction());
@@ -1619,6 +1665,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
                 createEdgeIfNotExist(eventVertex, pullVertex, EdgeType.EVENTPULLREQUEST);
             }
         } else if (eventType.equals(EventType.PULL_REQUEST_REVIEW_COMMENT_EVENT)) {
+            // FIXME: I have no idea what the payload type should be here
             log.warn("Ignoring payload for PULL_REQUEST_REVIEW_COMMENT_EVENT");
         } else if (eventType.equals(EventType.PUSH_EVENT)) {
             PushPayload pp = (PushPayload)event.getPayload();
@@ -1634,7 +1681,19 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             setProperty(eventVertex, PropertyName.REF, pp.getRef());
             setProperty(eventVertex, PropertyName.SIZE, pp.getSize());
         } else if (eventType.equals(EventType.TEAM_ADD_EVENT)) {
-            log.warn("Ignoring payload for TEAM_ADD_EVENT");
+            TeamAddPayload tap = (TeamAddPayload)event.getPayload();
+            if (tap.getRepo() != null) {
+                Vertex repoVtx = saveRepository(tap.getRepo());
+                createEdgeIfNotExist(eventVertex, repoVtx, EdgeType.EVENTPAYLOADREPO);
+            }
+            if (tap.getTeam() != null) {
+                Vertex teamVtx = saveTeam(tap.getTeam());
+                createEdgeIfNotExist(eventVertex, teamVtx, EdgeType.EVENTTEAM);
+            }
+            if (tap.getUser() != null) {
+                Vertex userVtx = saveUser(tap.getUser());
+                createEdgeIfNotExist(eventVertex, userVtx, EdgeType.EVENTUSER);
+            }            
         } else if (eventType.equals(EventType.WATCH_EVENT)) {
             WatchPayload wp = (WatchPayload)event.getPayload();
             setProperty(eventVertex, PropertyName.EVENT_ACTION, wp.getAction());
@@ -1645,6 +1704,31 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         // log.warn("Payload: {}", event.getPayload().toString());
         return eventVertex;
     }
+
+    private Vertex saveDownload(Download download) {
+        Vertex downloadVtx = getOrCreateDownload(download);
+        setProperty(downloadVtx, PropertyName.CONTENT_TYPE, download.getContentType());
+        setProperty(downloadVtx, PropertyName.DESCRIPTION, download.getDescription());
+        setProperty(downloadVtx, PropertyName.DOWNLOAD_COUNT, download.getDownloadCount());
+        setProperty(downloadVtx, PropertyName.HTML_URL, download.getHtmlUrl());
+        setProperty(downloadVtx, PropertyName.GITHUB_ID, download.getId());
+        setProperty(downloadVtx, PropertyName.NAME, download.getName());
+        setProperty(downloadVtx, PropertyName.SIZE, download.getSize());
+        setProperty(downloadVtx, PropertyName.URL, download.getUrl());
+        return downloadVtx;
+    }
+
+    private Vertex saveGollumPage(GollumPage page) {
+        Vertex gollumPage = getOrCreateGolumPage(page);
+        
+        setProperty(gollumPage, PropertyName.ACTION, page.getAction());
+        setProperty(gollumPage, PropertyName.HTML_URL, page.getHtmlUrl());
+        setProperty(gollumPage, PropertyName.NAME, page.getPageName());
+        setProperty(gollumPage, PropertyName.TITLE, page.getTitle());
+        setProperty(gollumPage, PropertyName.SHA, page.getSha());
+        return gollumPage;
+    }
+
 
     /**
      * Saves a CommitComment object to the database

@@ -20,12 +20,14 @@ public final class IndexNames {
     public static final String COMMENT = "comment-idx";;
     public static final String COMMIT = "commit-idx";
     public static final String DISCUSSION = "discussion-idx";
+    public static final String DOWNLOAD = "download-idx";
     public static final String EMAIL = "email-idx";
     public static final String EVENT = "event-idx";
     public static final String FILE = "file-idx";
     public static final String GIST = "gist-idx";
     public static final String GISTFILE = "gistfile-idx";
     public static final String GITUSER = "git-user-idx";
+    public static final String GOLLUM = "gollum-idx";
     public static final String GRAVATAR = "gravatar-idx";
     public static final String ISSUE = "issue-idx";
     public static final String ISSUEEVENT = "issueevent-idx";

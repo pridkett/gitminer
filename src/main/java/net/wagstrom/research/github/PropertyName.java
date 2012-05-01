@@ -24,8 +24,10 @@ public final class PropertyName {
     public static final String ACTION = "action";
     public static final String ACTIONS = "actions";
     public static final String ADDITIONS = "additions";
+    public static final String AFTER = "after";
     public static final String AUTHORED_DATE = "authoredDate";
     public static final String ASSIGNEE = "assignee";
+    public static final String BEFORE = "before";
     public static final String BILLING_EMAIL = "billingEmail";
     public static final String BIOGRAPHY = "biography";
     public static final String BLOG = "blog";
@@ -41,6 +43,7 @@ public final class PropertyName {
     public static final String COMMIT_ID = "commitId";
     public static final String COMMITS = "commits";
     public static final String COMPANY = "company";
+    public static final String CONTENT_TYPE = "contentType";
     public static final String CONTRIBUTIONS = "contributions";
     public static final String CREATED_AT = "createdAt";
     public static final String DATE = "date";
@@ -49,6 +52,7 @@ public final class PropertyName {
     public static final String DIFF_HUNK = "diffHunk";
     public static final String DIFF_URL = "diffUrl";
     public static final String DISK_USAGE = "diskUsage";
+    public static final String DOWNLOAD_COUNT = "downloadCount";
     public static final String DUE_DATE = "dueDate";
     public static final String EMAIL = "email";
     public static final String EVENT = "event";
