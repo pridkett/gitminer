@@ -34,6 +34,8 @@ public final class EdgeType {
     public static final String EVENTCOMMENT = "EVENT_COMMENT";
     public static final String EVENTCOMMIT = "EVENT_COMMIT";
     public static final String EVENTCOMMITCOMMENT = "EVENT_COMMIT_COMMENT";
+    public static final String EVENTFOLLOWUSER = "EVENT_FOLLOW_USER";
+    public static final String EVENTGIST = "EVENT_GIST";
     public static final String EVENTISSUE = "EVENT_ISSUE";
     public static final String EVENTPULLREQUEST = "EVENT_PULL_REQUEST";
     public static final String EVENTREPO = "EVENT_REPO";
