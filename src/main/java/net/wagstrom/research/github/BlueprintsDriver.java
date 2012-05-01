@@ -1617,6 +1617,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
                     Vertex forkeeVtx = saveRepository(fp.getForkee());
                     createEdgeIfNotExist(eventVertex, forkeeVtx, EdgeType.EVENTFORKEE);
                 } else {
+                    // FIXME: getName() appears to work, generateId() returns null
                     User u = forkee.getOwner();
                     String owner = null;
                     if (u != null) { 

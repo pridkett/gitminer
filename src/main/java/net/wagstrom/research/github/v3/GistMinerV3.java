@@ -40,6 +40,8 @@ public class GistMinerV3 extends AbstractMiner {
             gists = service.getGists(user);
         } catch (IOException e) {
             log.error("IOException in getGists: {}", user, e);
+        } catch (NullPointerException npe) {
+            log.error("NullPointerException getting gists: {}", user, npe);
         }
         return gists;
     }

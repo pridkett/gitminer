@@ -34,7 +34,13 @@ public class EventMinerV3 extends AbstractMiner {
 
     public List<Event> getUserEvents(final String user) {
         log.trace("Getting all events for user {}", user);
-        return service.getUserEvents(user);
+        List<Event> events = null;
+        try {
+            events = service.getUserEvents(user);
+        } catch (NullPointerException npe) {
+            log.error("NullPointerException getting events for user: {}", user, npe);
+        }
+        return events;
     }
 
 }
