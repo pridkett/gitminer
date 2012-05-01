@@ -1610,9 +1610,20 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             setProperty(eventVertex, PropertyName.HEAD, fap.getHead());
         } else if (eventType.equals(EventType.FORK_EVENT)) {
             ForkPayload fp = (ForkPayload)event.getPayload();
-            if (fp.getForkee() != null) {
-                Vertex forkeeVtx = saveRepository(fp.getForkee());
-                createEdgeIfNotExist(eventVertex, forkeeVtx, EdgeType.EVENTFORKEE);
+            Repository forkee = fp.getForkee();
+            if (forkee != null) {
+               
+                if (forkee.generateId() != null) {
+                    Vertex forkeeVtx = saveRepository(fp.getForkee());
+                    createEdgeIfNotExist(eventVertex, forkeeVtx, EdgeType.EVENTFORKEE);
+                } else {
+                    User u = forkee.getOwner();
+                    String owner = null;
+                    if (u != null) { 
+                        owner = u.getName();
+                    }
+                    log.warn("Issue with forkee repository id: {}, {}", forkee.getName(), owner);
+                }
             }
         } else if (eventType.equals(EventType.GIST_EVENT)) {
             GistPayload gp = (GistPayload)event.getPayload();
