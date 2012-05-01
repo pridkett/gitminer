@@ -120,6 +120,7 @@ public final class PropertyName {
     public static final String SYS_CREATED_AT = "sys_created_at";
     public static final String SYS_EVENTS_ADDED = "sys_events_added";
     public static final String SYS_DISCUSSIONS_ADDED = "sys_discussions_added";
+    public static final String SYS_GISTS_ADDED = "sys_gists_added";
     public static final String SYS_LAST_FULL_UPDATE = "sys_last_full_update";
     public static final String SYS_LAST_UPDATED = "sys_last_updated";
     public static final String SYS_UPDATE_COMPLETE = "sys_update_complete";

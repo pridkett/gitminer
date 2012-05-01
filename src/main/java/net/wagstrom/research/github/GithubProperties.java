@@ -46,17 +46,15 @@ public final class GithubProperties {
      * 
      * @return a {java.util.Propeties} reference
      */
-    public static Properties props() {
-        synchronized(internalProps) {
-            if (internalProps == null) {
-                internalProps = new Properties();
-                ClassLoader loader = Thread.currentThread().getContextClassLoader();
-                InputStream properties = loader.getResourceAsStream("configuration.properties");
-                try {
-                    internalProps.load(properties);
-                } catch (IOException e) {
-                    log.error("Exception loading properties: ", e);
-                }
+    public synchronized static Properties props() {
+        if (internalProps == null) {
+            internalProps = new Properties();
+            ClassLoader loader = Thread.currentThread().getContextClassLoader();
+            InputStream properties = loader.getResourceAsStream("configuration.properties");
+            try {
+                internalProps.load(properties);
+            } catch (IOException e) {
+                log.error("Exception loading properties: ", e);
             }
         }
         return internalProps;
@@ -71,26 +69,24 @@ public final class GithubProperties {
      * @param filename
      * @return
      */
-    public static Properties props(final String filename) {
-        synchronized(internalProps) {
-            if (internalProps == null) {
-                FileInputStream input = null;
-                internalProps = new Properties();
+    public synchronized static Properties props(final String filename) {
+        if (internalProps == null) {
+            FileInputStream input = null;
+            internalProps = new Properties();
+            try {
                 try {
-                    try {
-                        input = new FileInputStream(filename);
-                        internalProps.load(input);
-                    } catch (IOException e) {
-                        log.error("Exception loading properties from file {}: ", filename, e);
-                    } finally {
-                        if (input != null) {
-                            input.close();
-                        }
-                    }
-                 
+                    input = new FileInputStream(filename);
+                    internalProps.load(input);
                 } catch (IOException e) {
-                    log.error("Exception closing FileInputStream: {}", e);
+                    log.error("Exception loading properties from file {}: ", filename, e);
+                } finally {
+                    if (input != null) {
+                        input.close();
+                    }
                 }
+             
+            } catch (IOException e) {
+                log.error("Exception closing FileInputStream: {}", e);
             }
         }
         return internalProps;
