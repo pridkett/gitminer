@@ -289,7 +289,9 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         Vertex emailVtx = getOrCreateVertexHelper(IdCols.EMAIL, email, VertexType.EMAIL, emailidx);
         if (!email.trim().equals("")) {
             Vertex gravatarVtx = saveGravatar(email);
-            createEdgeIfNotExist(emailVtx, gravatarVtx, EdgeType.GRAVATARHASH);
+            if (gravatarVtx != null) {
+                createEdgeIfNotExist(emailVtx, gravatarVtx, EdgeType.GRAVATARHASH);
+            }
         }
         return emailVtx;
     }
@@ -617,12 +619,18 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
     public Vertex saveGravatar(final String gravatarHash) {
         String ghash;
+        Vertex returnVertex = null;
         if (gravatarHash.indexOf('@') == -1) {
             ghash = Utils.gravatarIdExtract(gravatarHash);
         } else {
             ghash = Utils.gravatarHash(gravatarHash);
         }
-        return getOrCreateGravatar(ghash);
+        if (ghash == null) {
+            log.warn("Unable to determine gravatar hash for [{}]", gravatarHash);
+        } else {
+            returnVertex = getOrCreateGravatar(ghash);
+        }
+        return returnVertex;
     }
 
     private Vertex saveIssue(final Vertex repoVtx, final Issue issue) {
