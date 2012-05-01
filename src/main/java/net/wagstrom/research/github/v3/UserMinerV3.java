@@ -50,6 +50,8 @@ public class UserMinerV3 extends AbstractMiner {
             followers = service.getFollowers(login);
         } catch (IOException e) {
             log.error("IOException in getFollowers: {}", login, e);
+        } catch (NullPointerException npe) {
+            log.error("NullPointerException in getFollowers: {}", login, npe);
         }
         return followers;
     }
@@ -60,6 +62,8 @@ public class UserMinerV3 extends AbstractMiner {
             following = service.getFollowing(login);
         } catch (IOException e) {
             log.error("IOException in getFollowing: {}", login, e);
+        } catch (NullPointerException npe) {
+            log.error("NullPointerException in getFollowing: {}", login, npe);
         }
         return following;
     }

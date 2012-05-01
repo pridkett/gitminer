@@ -24,12 +24,14 @@ public final class IdCols {
     public static final String COMMENT = "comment_id";
     public static final String COMMIT = "hash";
     public static final String DISCUSSION = "discussion_id";
+    public static final String DOWNLOAD = "download_id";
     public static final String EMAIL = "email";
     public static final String EVENT = "event_id";
     public static final String FILE = "token";
     public static final String GIST = "gist_id";
     public static final String GISTFILE = "gistfile_id";
     public static final String GITUSER = "string";
+    public static final String GOLLUM = "html_url";
     public static final String GRAVATAR = "hash";
     public static final String ISSUE = "issue_id";
     public static final String LABEL = "label";
