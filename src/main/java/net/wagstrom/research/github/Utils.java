@@ -25,10 +25,15 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Utils {
+public final class Utils {
     private static final Logger log = LoggerFactory.getLogger(Utils.class);  // NOPMD
     private static final Pattern GRAVATAR_PATTERN = Pattern.compile("([a-f0-9]{32})");
-
+    
+    /**
+     * All methods of this class are static. Do not initialize it.
+     */
+    private Utils() {};
+    
     /**
      * takes an email address and creates the appropriate gravatar hash
      * 

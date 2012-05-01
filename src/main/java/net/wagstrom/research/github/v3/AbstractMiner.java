@@ -15,6 +15,11 @@
  */
 package net.wagstrom.research.github.v3;
 
+/**
+ * This is basically a holder class for future extension
+ * 
+ * @author pwagstro
+ */
 public abstract class AbstractMiner {
     protected AbstractMiner() {
     }

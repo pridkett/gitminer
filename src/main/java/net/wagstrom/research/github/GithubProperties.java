@@ -46,7 +46,7 @@ public final class GithubProperties {
      * 
      * @return a {java.util.Propeties} reference
      */
-    public static synchronized Properties props() {
+    public synchronized static Properties props() {
         if (internalProps == null) {
             internalProps = new Properties();
             ClassLoader loader = Thread.currentThread().getContextClassLoader();
@@ -69,7 +69,7 @@ public final class GithubProperties {
      * @param filename
      * @return
      */
-    public static synchronized Properties props(final String filename) {
+    public synchronized static Properties props(final String filename) {
         if (internalProps == null) {
             FileInputStream input = null;
             internalProps = new Properties();

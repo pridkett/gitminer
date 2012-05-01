@@ -225,22 +225,44 @@ public class GitHubMain {
                 if (props.getProperty("net.wagstrom.research.github.miner.repositories.users", "true").equals("true")) {
                     log.trace("calling getProjectUsersLastFullUpdate");
                     Map<String, Date> allProjectUsers = bp.getProjectUsersLastFullUpdate(proj);
+                    Map<String, Date> allProjectUsersGists = bp.getProjectUsersLastGistsUpdate(proj);
+                    Map<String, Date> allProjectUsersEvents = bp.getProjectUsersLastEventsUpdate(proj);
                     log.trace("keyset: {}", allProjectUsers.keySet());
-                    int ctr = 1;
+                    int ctr = 0;
                     int numUsers = allProjectUsers.size();
                     for (Map.Entry<String, Date> entry : allProjectUsers.entrySet()) {
                         String username = entry.getKey();
-                        Date date = entry.getValue();
+                        Date lastFullUpdate = entry.getValue();
+                        Date lastGistsUpdate = allProjectUsersGists.get(username);
+                        Date lastEventsUpdate = allProjectUsersEvents.get(username);
                         if (username == null || username.trim().equals("")) {
                             log.warn("null/empty username! continuing");
                             continue;
                         }
-                        if (needsUpdate(date, true)) {
-                            log.info("last updated: {}", date);
-                            log.debug("Fetching {} user {}/{}: {}", new Object[]{proj, ctr++, numUsers, username});
-                            fetchAllUserData(bp, umv3, rmv3, gmv3, wmv3, username);
+                        ++ctr;
+                        // FIXME: these should be extracted into a single method...
+                        if (needsUpdate(lastFullUpdate, true)) {
+                            log.trace("last updated: {}", lastFullUpdate);
+                            log.debug("Fetching {} user {}/{}: {}", new Object[]{proj, ctr, numUsers, username});
+                            fetchAllUserData(bp, umv3, rmv3, wmv3, username);
                         } else {
-                            log.debug("Fecthing {} user {}/{}: {} needs no update - last update {}", new Object[]{proj, ctr++, numUsers, username, date});
+                            log.debug("Fecthing {} user {}/{}: {} needs no update - last update {}", new Object[]{proj, ctr, numUsers, username, lastFullUpdate});
+                        }
+                        
+                        if (props.getProperty("net.wagstrom.research.github.miner.users.events", "true").equals("true") &&
+                                needsUpdate(lastEventsUpdate, true)) {
+                            log.debug("Fetching {} events for user {}/{}: {} - last update: {}", new Object[]{proj, ctr, numUsers, username, lastEventsUpdate});
+                            fetchAllUserEvents(bp, emv3, username);
+                        } else {
+                            log.debug("Fetching {} events for user {}/{}: {} needs no update/disabled - last update: {}", new Object[]{proj, ctr, numUsers, username, lastEventsUpdate});
+                        }
+                        
+                        if (props.getProperty("net.wagstrom.research.github.miner.users.gists", "true").equals("true") &&
+                                needsUpdate(lastGistsUpdate, true)) {
+                            log.debug("Fetching {} gists for user {}/{}: {} - last update: {}", new Object[]{proj, ctr, numUsers, username, lastEventsUpdate});
+                            fetchAllUserGists(bp, gmv3, username);
+                        } else {
+                            log.debug("Fetching {} gists for user {}/{}: {} needs no update/disabled - last update: {}", new Object[]{proj, ctr, numUsers, username, lastEventsUpdate});
                         }
                     }
                 }
@@ -250,10 +272,11 @@ public class GitHubMain {
         // FIXME: this should check for when the user was last updated
         if (props.getProperty("net.wagstrom.research.github.miner.users","true").equals("true")) {
             for (String username : users) {
-                fetchAllUserData(bp, umv3, rmv3, gmv3, wmv3, username);
+                fetchAllUserData(bp, umv3, rmv3, wmv3, username);
                 if (props.getProperty("net.wagstrom.research.github.miner.users.events", "true").equals("true")) {
                     fetchAllUserEvents(bp, emv3, username);
                 }
+                fetchAllUserGists(bp, gmv3, username);
             }
         }
 
@@ -342,7 +365,7 @@ public class GitHubMain {
         }
     }
     
-    private void fetchAllUserData(final BlueprintsDriver bp, final UserMinerV3 umv3, final RepositoryMinerV3 rmv3, final GistMinerV3 gmv3, final WatcherMinerV3 wmv3, final String user) {
+    private void fetchAllUserData(final BlueprintsDriver bp, final UserMinerV3 umv3, final RepositoryMinerV3 rmv3, final WatcherMinerV3 wmv3, final String user) {
         List<User> followers = umv3.getFollowers(user);
         if (followers != null) {
             bp.saveUserFollowers(user, followers);
@@ -370,10 +393,6 @@ public class GitHubMain {
         } else {
             log.debug("user: {} null user repositries", user);
 
-        }
-
-        if (props.getProperty("net.wagstrom.research.github.miner.gists","true").equals("true")) {
-            bp.saveUserGists(user, gmv3.getGists(user));
         }
 
         // yes, the user is saved last, this way if any of the other parts
@@ -433,6 +452,13 @@ public class GitHubMain {
     //            log.debug("user: {} null user information", user);
     //        }
     //    }
+
+    private void fetchAllUserGists(final BlueprintsDriver bp,
+            final GistMinerV3 gmv3, final String user) {
+        if (props.getProperty("net.wagstrom.research.github.miner.gists","true").equals("true")) {
+            bp.saveUserGists(user, gmv3.getGists(user));
+        }
+    }
 
     protected BlueprintsDriver connectToGraph(Properties p) {
         // pass through all the db.XYZ properties to the database

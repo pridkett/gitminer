@@ -17,6 +17,7 @@ package net.wagstrom.research.github;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Locale;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,14 +41,13 @@ public class ApiThrottle {
     private Calendar lastCall = null;
     private static final Logger log = LoggerFactory.getLogger(ApiThrottle.class); // NOPMD
     private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
-    private SimpleDateFormat dateFormatter = null;
+    private final SimpleDateFormat dateFormatter = new SimpleDateFormat(DATE_FORMAT, Locale.US);
     private long internalMaxRate = -1;
     private String idstr = "";
 
     public ApiThrottle() {
         limit = -1;
         limitRemaining = -1;
-        dateFormatter = new SimpleDateFormat(DATE_FORMAT);
     }
 
 
@@ -89,11 +89,11 @@ public class ApiThrottle {
         lastCall = Calendar.getInstance();
     }
 
-    public void setRateLimit(int limit) {
+    public void setRateLimit(final int limit) {
         this.limit = limit;
     }
 
-    public void setRateLimitRemaining(int limitRemaining) {
+    public void setRateLimitRemaining(final int limitRemaining) {
         this.limitRemaining = limitRemaining;
         // assume that we just reset the time limit
         if (this.limitRemaining == this.limit - 1) {
@@ -110,7 +110,7 @@ public class ApiThrottle {
      * @param calls
      * @param seconds
      */
-    public void setMaxRate(int calls, int seconds) {
+    public void setMaxRate(final int calls, final int seconds) {
         internalMaxRate = (long)(((double) seconds / (double)calls)*1000);
         log.trace("[{}] Internal maximum rate set to: {}ms", idstr, internalMaxRate);
     }

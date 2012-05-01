@@ -33,6 +33,7 @@ public class EventMinerV3 extends AbstractMiner {
     }
 
     public List<Event> getUserEvents(final String user) {
+        log.trace("Getting all events for user {}", user);
         return service.getUserEvents(user);
     }
 

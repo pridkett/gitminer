@@ -417,6 +417,17 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return getOrCreateVertexHelper(IdCols.NAME, name, VertexType.NAME, nameidx);
     }
 
+    public Map<String, Date> getProjectUsersLastGistsUpdate(final String reponame) {
+        return getProjectUsersLastUpdateHelper(reponame, PropertyName.LOGIN, PropertyName.SYS_GISTS_ADDED);
+    }
+
+    public Map<String, Date> getProjectUsersLastEventsUpdate(final String reponame) {
+        return getProjectUsersLastUpdateHelper(reponame, PropertyName.LOGIN, PropertyName.SYS_EVENTS_ADDED);
+    }
+
+    public Map<String, Date> getProjectUsersLastFullUpdate(final String reponame) {
+        return getProjectUsersLastUpdateHelper(reponame, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
+    }
     /**
      * An aggressive method that attempts to get the last date that ALL the users
      * associated with a project were updated.
@@ -430,39 +441,40 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @param reponame the name of the repository, eg mxcl/homebrew
      * @return a mapping of usernames to the date they last had a full update
      */
-    public Map<String, Date> getProjectUsersLastFullUpdate(final String reponame) {
+    public Map<String, Date> getProjectUsersLastUpdateHelper(final String reponame,
+            final String keyProperty, final String valueProperty) {
         Vertex node = getOrCreateRepository(reponame);
         HashMap<String, Date> map = new HashMap<String, Date>();
         GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
 
         // first: get all the users watching the project
         pipe.start(node).in(EdgeType.REPOWATCHED.toString());
-        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
+        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
 
         // add the collaborators
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.REPOCOLLABORATOR.toString());
-        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
+        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
 
         // add the contributors
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.REPOCONTRIBUTOR.toString());
-        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
+        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
 
         // add the issue owners
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.ISSUE.toString()).in(EdgeType.ISSUEOWNER.toString()).dedup();
-        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
+        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
 
         // add the individuals who commented on the issues
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.ISSUE.toString()).out(EdgeType.ISSUECOMMENT.toString()).in(EdgeType.ISSUECOMMENTOWNER.toString()).dedup();
-        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
+        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
 
         // add the pull request owners
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.PULLREQUEST.toString()).in(EdgeType.PULLREQUESTOWNER.toString()).dedup();
-        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
+        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
 
         // add the pull request commenters
         pipe = new GremlinPipeline<Vertex, Vertex>();
@@ -471,7 +483,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
                 return argument.getProperty(PropertyName.TYPE.toString()).equals(VertexType.USER.toString());
             }
         }).dedup();
-        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
+        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
 
         return map;
     }
@@ -666,6 +678,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             log.warn("Guessing repo name: {}", reponame);
         }
 
+        log.warn("reponame: {}", reponame);
+        log.warn("Issue: {}", issue);
         Vertex issuenode = getOrCreateIssue(reponame, issue);
         if (issue.getAssignee() != null) {
             setProperty(issuenode, PropertyName.ASSIGNEE, issue.getAssignee().getLogin());
@@ -1469,6 +1483,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             createEdgeIfNotExist(usernode, gistnode, EdgeType.GISTOWNER);
             mapper.put(gist, gistnode);
         }
+        setProperty(usernode, PropertyName.SYS_GISTS_ADDED, new Date());
         return mapper;
     }
 
@@ -1500,6 +1515,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         for (Event event : events) {
             saveEvent(user, event);
         }
+        setProperty(user, PropertyName.SYS_EVENTS_ADDED, new Date());
     }
     
     public Vertex saveEvent(final Vertex user, final Event event) {
@@ -1530,20 +1546,17 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         // Please Java7 become standard soon...
         if (eventType.equals(EventType.COMMIT_COMMENT_EVENT)) {
             CommitCommentPayload ccp = (CommitCommentPayload)event.getPayload();
-            CommitComment comment = ccp.getComment();
-            Vertex commitCommentVertex = saveCommitComment(repoVertex, comment);
-            createEdgeIfNotExist(eventVertex, commitCommentVertex, EdgeType.EVENTCOMMITCOMMENT);
-            
+            if (ccp.getComment() != null) {
+                CommitComment comment = ccp.getComment();
+                Vertex commitCommentVertex = saveCommitComment(repoVertex, comment);
+                createEdgeIfNotExist(eventVertex, commitCommentVertex, EdgeType.EVENTCOMMITCOMMENT);
+            }
         } else if (eventType.equals(EventType.CREATE_EVENT)) {
             CreatePayload cp = (CreatePayload)event.getPayload();
             setProperty(eventVertex, PropertyName.DESCRIPTION, cp.getDescription());
             setProperty(eventVertex, PropertyName.MASTER_BRANCH, cp.getMasterBranch());
             setProperty(eventVertex, PropertyName.REF, cp.getRef());
             setProperty(eventVertex, PropertyName.REF_TYPE, cp.getRefType());
-            if (cp.getRefType().equals("repository")) {
-                log.warn("XXXXXXXXXXXXXXXXXXXXXXX");
-                log.warn("refType == repository. RepoVtx: {}", repoVertex);
-            }
         } else if (eventType.equals(EventType.DELETE_EVENT)) {
             log.warn("Ignoring payload for DELETE_EVENT");
         } else if (eventType.equals(EventType.DOWNLOAD_EVENT)) {
@@ -1561,11 +1574,16 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         } else if (eventType.equals(EventType.ISSUE_COMMENT_EVENT)) {
             IssueCommentPayload icp = (IssueCommentPayload)event.getPayload();
             setProperty(eventVertex, PropertyName.ACTION, icp.getAction());
-            Vertex issueVertex = saveIssue(repoVertex, icp.getIssue());
-            createEdgeIfNotExist(eventVertex, issueVertex, EdgeType.EVENTISSUE);
-            Vertex commentVertex = saveIssueComment(icp.getComment());
-            createEdgeIfNotExist(issueVertex, commentVertex, EdgeType.ISSUECOMMENT);
-            createEdgeIfNotExist(eventVertex, commentVertex, EdgeType.EVENTCOMMENT);
+            if (icp.getIssue() != null && repoVertex != null) {
+                Vertex issueVertex = saveIssue(repoVertex, icp.getIssue());
+                createEdgeIfNotExist(eventVertex, issueVertex, EdgeType.EVENTISSUE);
+           
+                if (icp.getComment() != null) {
+                    Vertex commentVertex = saveIssueComment(icp.getComment());
+                    createEdgeIfNotExist(issueVertex, commentVertex, EdgeType.ISSUECOMMENT);
+                    createEdgeIfNotExist(eventVertex, commentVertex, EdgeType.EVENTCOMMENT);
+                }
+            }
         } else if (eventType.equals(EventType.ISSUES_EVENT)) {
             IssuesPayload ip = (IssuesPayload)event.getPayload();
             setProperty(eventVertex, PropertyName.EVENT_ACTION, ip.getAction());
