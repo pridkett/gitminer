@@ -160,7 +160,7 @@ public class GitHubMain {
                                     log.debug("Skipping fetching comments for issue {} - recently updated {}", issueId, savedIssues.get(issue.getNumber()));
                                     continue;
                                 }
-                                log.debug("Pulling comments for issue: {} - {}", issueId, savedIssues.get(issue.getNumber()));
+                                log.debug("Pulling comments for issue: {} - last update: {}", issueId, savedIssues.get(issue.getNumber()));
                                 try {
                                     // Fetch comments BOTH ways -- using the v2 and the v3 apis
                                     bp.saveIssueComments(repo, issue, imv3.getIssueComments(repo, issue));
@@ -175,6 +175,8 @@ public class GitHubMain {
                                 if (!needsUpdate(savedIssues.get(issue.getNumber()), true)) {
                                     log.debug("Skipping fetching events for issue {} - recently updated - {}", new Object[]{issueId, savedIssues.get(issue.getNumber())});
                                     continue;
+                                } else {
+                                    log.warn("issue {} - last updated: {}", issue.getNumber(), savedIssues.get(issue.getNumber()));
                                 }
                                 log.debug("Pulling events for issue: {} - {}", new Object[]{issueId, savedIssues.get(issue.getNumber())});
                                 Collection<IssueEvent> evts = imv3.getIssueEvents(repo, issue);
@@ -234,10 +236,11 @@ public class GitHubMain {
                             continue;
                         }
                         if (needsUpdate(date, true)) {
+                            log.info("last updated: {}", date);
                             log.debug("Fetching {} user {}/{}: {}", new Object[]{proj, ctr++, numUsers, username});
                             fetchAllUserData(bp, umv3, rmv3, gmv3, wmv3, username);
                         } else {
-                            log.debug("Fecthing {} user {}/{}: {} needs no update", new Object[]{proj, ctr++, numUsers, username});
+                            log.debug("Fecthing {} user {}/{}: {} needs no update - last update {}", new Object[]{proj, ctr++, numUsers, username, date});
                         }
                     }
                 }

@@ -157,7 +157,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
                     continue;
                 }
                 if (keys.contains(datekey)) {
-                    final Date vertexDate = propertyToDate(vertex.getProperty(datekey));
+                    final Date vertexDate = propertyToDate(((Long) vertex.getProperty(datekey)) * 1000L);
                     map.put((T) vertex.getProperty(idkey), vertexDate);
                 } else {
                     map.put((T) vertex.getProperty(idkey), null);
@@ -234,10 +234,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         final HashMap<Integer, Date> map = new HashMap<Integer, Date>();
 
         final GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
-        pipe.start(node).out(EdgeType.ISSUE.toString());
+        pipe.start(node).out(EdgeType.ISSUE);
 
         addValuesFromIterable(pipe, map, PropertyName.NUMBER, PropertyName.SYS_COMMENTS_ADDED);
-
+        log.warn("number of issues: {}", map.size());
         return map;
     }
 
@@ -442,27 +442,27 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         // add the collaborators
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.REPOCOLLABORATOR.toString());
-        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
+        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
 
         // add the contributors
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.REPOCONTRIBUTOR.toString());
-        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
+        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
 
         // add the issue owners
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.ISSUE.toString()).in(EdgeType.ISSUEOWNER.toString()).dedup();
-        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
+        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
 
         // add the individuals who commented on the issues
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.ISSUE.toString()).out(EdgeType.ISSUECOMMENT.toString()).in(EdgeType.ISSUECOMMENTOWNER.toString()).dedup();
-        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
+        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
 
         // add the pull request owners
         pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.PULLREQUEST.toString()).in(EdgeType.PULLREQUESTOWNER.toString()).dedup();
-        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
+        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
 
         // add the pull request commenters
         pipe = new GremlinPipeline<Vertex, Vertex>();
@@ -471,7 +471,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
                 return argument.getProperty(PropertyName.TYPE.toString()).equals(VertexType.USER.toString());
             }
         }).dedup();
-        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);	
+        addValuesFromIterable(pipe, map, PropertyName.LOGIN, PropertyName.SYS_LAST_FULL_UPDATE);
 
         return map;
     }
@@ -725,9 +725,11 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
     public void saveIssueComments(final Repository repo,
             final Issue issue,
             final Collection<Comment> issueComments) {
+        Vertex issueVtx = saveIssue(repo, issue);
         for (Comment comment : issueComments) {
             saveIssueComment(repo, issue, comment);
         }
+        setProperty(issueVtx, PropertyName.SYS_COMMENTS_ADDED, new Date());
     }
 
     private Vertex saveIssueComment(final Repository repo,
@@ -1106,51 +1108,32 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return mapper;
     }
 
-    /**
-     * Saves the comments that match up with a given issue
-     * 
-     * Also, of note this method sets the property comments_added_at to indicate when
-     * the comments were added to the comment. This can be used to avoid pulling comments
-     * multiple times.
-     * 
-     * @param project
-     * @param issue
-     * @param comments
-     * @return
-     */
-    public Map<Long,Vertex> saveRepositoryIssueComments(final String project, final Issue issue, final Collection<Comment> comments) {
-        final Vertex issuenode = getOrCreateIssue(project, issue);
-        final HashMap<Long,Vertex> mapper = new HashMap<Long,Vertex>();
-        for (Comment comment : comments) {
-            Vertex commentnode = saveIssueComment(comment);
-            createEdgeIfNotExist(issuenode, commentnode, EdgeType.ISSUECOMMENT);
-            mapper.put(Long.valueOf(comment.getId()), commentnode);
-        }
-        setProperty(issuenode, PropertyName.SYS_COMMENTS_ADDED, new Date());
-        return mapper;
-    }
-
-    /**
-     * {@link #saveRepositoryIssueComments(String, Issue, Collection)} updated for v3 api
-     * @param proj
-     * @param issue
-     * @param issueComments
-     */
-    public Map<Long, Vertex> saveRepositoryIssueComments(final String project,
-            final Issue issue,
-            final List<Comment> comments) {
-        final Vertex issuenode = getOrCreateIssue(project, issue);
-        final HashMap<Long,Vertex> mapper = new HashMap<Long,Vertex>();
-        for (Comment comment : comments) {
-            Vertex commentnode = saveIssueComment(comment);
-            createEdgeIfNotExist(issuenode, commentnode, EdgeType.ISSUECOMMENT);
-            mapper.put(Long.valueOf(comment.getId()), commentnode);
-
-        }
-        setProperty(issuenode, PropertyName.SYS_COMMENTS_ADDED, new Date());
-        return mapper;
-    }
-
+//    /**
+//     * Saves the comments that match up with a given issue
+//     * 
+//     * Also, of note this method sets the property comments_added_at to indicate when
+//     * the comments were added to the comment. This can be used to avoid pulling comments
+//     * multiple times.
+//     * 
+//     * @param project
+//     * @param issue
+//     * @param comments
+//     * @return
+//     */
+//    public Map<Long,Vertex> saveRepositoryIssueComments(final String project,
+//            final Issue issue,
+//            final Collection<Comment> comments) {
+//        final Vertex issuenode = getOrCreateIssue(project, issue);
+//        final HashMap<Long,Vertex> mapper = new HashMap<Long,Vertex>();
+//        for (Comment comment : comments) {
+//            Vertex commentnode = saveIssueComment(comment);
+//            createEdgeIfNotExist(issuenode, commentnode, EdgeType.ISSUECOMMENT);
+//            mapper.put(Long.valueOf(comment.getId()), commentnode);
+//        }
+//        setProperty(issuenode, PropertyName.SYS_COMMENTS_ADDED, new Date());
+//        log.warn("Comments added: {}", issuenode.getProperty(PropertyName.SYS_COMMENTS_ADDED));
+//        return mapper;
+//    }
 
     /**
      * {@link #saveRepositoryIssues(String, Collection)} modified for v3 api
