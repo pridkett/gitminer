@@ -1617,13 +1617,18 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
                     Vertex forkeeVtx = saveRepository(fp.getForkee());
                     createEdgeIfNotExist(eventVertex, forkeeVtx, EdgeType.EVENTFORKEE);
                 } else {
-                    // FIXME: getName() appears to work, generateId() returns null
-                    User u = forkee.getOwner();
-                    String owner = null;
-                    if (u != null) { 
-                        owner = u.getName();
+                    if (forkee.getName() != null && forkee.getName().indexOf("/") != -1) {
+                        Vertex forkeeVtx = getOrCreateRepository(forkee.getName());
+                        createEdgeIfNotExist(eventVertex, forkeeVtx, EdgeType.EVENTFORKEE);                    
+                    } else {
+                        // FIXME: getName() appears to work, generateId() returns null
+                        User u = forkee.getOwner();
+                        String owner = null;
+                        if (u != null) { 
+                            owner = u.getName();
+                        }
+                        log.warn("Issue with forkee repository id: {}, {}", forkee.getName(), owner);
                     }
-                    log.warn("Issue with forkee repository id: {}, {}", forkee.getName(), owner);
                 }
             }
         } else if (eventType.equals(EventType.GIST_EVENT)) {
@@ -1634,9 +1639,15 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             }
         } else if (eventType.equals(EventType.GOLLUM_EVENT)) {
             GollumPayload gp = (GollumPayload)event.getPayload();
-            for (GollumPage page : gp.getPages()) {
-                Vertex pageVtx = saveGollumPage(page);
-                createEdgeIfNotExist(eventVertex, pageVtx, EdgeType.EVENTGOLLUM);
+            if (gp != null && gp.getPages() != null) {
+                for (GollumPage page : gp.getPages()) {
+                    // FIXME: ignore gollum pages where HtmlUrl is null
+                    // this should be dealt with somehow
+                    if (page.getHtmlUrl() != null) {
+                        Vertex pageVtx = saveGollumPage(page);
+                        createEdgeIfNotExist(eventVertex, pageVtx, EdgeType.EVENTGOLLUM);
+                    }
+                }
             }
         } else if (eventType.equals(EventType.ISSUE_COMMENT_EVENT)) {
             IssueCommentPayload icp = (IssueCommentPayload)event.getPayload();
@@ -1732,7 +1743,6 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
     private Vertex saveGollumPage(GollumPage page) {
         Vertex gollumPage = getOrCreateGolumPage(page);
-        
         setProperty(gollumPage, PropertyName.ACTION, page.getAction());
         setProperty(gollumPage, PropertyName.HTML_URL, page.getHtmlUrl());
         setProperty(gollumPage, PropertyName.NAME, page.getPageName());
