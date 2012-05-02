@@ -18,6 +18,7 @@ package net.wagstrom.research.github;
 import java.lang.reflect.Method;
 import java.net.ConnectException;
 
+import org.eclipse.egit.github.core.client.RequestException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,6 +70,12 @@ public abstract class AbstractInvocationHandler {
             log.error("Connection exception (deep): Method: {}, Args: {}", new Object[]{method.getName(), args, e});
             failSleep();
             return invoke(proxy, method, args);
+        } else if (e instanceof RequestException) {
+            RequestException re = (RequestException)e;
+            if (re.getStatus() == 404) {
+                log.error("Received 404 error. Returning null", e);
+                return null;
+            }
         }
 
         log.error("Unhandled exception: Method: {} Args: {}", new Object[]{method.getName(), args, e});
