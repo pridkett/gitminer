@@ -40,6 +40,8 @@ public class UserMinerV3 extends AbstractMiner {
             user = service.getUser(login);
         } catch (IOException e) {
             log.error("IOException in getting user {} {}", login, e);
+        } catch (NullPointerException npe) {
+            log.error("NullPointerException in getting user {}", login, npe);
         }
         return user;
     }
