@@ -53,6 +53,8 @@ public class RepositoryMinerV3 extends AbstractMiner {
             repository = service.getRepository(username, reponame);
         } catch (IOException e) {
             log.error("IO exception fetchin Repository {}/{}", new Object[]{username, reponame, e});
+        } catch (NullPointerException npe) {
+            log.error("NullPointerException fetching repository {}/{}", new Object[]{username, reponame, npe});
         }
         return repository;
     }
