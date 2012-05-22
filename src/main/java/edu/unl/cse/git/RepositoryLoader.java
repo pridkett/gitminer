@@ -61,6 +61,19 @@ public class RepositoryLoader {
         }
         return null;
     }
+    
+    static private boolean deleteFile(final File f) {
+    	if (f.isDirectory()) {
+    		for (File child : f.listFiles()) {
+    			deleteFile(child);
+    		}
+    	}
+    	return f.delete();
+    }
+    
+    static public boolean removeRepository(final String name) {
+    	return deleteFile(new File(LOCAL_STORE, name));
+    }
 
     static public Iterable<RevCommit> getCommits(final String reponame) {
         try {

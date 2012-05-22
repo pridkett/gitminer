@@ -153,14 +153,16 @@ def getDossier(IndexableGraph g, Vertex repo, Vertex user) {
 def getDossierAsCSV(Vertex repo, Vertex user, Map dossier) {
     return [repo.name, \
             user.login, \
-            dossier[EdgeType.DISCUSSIONUSER] ?: 0, \
+            "\"" + user.email + "\"", \
+            //user.gravatarId, \
+            //dossier[EdgeType.DISCUSSIONUSER] ?: 0, \
             dossier[EdgeType.ISSUEASSIGNEE] ?: 0, \
             dossier[EdgeType.ISSUECOMMENTOWNER] ?: 0, \
             dossier[EdgeType.ISSUEEVENTACTOR] ?: 0, \
             dossier[EdgeType.ISSUEOWNER] ?: 0, \
             dossier[EdgeType.PULLREQUESTCOMMENTOWNER] ?: 0, \
-            dossier[EdgeType.PULLREQUESTISSUEUSER] ?: 0, \
-            dossier[EdgeType.PULLREQUESTOWNER] ?: 0, \
+            //dossier[EdgeType.PULLREQUESTISSUEUSER] ?: 0, \
+            //dossier[EdgeType.PULLREQUESTOWNER] ?: 0, \
             dossier[EdgeType.PULLREQUESTREVIEWCOMMENTOWNER] ?: 0, \
             dossier[EdgeType.COMMITTER] ?: 0 ].join(",")
 }
@@ -168,9 +170,13 @@ def getDossierAsCSV(Vertex repo, Vertex user, Map dossier) {
 g = new Neo4jGraph(Defaults.DBPATH)
 
 //projects = Defaults.PROJECTS
-projects = ["rails/rails", "rack/rack", "sinatra/sinatra"]
+//projects = ["rails/rails", "rack/rack", "sinatra/sinatra"]
+projects = ["rails/rails"]
 //user = repo.in("REPO_OWNER").next()
 
+// header
+// TODO clean this up, need to unify all of the points where these fields are referenced
+println "repository,username,email,issueassignee,issuecommentowner,issueeventactor,issueowner,pullrequestcommentowner,pullrequestreviewcommentowner,committer"
 for (project in projects) {
     repo = g.idx(IndexNames.REPOSITORY).get(IdCols.REPOSITORY, project).next()
     users = Helpers.getAllRepositoryUsers(repo)
