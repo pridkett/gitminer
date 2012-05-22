@@ -52,20 +52,22 @@ public class AppMain {
             bp.saveRepository( reponame );
             // commits
             Iterable<RevCommit> cmts = RepositoryLoader.getCommits( reponame );
-            for ( RevCommit cmt : cmts ) {
-                bp.saveCommit( cmt );
-                bp.saveCommitAuthor( cmt, cmt.getAuthorIdent() );
-                bp.saveCommitCommitter( cmt, cmt.getCommitterIdent() );
-                bp.saveCommitParents( cmt, cmt.getParents() );
-                Iterable<String> commitFiles = RepositoryLoader.filesChanged( reponame, cmt );
-                for ( String fileName : commitFiles ) {
-                    bp.saveFile( fileName );
+            if (cmts != null) {
+                for ( RevCommit cmt : cmts ) {
+                    bp.saveCommit( cmt );
+                    bp.saveCommitAuthor( cmt, cmt.getAuthorIdent() );
+                    bp.saveCommitCommitter( cmt, cmt.getCommitterIdent() );
+                    bp.saveCommitParents( cmt, cmt.getParents() );
+                    Iterable<String> commitFiles = RepositoryLoader.filesChanged( reponame, cmt );
+                    for ( String fileName : commitFiles ) {
+                        bp.saveFile( fileName );
+                    }
+                    bp.saveCommitFiles( cmt, commitFiles );
                 }
-                bp.saveCommitFiles( cmt, commitFiles );
+                // refresh the iterator otherwise it will be empty
+                cmts = RepositoryLoader.getCommits( reponame );
+                bp.saveRepositoryCommits( reponame, cmts );
             }
-            // refresh the iterator otherwise it will be empty
-            cmts = RepositoryLoader.getCommits( reponame );
-            bp.saveRepositoryCommits( reponame, cmts );
         }
 
         log.info("Shutting down graph");

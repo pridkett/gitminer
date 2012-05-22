@@ -67,10 +67,10 @@ public class RepositoryLoader {
             return RepositoryLoader.getRepository( reponame ).log().call();
         } catch (NoHeadException e) {
             log.error("NoHeadException: ", e);
-            System.exit( 1 );
+            // System.exit( 1 );
         } catch (JGitInternalException e) {
             log.error("JGitInternalException: ", e);
-            System.exit( 1 );
+            // System.exit( 1 );
         }
         return null;
     }
