@@ -14,7 +14,8 @@ def merge(Map a, Map b) {
     return c
 }
 
-def belongsToRepo(Vertex repo, Element e) {
+def belongsToRepo(repo, e) {
+    // println("belongsToRepo: " + e + " " + e.label + " " + e.type)
     switch (e.label) {
         case null:
             // kill null first as this is likely a vertex
@@ -49,9 +50,11 @@ def belongsToRepo(Vertex repo, Element e) {
         // discussion_user
         case VertexType.COMMENT:
             // comment -> issue -> repository
+            // println("Returning: " + e.in(EdgeType.ISSUECOMMENT).in(EdgeType.ISSUE).next() + " " + repo)
             return e.in(EdgeType.ISSUECOMMENT).in(EdgeType.ISSUE).next() == repo
         case VertexType.COMMIT:
             // commit -> repository
+            // println("Returning: " + e.out(EdgeType.REPOSITORY).next() + " " + repo)
             return e.out(EdgeType.REPOSITORY).next() == repo
         case VertexType.PULLREQUESTREVIEWCOMMENT:
             // really not sure how to handle this...
@@ -61,38 +64,72 @@ def belongsToRepo(Vertex repo, Element e) {
         // issue_event_actor
         case VertexType.ISSUE_EVENT:
             // issue event -> issue -> repository
+            // println("Returning: " + e.in(EdgeType.ISSUEEVENT).in(EdgeType.ISSUE).next() + " " + repo)
+        
             return e.in("ISSUE_EVENT").in("ISSUE").next() == repo
         case VertexType.ISSUE:
             // issue -> repository
+            // println("Returning: " + e.in(EdgeType.ISSUE).next() + " " + repo)
+        
             return e.in("ISSUE").next() == repo
         case VertexType.PULLREQUEST:
             // pullrequest -> repository
+            // println("Returning: " + e.in(EdgeType.PULLREQUEST).next() + " " + repo)
+        
             return e.in("PULLREQUEST").next() == repo
         // issue_event
         // - issue_event
         // git_user
         // - commit
     }
+    println("SHOULD NEVER REACH HERE!")
+    println("belongsToRepo: " + e + " " + e.label + " " + e.type)
+    return false
 }
 def getDossier(IndexableGraph g, Vertex repo, Vertex user) {
-    // need to find a groovy equivalent of apply to clean this up
-    gh_dossier = user.bothE(EdgeType.DISCUSSIONUSER, \
-                            EdgeType.ISSUEASSIGNEE, \
-                            EdgeType.ISSUECOMMENTOWNER, \
-                            EdgeType.ISSUEEVENTACTOR, \
-                            EdgeType.ISSUEOWNER, \
-                            EdgeType.PULLREQUESTCOMMENTOWNER, \
-                            EdgeType.PULLREQUESTISSUEUSER, \
-                            EdgeType.PULLREQUESTOWNER, \
-                            EdgeType.PULLREQUESTREVIEWCOMMENTOWNER). \
-                      filter{ belongsToRepo(repo, it) }. \
-                      groupCount{it.label}.cap.next()
-    g_dossier = Helpers.getAllGitAccounts(g, user). \
-                    //_().in(EdgeType.COMMITAUTHOR, \
-                           //EdgeType.COMMITTER). \
-                    _().inE(EdgeType.COMMITTER). \
-                    filter{ belongsToRepo(repo, it) }. \
-                    groupCount{it.label}.cap.next()
+
+// For some reason this code seems to stop abnormally soon. I'm thinking it's a
+// bug in gremlin or pipes. Use the new code below instead.
+//    // need to find a groovy equivalent of apply to clean this up
+//    gh_dossier = user.bothE(EdgeType.DISCUSSIONUSER, \
+//                            EdgeType.ISSUEASSIGNEE, \
+//                            EdgeType.ISSUECOMMENTOWNER, \
+//                            EdgeType.ISSUEEVENTACTOR, \
+//                            EdgeType.ISSUEOWNER, \
+//                            EdgeType.PULLREQUESTCOMMENTOWNER, \
+//                            EdgeType.PULLREQUESTISSUEUSER, \
+//                            EdgeType.PULLREQUESTOWNER, \
+//                            EdgeType.PULLREQUESTREVIEWCOMMENTOWNER). \
+//                      filter{ belongsToRepo(repo, it) }. \
+//                      groupCount{it.label}.cap.next()
+
+    gh_dossier = [:]
+    gitHubEdgeTypes = [EdgeType.DISCUSSIONUSER, \
+                       EdgeType.ISSUEASSIGNEE, \
+                       EdgeType.ISSUECOMMENTOWNER, \
+                       EdgeType.ISSUEEVENTACTOR, \
+                       EdgeType.ISSUEOWNER, \
+                       EdgeType.PULLREQUESTCOMMENTOWNER, \
+                       EdgeType.PULLREQUESTISSUEUSER, \
+                       EdgeType.PULLREQUESTOWNER, \
+                       EdgeType.PULLREQUESTREVIEWCOMMENTOWNER]
+    for (et in gitHubEdgeTypes) {
+        user.bothE(et).filter{belongsToRepo(repo, it)}.label.groupCount(gh_dossier).iterate()
+    }
+
+    g_dossier = [:]
+    gitEdgeTypes = [EdgeType.COMMITTER, EdgeType.COMMITAUTHOR]
+    allGitAccounts = Helpers.getAllGitAccounts(g, user)
+    for (et in gitEdgeTypes) {
+        allGitAccounts._().inE(et).filter{belongsToRepo(repo, it)}. \
+            label.groupCount(g_dossier).iterate()
+    }
+//    g_dossier = Helpers.getAllGitAccounts(g, user). \
+//                    //_().in(EdgeType.COMMITAUTHOR, \
+//                           //EdgeType.COMMITTER). \
+//                    _().inE(EdgeType.COMMITTER). \
+//                    filter{ belongsToRepo(repo, it) }. \
+//                    groupCount{it.label}.cap.next()
     return merge(gh_dossier, g_dossier)
 }
 
@@ -113,20 +150,17 @@ def getDossierAsCSV(Vertex repo, Vertex user, Map dossier) {
             dossier[EdgeType.COMMITTER] ?: 0 ].join(",")
 }
 
-// g = new Neo4jGraph(Defaults.DBPATH)
-
-//projects = Defaults.PROJECTS
-//projects = ["rails/rails", "rack/rack", "sinatra/sinatra"]
+configMap = ["READ_ONLY": true]
+g = new Neo4jGraph(Defaults.DBPATH, configMap)
 projects = ["rails/rails"]
-//user = repo.in("REPO_OWNER").next()
 
 // header
 // TODO clean this up, need to unify all of the points where these fields are referenced
 println "repository,username,email,issueassignee,issuecommentowner,issueeventactor,issueowner,pullrequestcommentowner,pullrequestreviewcommentowner,committer"
 for (project in projects) {
     repo = g.idx(IndexNames.REPOSITORY).get(IdCols.REPOSITORY, project).next()
-    users = [g.idx(IndexNames.USER).get(IdCols.USER, "dhh").next()]
-    // users = Helpers.getAllRepositoryUsers(repo)
+    // users = [g.idx(IndexNames.USER).get(IdCols.USER, "dhh").next()]
+    users = Helpers.getAllRepositoryUsers(repo)
     for (user in users) {
         if (user instanceof Vertex) {
             println getDossierAsCSV(repo, user, getDossier(g, repo, user))
@@ -137,5 +171,5 @@ for (project in projects) {
     }
 }
 
-// g.shutdown()
+g.shutdown()
 
