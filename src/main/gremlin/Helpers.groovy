@@ -1,5 +1,8 @@
 import net.wagstrom.research.github.EdgeType
 import net.wagstrom.research.github.VertexType
+import net.wagstrom.research.github.PropertyName
+import net.wagstrom.research.github.IndexNames
+import net.wagstrom.research.github.IdCols
 import com.tinkerpop.blueprints.pgm.Vertex
 import com.tinkerpop.blueprints.pgm.Element
 import java.security.MessageDigest
@@ -122,5 +125,59 @@ class Helpers {
         } catch (e) {
             return null;
         }
+    }
+    
+    
+    static getAllGitAccounts(g, Vertex user) {
+        // getting all of a users git accounts is tricky because they don't make all of their email addresses
+        // public. Luckily, using these two methods we do a pretty good job of getting all of a users git_user
+        // accounts
+        def gitAccounts = user.out(EdgeType.EMAIL). \
+                           in(EdgeType.EMAIL). \
+                           has("type", VertexType.GIT_USER). \
+                           dedup().toSet()
+    
+        // this code has been superseded as it isn't always that accurate and can
+        // grab accounts that don't belong to this user
+        // gitAccounts = (gitAccounts as Set) + user.out(EdgeType.ISSUEEVENTACTOR). \
+        //                  in(EdgeType.ISSUEEVENT).in(EdgeType.ISSUE). \
+        //                  filter{it == repo}.back(3).out(EdgeType.EVENTCOMMIT). \
+        //                  out(EdgeType.COMMITTER).dedup().toList()
+        
+        // here we need to be a little careful with finding additional accounts
+        // this pipe takes all of the commits this person has tied to an issue,
+        // and filters for those email addresses which are not associated with
+        // a user yet. It assumes, and this is a big assumption, that if one of
+        // these unparented links shows up in both COMMITTERS and PARENTS then
+        // the user probably owns that account
+        // traceAccountsCommitter = user.out(EdgeType.ISSUEEVENTACTOR).out(EdgeType.EVENTCOMMIT).out(EdgeType.COMMITTER). \
+        //                          filter{it.type=="GIT_USER"}.out("EMAIL").dedup().filter{it.in("EMAIL").filter{it.type == "USER"}.count() == 0}.back(4).toList()
+        // traceAccountsAuthor = user.out(EdgeType.ISSUEEVENTACTOR).out(EdgeType.EVENTCOMMIT).out(EdgeType.COMMITAUTHOR). \
+        //                          filter{it.type=="GIT_USER"}.out("EMAIL").dedup().filter{it.in("EMAIL").filter{it.type == "USER"}.count() == 0}.back(4).toList()
+        // traceAccounts = (traceAccountsCommitter as Set) + traceAccountsAuthor
+        // a slightly more complicated but more accurate version of the above commands
+        // this version requires that the supposedly unattached commit have the same author
+        // and committer.
+        def traceAccounts = user.out(EdgeType.ISSUEEVENTACTOR).out(EdgeType.EVENTCOMMIT). \
+             filter{it.out(EdgeType.COMMITTER).filter{it.type==VertexType.GIT_USER}.out(EdgeType.EMAIL).next() == \
+                    it.out(EdgeType.COMMITAUTHOR).filter{it.type==VertexType.GIT_USER}.out(EdgeType.EMAIL).next()}. \
+             out(EdgeType.COMMITTER). \
+             filter{it.type==VertexType.GIT_USER}.out(EdgeType.EMAIL).dedup().filter{it.in(EdgeType.EMAIL).filter{it.type == VertexType.USER}.count() == 0}. \
+             back(4).dedup().toSet()
+        
+        def gravatars = user.out(EdgeType.GRAVATAR). \
+                         in(EdgeType.GRAVATARHASH). \
+                         has(PropertyName.TYPE, VertexType.EMAIL). \
+                         in(VertexType.EMAIL). \
+                         has(PropertyName.TYPE, VertexType.GIT_USER).toSet()
+                
+        gitAccounts = gitAccounts + traceAccounts + gravatars
+         
+        def allGitAccounts = [] as Set
+        for (email in gitAccounts._().out(EdgeType.EMAIL).email.dedup().toSet()) {
+            allGitAccounts += g.idx(IndexNames.EMAIL).get(IdCols.EMAIL, email)._().in(EdgeType.EMAIL).has(PropertyName.TYPE, VertexType.GIT_USER).toSet()
+        }
+    
+        return allGitAccounts
     }
 }
