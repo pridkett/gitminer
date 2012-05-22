@@ -35,6 +35,7 @@ import net.wagstrom.research.github.v3.UserMinerV3;
 import net.wagstrom.research.github.v3.WatcherMinerV3;
 
 import org.eclipse.egit.github.core.IssueEvent;
+import org.eclipse.egit.github.core.Repository;
 import org.eclipse.egit.github.core.PullRequest;
 import org.eclipse.egit.github.core.User;
 import org.eclipse.egit.github.core.client.GitHubClient;
@@ -126,8 +127,10 @@ public class GitHubMain {
             for (String proj : projects) {
                 String [] projsplit = proj.split("/");
 
-                // yay! full declarations! they're AWESOME!
-                org.eclipse.egit.github.core.Repository repo = rmv3.getRepository(projsplit[0], projsplit[1]);
+                Repository repo = rmv3.getRepository(projsplit[0], projsplit[1]);
+                if (repo == null) {
+                    continue;
+                }
                 bp.saveRepository(repo);
                 log.warn("handling project owner...");
                 handleProjectOwner(repo.getOwner(), umv3, omv3);

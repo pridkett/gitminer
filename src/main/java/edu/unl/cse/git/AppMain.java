@@ -40,18 +40,13 @@ public class AppMain {
 
         return new CommitBlueprintsDriver(dbengine, dburl, dbprops);
     }
-
-    public void main() {
-        Properties p = GithubProperties.props();
-
-        CommitBlueprintsDriver bp = connectToGraph(p);
-
-        String[] repositories = getProperty( p, "edu.unl.cse.git.repositories" ).split(",");
-        for ( String reponame : repositories ) {
-            log.info( "Loading Repository: " + reponame );
-            bp.saveRepository( reponame );
-            // commits
-            Iterable<RevCommit> cmts = RepositoryLoader.getCommits( reponame );
+    
+    public void loadRepository(CommitBlueprintsDriver bp, String reponame) {
+        log.info( "Loading Repository: " + reponame );
+        bp.saveRepository( reponame );
+        // commits
+        Iterable<RevCommit> cmts = RepositoryLoader.getCommits( reponame );
+        if (cmts != null) {
             for ( RevCommit cmt : cmts ) {
                 bp.saveCommit( cmt );
                 bp.saveCommitAuthor( cmt, cmt.getAuthorIdent() );
@@ -66,6 +61,22 @@ public class AppMain {
             // refresh the iterator otherwise it will be empty
             cmts = RepositoryLoader.getCommits( reponame );
             bp.saveRepositoryCommits( reponame, cmts );
+        }
+    }
+    
+    public void main() {
+        Properties p = GithubProperties.props();
+
+        CommitBlueprintsDriver bp = connectToGraph(p);
+
+        String[] repositories = getProperty( p, "edu.unl.cse.git.repositories" ).split(",");
+        for ( String reponame : repositories ) {
+       	    loadRepository(bp, reponame);
+            // remove if configured to
+            if (getProperty(p,"edu.unl.cse.git.repositories.removeAfterLoad").equals("true")) {
+            	log.info("Removing Local Repository: " + reponame);
+            	RepositoryLoader.removeRepository(reponame);
+            }
         }
 
         log.info("Shutting down graph");
