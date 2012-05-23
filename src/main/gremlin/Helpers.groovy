@@ -5,6 +5,7 @@ import net.wagstrom.research.github.IndexNames
 import net.wagstrom.research.github.IdCols
 import com.tinkerpop.blueprints.pgm.Vertex
 import com.tinkerpop.blueprints.pgm.Element
+import com.tinkerpop.pipes.Pipe
 import java.security.MessageDigest
 
 class Helpers {
@@ -63,39 +64,106 @@ class Helpers {
         return Math.abs(dateDifference(d1, d2))
     }
     
-    static Collection getAllRepositoryUsers(repo) {
-        def watchers = repo.in(EdgeType.REPOWATCHED).toList()
-        // collaborators: have admin rights on projects
-        def collaborators = repo.out(EdgeType.REPOCOLLABORATOR).toList()
-        // contributors: have committed code to project
-        def contributors = repo.out(EdgeType.REPOCONTRIBUTOR).toList() + \
-                       repo.in(EdgeType.REPOOWNER).dedup().toList()
-        def issueOwners = repo.out(EdgeType.ISSUE). \
-                           in(EdgeType.ISSUEOWNER). \
-                           dedup().toList()
-        def issueCommenters = repo.out(EdgeType.ISSUE). \
-                               out(EdgeType.ISSUECOMMENT). \
-                               in(EdgeType.ISSUECOMMENTOWNER).dedup().toList()
-        def pullRequestOwners = repo.out(EdgeType.PULLREQUEST). \
-                                 in(EdgeType.PULLREQUESTOWNER).dedup().toList()
-        def openPullRequestOwners = repo.out(EdgeType.PULLREQUEST). \
-                                     filter{it.closedAt==null}.in(EdgeType.PULLREQUESTOWNER).dedup().toList()
-        def closedPullRequestOwners = repo.out(EdgeType.PULLREQUEST). \
-                                       filter{it.closedAt!=null}.in(EdgeType.PULLREQUESTOWNER).dedup().toList()
-        def mergedPullRequestOwners = repo.out(EdgeType.PULLREQUEST). \
-                                       filter{it.merged_at != null}.in(EdgeType.PULLREQUESTOWNER).dedup().toList()
-        def pullRequestCommenters = repo.out(EdgeType.PULLREQUEST). \
-                                     out(EdgeType.PULLREQUESTDISCUSSION). \
-                                     filter{it.type==VertexType.USER.toString()}.dedup().toList()
-        def mergers = repo.out(EdgeType.ISSUE). \
-                       out(EdgeType.ISSUEEVENT). \
-                       filter{it.event=="merged"}.in(EdgeType.ISSUEEVENTACTOR).dedup().toList()
-        def forkOwners = repo.out(EdgeType.REPOFORK). \
-                          in(EdgeType.REPOOWNER).dedup().toList()
+    static Pipe getRepositoryWatchers(Vertex repo) {
+        return repo.in(EdgeType.REPOWATCHED)
+    }
+
+    static Pipe getRepositoryCollaborators(Vertex repo) {
+        return repo.out(EdgeType.REPOCOLLABORATOR)
+    }
+
+    static Pipe getRepositoryContributors(Vertex repo) {
+        return repo.copySplit(_().out(EdgeType.REPOCONTRIBUTOR). \
+                              _().in(EdgeType.REPOOWNER)).exhaustMerge().dedup()
+    }
+
+    static Pipe getRepositoryIssueOwners(Vertex repo) {
+        return repo.out(EdgeType.ISSUE). \
+                    in(EdgeType.ISSUEOWNER). \
+                    dedup()
+    }
+
+    static Pipe getRepositoryIssueCommenters(Vertex repo) {
+        return repo.out(EdgeType.ISSUE). \
+                    out(EdgeType.ISSUECOMMENT). \
+                    in(EdgeType.ISSUECOMMENTOWNER).dedup()
+    }
+
+    static Pipe getRepositoryPullRequestOwners(Vertex repo) {
+        return repo.out(EdgeType.PULLREQUEST). \
+                    in(EdgeType.PULLREQUESTOWNER).dedup()
+    }
+
+    static Pipe getRepositoryOpenPullRequestOwners(Vertex repo) {
+        return repo.out(EdgeType.PULLREQUEST). \
+                    has(PropertyName.CLOSED_AT, null). \
+                    in(EdgeType.PULLREQUESTOWNER).dedup()
+    }
+
+    static Pipe getRepositoryClosedPullRequestOwners(Vertex repo) {
+        return repo.out(EdgeType.PULLREQUEST). \
+                    hasNot(PropertyName.CLOSED_AT, null). \
+                    in(EdgeType.PULLREQUESTOWNER).dedup()
+    }
+
+    static Pipe getRepositoryMergedPullRequestOwners(Vertex repo) {
+        return repo.out(EdgeType.PULLREQUEST). \
+                    hasNot(PropertyName.MERGED_AT, null). \
+                    in(EdgeType.PULLREQUESTOWNER).dedup()
+    }
+
+    static Pipe getRepositoryPullRequestMergers(Vertex repo) {
+        return repo.out(EdgeType.ISSUE). \
+                    out(EdgeType.ISSUEEVENT). \
+                    has(PropertyName.EVENT, "merged"). \
+                    in(EdgeType.ISSUEEVENTACTOR).dedup()
+    }
     
-        // FIXME: this should be converted to constants
-        def committers = repo.in("REPOSITORY").out("AUTHOR").filter{it.type=="GIT_USER"}.out("EMAIL").dedup().in("EMAIL").filter{it.type=="USER"}
-         
+    static Pipe getRepositoryPullRequestCommenters(Vertex repo) {
+        return repo.out(EdgeType.PULLREQUEST). \
+                    out(EdgeType.PULLREQUESTDISCUSSION). \
+                    has(PropertyName.TYPE, VertexType.USER).dedup()
+    }
+
+    static Pipe getRepositoryForkOwners(Vertex repo) {
+        return repo.out(EdgeType.REPOFORK). \
+                    in(EdgeType.REPOOWNER).dedup()
+    }
+    
+    static Pipe getRepositoryCommitters(Vertex repo) {
+        return repo.in(EdgeType.REPOSITORY). \
+                    out(EdgeType.COMMITAUTHOR). \
+                    has(PropertyName.TYPE, VertexType.GIT_USER). \
+                    out(EdgeType.EMAIL).dedup(). \
+                    in(EdgeType.EMAIL). \
+                    has(PropertyName.TYPE, VertexType.USER).dedup()
+    }
+    
+    /**
+     * Combined method to return a list of all users on the project
+     * 
+     * @param repo Vertex for the repository of interest
+     * @return a Set of the users on the project
+     */
+    static Collection getAllRepositoryUsers(repo) {
+        def watchers = getRepositoryWatchers(repo).toList()
+        
+        // collaborators: have admin rights on projects
+        def collaborators = getRepositoryCollaborators(repo).toList()
+        // contributors: have committed code to project
+        def contributors = getRepositoryContributors(repo).toList()
+        
+        def issueOwners = getRepositoryIssueOwners(repo).toList()
+        def issueCommenters = getRepositoryIssueCommenters(repo).toList()
+        def pullRequestOwners = getRepositoryPullRequestOwners(repo).toList()
+        def openPullRequestOwners = getRepositoryOpenPullRequestOwners(repo).toList()
+        def closedPullRequestOwners = getRepositoryClosedPullRequestOwners(repo).toList()
+        def mergedPullRequestOwners = getRepositoryMergedPullRequestOwners(repo).toList()
+        def pullRequestCommenters = getRepositoryPullRequestCommenters(repo).toList()
+        def mergers = getRepositoryPullRequestMergers(repo).toList()
+        def forkOwners = getRepositoryForkOwners(repo).toList()
+        def committers = getRepositoryCommitters(repo).toList()
+        
         def allActive = (collaborators + contributors + issueOwners + \
                     issueCommenters + pullRequestOwners + \
                     openPullRequestOwners + closedPullRequestOwners + \
