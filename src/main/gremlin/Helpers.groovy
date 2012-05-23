@@ -72,9 +72,20 @@ class Helpers {
         return repo.out(EdgeType.REPOCOLLABORATOR)
     }
 
+    /**
+     * This gets the contributors and owners
+     *  
+     * This is a gross abuse of copySplit pipe but is required because
+     * _() doesn't seem to be defined in this context, therefore it cannot
+     * be used. Yech...
+     *
+     * @param repo
+     * @return
+     */
     static Pipe getRepositoryContributors(Vertex repo) {
-        return repo.copySplit(_().out(EdgeType.REPOCONTRIBUTOR). \
-                              _().in(EdgeType.REPOOWNER)).exhaustMerge().dedup()
+        return repo.copySplit(repo.out(EdgeType.REPOCONTRIBUTOR), \
+                              repo.in(EdgeType.REPOOWNER)).exhaustMerge(). \
+                    dedup()
     }
 
     static Pipe getRepositoryIssueOwners(Vertex repo) {
@@ -87,6 +98,18 @@ class Helpers {
         return repo.out(EdgeType.ISSUE). \
                     out(EdgeType.ISSUECOMMENT). \
                     in(EdgeType.ISSUECOMMENTOWNER).dedup()
+    }
+
+    static Pipe getRepositoryIssueClosers(Vertex repo) {
+        return repo.out(EdgeType.ISSUE).out(EdgeType.ISSUEEVENT). \
+                    has(PropertyName.EVENT, "closed"). \
+                    in(EdgeType.ISSUEEVENTACTOR).dedup()
+    }
+    
+    static Pipe getRepositoryIssueSubscribers(Vertex repo) {
+        return repo.out(EdgeType.ISSUE).out(EdgeType.ISSUEEVENT). \
+                    has(PropertyName.EVENT, "subscribed"). \
+                    in(EdgeType.ISSUEEVENTACTOR).dedup()
     }
 
     static Pipe getRepositoryPullRequestOwners(Vertex repo) {
@@ -121,8 +144,8 @@ class Helpers {
     
     static Pipe getRepositoryPullRequestCommenters(Vertex repo) {
         return repo.out(EdgeType.PULLREQUEST). \
-                    out(EdgeType.PULLREQUESTDISCUSSION). \
-                    has(PropertyName.TYPE, VertexType.USER).dedup()
+                    out(EdgeType.PULLREQUESTISSUECOMMENT). \
+                    in(EdgeType.PULLREQUESTCOMMENTOWNER).dedup()
     }
 
     static Pipe getRepositoryForkOwners(Vertex repo) {
@@ -138,7 +161,7 @@ class Helpers {
                     in(EdgeType.EMAIL). \
                     has(PropertyName.TYPE, VertexType.USER).dedup()
     }
-    
+        
     /**
      * Combined method to return a list of all users on the project
      * 
