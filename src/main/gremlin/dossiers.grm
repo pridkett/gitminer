@@ -167,6 +167,7 @@ def getDossierAsCSV(Vertex repo, Vertex user, Map dossier) {
             //dossier[EdgeType.PULLREQUESTISSUEUSER] ?: 0, \
             //dossier[EdgeType.PULLREQUESTOWNER] ?: 0, \
             dossier[EdgeType.PULLREQUESTREVIEWCOMMENTOWNER] ?: 0, \
+            dossier[EdgeType.COMMITAUTHOR] ?: 0, \
             dossier[EdgeType.COMMITTER] ?: 0 ].join(",")
 }
 
@@ -176,7 +177,7 @@ projects = ["rails/rails"]
 
 // header
 // TODO clean this up, need to unify all of the points where these fields are referenced
-println "repository,username,email,issueassignee,issuecommentowner,closed,reopened,subscribed,merged,referenced,mentioned,assigned,issueowner,pullrequestcommentowner,pullrequestreviewcommentowner,committer"
+println "repository,username,email,issueassignee,issuecommentowner,closed,reopened,subscribed,merged,referenced,mentioned,assigned,issueowner,pullrequestcommentowner,pullrequestreviewcommentowner,committer,commitauthor"
 for (project in projects) {
     repo = g.idx(IndexNames.REPOSITORY).get(IdCols.REPOSITORY, project).next()
     // users = [g.idx(IndexNames.USER).get(IdCols.USER, "dhh").next()]
