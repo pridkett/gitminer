@@ -47,7 +47,9 @@ def buildDeveloperProfile(String login, String role, Graph g) {
     profileMap["id"] = user.id
     profileMap["role"] = role
     copyProperties.each{profileMap[it] = user.getProperty(it)}
-    profileMap["name"] = profileMap["name"].replace(",", " ")
+    if (profileMap["name"] != null) {
+        profileMap["name"] = profileMap["name"].replace(",", " ")
+    }
     profileMap["watched"] = user.out(EdgeType.REPOWATCHED).dedup().count()
     profileMap["organizations"] = user.out(EdgeType.ORGANIZATIONMEMBER).dedup().count()
     
