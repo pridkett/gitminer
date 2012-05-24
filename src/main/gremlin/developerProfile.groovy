@@ -59,10 +59,14 @@ def buildDeveloperProfile(String login, String role, Graph g) {
 m = ["READ_ONLY": true]
 g = new Neo4jGraph("rails.db.20120505", m)
 users = readUserNames("rails.data/rails.db.20120505.people.txt")
+profiledUsers = new HashSet()
 println(outputFields.join(", "))
 for (role in users.keySet()) {
     for (login in users[role]) {
-        buildDeveloperProfile(login, role, g)
+        if (!profiledUsers.contains(login)) {
+            buildDeveloperProfile(login, role, g)
+            profiledUsers.add(login)
+        }
     }
 }
 g.shutdown()
