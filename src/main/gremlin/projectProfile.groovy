@@ -1,8 +1,9 @@
 /**
- * Builds a profile of a single project
+ * Builds a profile of a single repository
  * 
  * Output columns are as follows:
- * 
+ *
+ * id: the vertex id of the repository
  * reponame: String - name of the repository (e.g. rails/rails)
  * gitHubId: Int - github's internal id
  * openIssues: Int - number of open issues at time of data pull
