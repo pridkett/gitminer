@@ -127,7 +127,7 @@ def getDossier(IndexableGraph g, Vertex repo, Vertex user, Set communityUsers) {
         gh_dossier = merge(gh_dossier, groups)
     }
     if (communityUsers != null) {
-        gh_dossier["communityfollowers"] = user.out(EdgeType.FOLLOWER).toSet().intersect(communityUsers)
+        gh_dossier["communityfollowers"] = user.out(EdgeType.FOLLOWER).toSet().intersect(communityUsers).size()
     }
 
     g_dossier = [:]
