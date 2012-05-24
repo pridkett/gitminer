@@ -4,6 +4,27 @@ import net.wagstrom.research.github.EdgeType
 import net.wagstrom.research.github.VertexType
 import net.wagstrom.research.github.PropertyName
 
+/**
+ * duplicate code taken from projectProfile.groovy
+ */
+def readProjectNames(String filename) {
+    return new FileInputStream(filename).readLines()
+}
+
+/**
+ * duplicate code taken from developerProfile.groovy
+ */
+def readUserNames(String filename) {
+    userMap = [:].withDefault{[]}
+    pattern = ~/^([a-z]+) ?= ?\[(.*)\]/
+    lines = new FileInputStream(filename).readLines()
+    for (line in lines) {
+        matcher = pattern.matcher(line)
+        userMap[matcher[0][1]] = matcher[0][2].split(", ").collect{it[1..-2]}
+    }
+    return userMap
+}
+
 // util
 def merge(Map a, Map b) {
     //return (a + b).groupBy { it.id }.collect { it.value.collectEntries { it } }
@@ -150,7 +171,7 @@ def getDossier(IndexableGraph g, Vertex repo, Vertex user, Set communityUsers) {
 }
 
 def getDossierAsCSV(Vertex repo, Vertex user, Map dossier) {
-    return [repo.name, \
+    return [repo.fullname, \
             user.login, \
             "\"" + user.email + "\"", \
             //user.gravatarId, \
@@ -175,18 +196,24 @@ def getDossierAsCSV(Vertex repo, Vertex user, Map dossier) {
             dossier[EdgeType.COMMITAUTHOR] ?: 0 ].join(",")
 }
 
-configMap = ["READ_ONLY": true]
+configMap = ["READ_ONLY": "true"]
 g = new Neo4jGraph(Defaults.DBPATH, configMap)
-projects = ["rails/rails"]
+projects = readProjectNames("rails.data/rails.db.20120505.projects.txt")
+
+interestUsers = new HashSet()
+repoUsers = readUserNames("rails.data/rails.db.20120505.people.txt")
+repoUsers.keySet().each{interestUsers.addAll(repoUsers[it])}
 
 // header
 // TODO clean this up, need to unify all of the points where these fields are referenced
 println "repository,username,email,issueassignee,issuecommentowner,closed,reopened,subscribed,merged,referenced,mentioned,assigned,issueowner,pullrequestcommentowner,pullrequestreviewcommentowner,communityfollowers,committer,commitauthor"
 for (project in projects) {
     repo = g.idx(IndexNames.REPOSITORY).get(IdCols.REPOSITORY, project).next()
-    // users = [g.idx(IndexNames.USER).get(IdCols.USER, "dhh").next()]
     users = Helpers.getAllRepositoryUsers(repo)
-    for (user in users) {
+    // in the future, it may be nice to look at all the users, for now
+    // we only look at the interesting users who are affiliated with this
+    // project
+    for (user in users._().filter{interestUsers.contains(it.login)}) {
         if (user instanceof Vertex) {
             println getDossierAsCSV(repo, user, getDossier(g, repo, user, users))
         } else {
