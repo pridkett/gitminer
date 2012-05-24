@@ -86,7 +86,15 @@ def belongsToRepo(repo, e) {
     println("belongsToRepo: " + e + " " + e.label + " " + e.type)
     return false
 }
-def getDossier(IndexableGraph g, Vertex repo, Vertex user) {
+
+def dossierContributionType(Edge e) {
+    if (e.label == EdgeType.ISSUEEVENTACTOR) {
+        return e.inV.event.next()
+    }
+    return e.label
+}
+
+def getDossier(IndexableGraph g, Vertex repo, Vertex user, Set communityUsers) {
 
 // For some reason this code seems to stop abnormally soon. I'm thinking it's a
 // bug in gremlin or pipes. Use the new code below instead.
@@ -114,15 +122,23 @@ def getDossier(IndexableGraph g, Vertex repo, Vertex user) {
                        EdgeType.PULLREQUESTOWNER, \
                        EdgeType.PULLREQUESTREVIEWCOMMENTOWNER]
     for (et in gitHubEdgeTypes) {
-        user.bothE(et).filter{belongsToRepo(repo, it)}.label.groupCount(gh_dossier).iterate()
+        //user.bothE(et).filter{belongsToRepo(repo, it)}.label.groupCount(gh_dossier).iterate()
+        groups = user.bothE(et).filter{belongsToRepo(repo, it)}.collect{dossierContributionType(it)}.countBy{it}
+        gh_dossier = merge(gh_dossier, groups)
+    }
+    if (communityUsers != null) {
+        gh_dossier["communityfollowers"] = user.out(EdgeType.FOLLOWER).toSet().intersect(communityUsers).size()
     }
 
     g_dossier = [:]
     gitEdgeTypes = [EdgeType.COMMITTER, EdgeType.COMMITAUTHOR]
     allGitAccounts = Helpers.getAllGitAccounts(g, user)
     for (et in gitEdgeTypes) {
-        allGitAccounts._().inE(et).filter{belongsToRepo(repo, it)}. \
-            label.groupCount(g_dossier).iterate()
+        //allGitAccounts._().inE(et).filter{belongsToRepo(repo, it)}. \
+            //label.groupCount(g_dossier).iterate()
+        groups = allGitAccounts._().inE(et).filter{belongsToRepo(repo, it)}. \
+            collect{dossierContributionType(it)}.countBy{it}
+        g_dossier = merge(g_dossier, groups)
     }
 //    g_dossier = Helpers.getAllGitAccounts(g, user). \
 //                    //_().in(EdgeType.COMMITAUTHOR, \
@@ -141,13 +157,22 @@ def getDossierAsCSV(Vertex repo, Vertex user, Map dossier) {
             //dossier[EdgeType.DISCUSSIONUSER] ?: 0, \
             dossier[EdgeType.ISSUEASSIGNEE] ?: 0, \
             dossier[EdgeType.ISSUECOMMENTOWNER] ?: 0, \
-            dossier[EdgeType.ISSUEEVENTACTOR] ?: 0, \
+            //dossier[EdgeType.ISSUEEVENTACTOR] ?: 0, \
+            dossier["closed"] ?: 0, \
+            dossier["reopened"] ?: 0, \
+            dossier["subscribed"] ?: 0, \
+            dossier["merged"] ?: 0, \
+            dossier["referenced"] ?: 0, \
+            dossier["mentioned"] ?: 0, \
+            dossier["assigned"] ?: 0, \
             dossier[EdgeType.ISSUEOWNER] ?: 0, \
             dossier[EdgeType.PULLREQUESTCOMMENTOWNER] ?: 0, \
             //dossier[EdgeType.PULLREQUESTISSUEUSER] ?: 0, \
             //dossier[EdgeType.PULLREQUESTOWNER] ?: 0, \
             dossier[EdgeType.PULLREQUESTREVIEWCOMMENTOWNER] ?: 0, \
-            dossier[EdgeType.COMMITTER] ?: 0 ].join(",")
+            dossier["communityfollowers"] ?: 0, \
+            dossier[EdgeType.COMMITTER] ?: 0, \
+            dossier[EdgeType.COMMITAUTHOR] ?: 0 ].join(",")
 }
 
 configMap = ["READ_ONLY": true]
@@ -156,14 +181,14 @@ projects = ["rails/rails"]
 
 // header
 // TODO clean this up, need to unify all of the points where these fields are referenced
-println "repository,username,email,issueassignee,issuecommentowner,issueeventactor,issueowner,pullrequestcommentowner,pullrequestreviewcommentowner,committer"
+println "repository,username,email,issueassignee,issuecommentowner,closed,reopened,subscribed,merged,referenced,mentioned,assigned,issueowner,pullrequestcommentowner,pullrequestreviewcommentowner,communityfollowers,committer,commitauthor"
 for (project in projects) {
     repo = g.idx(IndexNames.REPOSITORY).get(IdCols.REPOSITORY, project).next()
     // users = [g.idx(IndexNames.USER).get(IdCols.USER, "dhh").next()]
     users = Helpers.getAllRepositoryUsers(repo)
     for (user in users) {
         if (user instanceof Vertex) {
-            println getDossierAsCSV(repo, user, getDossier(g, repo, user))
+            println getDossierAsCSV(repo, user, getDossier(g, repo, user, users))
         } else {
             println "------invalid"
             println user.class
