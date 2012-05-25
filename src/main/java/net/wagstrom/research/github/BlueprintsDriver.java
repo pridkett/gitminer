@@ -410,6 +410,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
     }
     
     public Vertex getOrCreateRepository(final String reponame) {
+        log.debug("Getting or creating repository: {}", reponame);
         return getOrCreateVertexHelper(IdCols.REPOSITORY, reponame, VertexType.REPOSITORY, repoidx);
     }
 
@@ -978,6 +979,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      * @return
      */
     public Vertex saveRepository(final Repository repo) {
+        if (repo.generateId() == null) {
+            log.error("Repository ID is null. Skipping");
+            return null;
+        }
         Vertex node = getOrCreateRepository(repo.generateId());
 
         setProperty(node, PropertyName.FULLNAME, repo.generateId());
@@ -1073,7 +1078,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         HashMap<Contributor, Vertex> mapper = new HashMap<Contributor, Vertex>();
         Vertex repoVtx = getOrCreateRepository(repo);
         if (contributors == null) {
-            log.warn("saveRepositoryCollaborators - collaborators are null");
+            log.warn("saveRepositoryContributors - contributors are null");
+            return mapper;
         } else {
             for (Contributor contributor : contributors) {
                 Vertex contributorVtx = saveContributor(contributor);
@@ -1141,8 +1147,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         } else {
             for (Repository fork : forks) {
                 Vertex forkVtx = saveRepository(fork);
-                createEdgeIfNotExist(null, repoVtx, forkVtx, EdgeType.REPOFORK);
-                mapper.put(fork, forkVtx);
+                if (forkVtx != null) {
+                    createEdgeIfNotExist(null, repoVtx, forkVtx, EdgeType.REPOFORK);
+                    mapper.put(fork, forkVtx);
+                }
             }
         }
         return mapper;
