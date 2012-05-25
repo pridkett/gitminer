@@ -265,7 +265,7 @@ public class GitHubMain {
                             log.debug("Fetching {} gists for user {}/{}: {} - last update: {}", new Object[]{proj, ctr, numUsers, username, lastEventsUpdate});
                             fetchAllUserGists(bp, gmv3, username);
                         } else {
-                            log.debug("Fetching {} gists for user {}/{}: {} needs no update/disabled - last update: {}", new Object[]{proj, ctr, numUsers, username, lastEventsUpdate});
+                            log.debug("Fetching {} gists for user {}/{}: {} needs no update/disabled - last update: {}", new Object[]{proj, ctr, numUsers, username, lastGistsUpdate});
                         }
                     }
                 }

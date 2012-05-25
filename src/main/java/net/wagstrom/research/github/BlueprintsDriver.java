@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -73,7 +74,6 @@ import com.tinkerpop.blueprints.pgm.Element;
 import com.tinkerpop.blueprints.pgm.Index;
 import com.tinkerpop.blueprints.pgm.Vertex;
 import com.tinkerpop.gremlin.java.GremlinPipeline;
-import com.tinkerpop.pipes.PipeFunction;
 
 /**
  * 
@@ -472,46 +472,47 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             final String keyProperty, final String valueProperty) {
         Vertex node = getOrCreateRepository(reponame);
         HashMap<String, Date> map = new HashMap<String, Date>();
-        GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
-
-        // first: get all the users watching the project
-        pipe.start(node).in(EdgeType.REPOWATCHED.toString());
-        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
-
-        // add the collaborators
-        pipe = new GremlinPipeline<Vertex, Vertex>();
-        pipe.start(node).out(EdgeType.REPOCOLLABORATOR.toString());
-        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
-
-        // add the contributors
-        pipe = new GremlinPipeline<Vertex, Vertex>();
-        pipe.start(node).out(EdgeType.REPOCONTRIBUTOR.toString());
-        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
-
-        // add the issue owners
-        pipe = new GremlinPipeline<Vertex, Vertex>();
-        pipe.start(node).out(EdgeType.ISSUE.toString()).in(EdgeType.ISSUEOWNER.toString()).dedup();
-        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
-
-        // add the individuals who commented on the issues
-        pipe = new GremlinPipeline<Vertex, Vertex>();
-        pipe.start(node).out(EdgeType.ISSUE.toString()).out(EdgeType.ISSUECOMMENT.toString()).in(EdgeType.ISSUECOMMENTOWNER.toString()).dedup();
-        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
-
-        // add the pull request owners
-        pipe = new GremlinPipeline<Vertex, Vertex>();
-        pipe.start(node).out(EdgeType.PULLREQUEST.toString()).in(EdgeType.PULLREQUESTOWNER.toString()).dedup();
-        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
-
-        // add the pull request commenters
-        pipe = new GremlinPipeline<Vertex, Vertex>();
-        pipe.start(node).out(EdgeType.PULLREQUEST.toString()).out(EdgeType.PULLREQUESTDISCUSSION.toString()).in().filter(new PipeFunction<Vertex, Boolean>() {
-            public Boolean compute(final Vertex argument) {
-                return argument.getProperty(PropertyName.TYPE.toString()).equals(VertexType.USER.toString());
-            }
-        }).dedup();
-        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
-
+//        GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
+//
+//        // first: get all the users watching the project
+//        pipe.start(node).in(EdgeType.REPOWATCHED);
+//        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
+//
+//        // add the collaborators
+//        pipe = new GremlinPipeline<Vertex, Vertex>();
+//        pipe.start(node).out(EdgeType.REPOCOLLABORATOR);
+//        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
+//
+//        // add the contributors
+//        pipe = new GremlinPipeline<Vertex, Vertex>();
+//        pipe.start(node).out(EdgeType.REPOCONTRIBUTOR);
+//        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
+//
+//        // add the issue owners
+//        pipe = new GremlinPipeline<Vertex, Vertex>();
+//        pipe.start(node).out(EdgeType.ISSUE).in(EdgeType.ISSUEOWNER).dedup();
+//        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
+//
+//        // add the individuals who commented on the issues
+//        pipe = new GremlinPipeline<Vertex, Vertex>();
+//        pipe.start(node).out(EdgeType.ISSUE).out(EdgeType.ISSUECOMMENT).in(EdgeType.ISSUECOMMENTOWNER).dedup();
+//        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
+//
+//        // add the pull request owners
+//        pipe = new GremlinPipeline<Vertex, Vertex>();
+//        pipe.start(node).out(EdgeType.PULLREQUEST).in(EdgeType.PULLREQUESTOWNER).dedup();
+//        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
+//
+//        // add the pull request commenters
+//        pipe = new GremlinPipeline<Vertex, Vertex>();
+//        pipe.start(node).out(EdgeType.PULLREQUEST).out(EdgeType.PULLREQUESTDISCUSSION).in().has(PropertyName.TYPE, VertexType.USER).dedup();
+////        filter(new PipeFunction<Vertex, Boolean>() {
+////            public Boolean compute(final Vertex argument) {
+////                return argument.getProperty(PropertyName.TYPE).equals(VertexType.USER);
+////            }
+////        }).dedup();
+//        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
+        addValuesFromIterable(getAllRepositoryUsers(node), map, keyProperty, valueProperty);
         return map;
     }
 
@@ -1781,5 +1782,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         }
         return commentVtx;
     }
+
+    
 
 }

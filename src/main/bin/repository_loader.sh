@@ -25,7 +25,7 @@ fi
 
 # Set Java options
 if [ "$JAVA_OPTIONS" = "" ] ; then
-    JAVA_OPTIONS="-Xms64M -Xmx1536M"
+    JAVA_OPTIONS="-Xms128M -Xmx3072M"
 fi
 
 $JAVA $JAVA_OPTIONS -cp $CP edu.unl.cse.git.App $@
