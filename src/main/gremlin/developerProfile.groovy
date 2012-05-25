@@ -29,17 +29,6 @@ copyProperties = ["login", "name", "createdAt", "followers", "following",
 outputFields = ["id", "role"] + copyProperties +
                ["watched", "organizations"]
 
-def readUserNames(String filename) {
-    userMap = [:].withDefault{[]}
-    pattern = ~/^([a-z]+) ?= ?\[(.*)\]/
-    lines = new FileInputStream(filename).readLines()
-    for (line in lines) {
-        matcher = pattern.matcher(line)
-        userMap[matcher[0][1]] = matcher[0][2].split(", ").collect{it[1..-2]}
-    }
-    return userMap
-}
-
 def buildDeveloperProfile(String login, String role, Graph g) {
     profileMap = [:].withDefault{null}
     user = g.idx(IndexNames.USER).get(IdCols.USER, login).next()
@@ -58,7 +47,7 @@ def buildDeveloperProfile(String login, String role, Graph g) {
 
 m = ["READ_ONLY": true]
 g = new Neo4jGraph("rails.db.20120505", m)
-users = readUserNames("rails.data/rails.db.20120505.people.txt")
+users = RailsHelpers.readUserNames("rails.data/rails.db.20120505.people.txt")
 profiledUsers = new HashSet()
 println(outputFields.join(", "))
 for (role in users.keySet()) {

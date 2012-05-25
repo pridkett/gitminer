@@ -4,27 +4,6 @@ import net.wagstrom.research.github.EdgeType
 import net.wagstrom.research.github.VertexType
 import net.wagstrom.research.github.PropertyName
 
-/**
- * duplicate code taken from projectProfile.groovy
- */
-def readProjectNames(String filename) {
-    return new FileInputStream(filename).readLines()
-}
-
-/**
- * duplicate code taken from developerProfile.groovy
- */
-def readUserNames(String filename) {
-    userMap = [:].withDefault{[]}
-    pattern = ~/^([a-z]+) ?= ?\[(.*)\]/
-    lines = new FileInputStream(filename).readLines()
-    for (line in lines) {
-        matcher = pattern.matcher(line)
-        userMap[matcher[0][1]] = matcher[0][2].split(", ").collect{it[1..-2]}
-    }
-    return userMap
-}
-
 // util
 def merge(Map a, Map b) {
     //return (a + b).groupBy { it.id }.collect { it.value.collectEntries { it } }
@@ -198,10 +177,10 @@ def getDossierAsCSV(Vertex repo, Vertex user, Map dossier) {
 
 configMap = ["READ_ONLY": "true"]
 g = new Neo4jGraph(Defaults.DBPATH, configMap)
-projects = readProjectNames("rails.data/rails.db.20120505.projects.txt")
+projects = RailsHelpers.readProjectNames("rails.data/rails.db.20120505.projects.txt")
 
 interestUsers = new HashSet()
-repoUsers = readUserNames("rails.data/rails.db.20120505.people.txt")
+repoUsers = RailsHelpers.readUserNames("rails.data/rails.db.20120505.people.txt")
 repoUsers.keySet().each{interestUsers.addAll(repoUsers[it])}
 
 // header

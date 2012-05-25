@@ -47,10 +47,6 @@ outputFields = ["id"] +
                                  "pullRequestCommenters", "pullRequestMergers",
                                  "forkOwners"]
 
-def readProjectNames(String filename) {
-    return new FileInputStream(filename).readLines()
-}
-
 def buildProjectProfile(String reponame, Graph g) {
     profileMap = [:].withDefault{null}
     repo = g.idx(IndexNames.REPOSITORY).get(IdCols.REPOSITORY, reponame).next()
@@ -78,7 +74,7 @@ def buildProjectProfile(String reponame, Graph g) {
 
 m = ["READ_ONLY": true]
 g = new Neo4jGraph("rails.db.20120505", m)
-projects = readProjectNames("rails.data/rails.db.20120505.projects.txt")
+projects = RailsHelpers.readProjectNames("rails.data/rails.db.20120505.projects.txt")
 println(outputFields.join(", "))
 for (project in projects) {
     buildProjectProfile(project, g)
