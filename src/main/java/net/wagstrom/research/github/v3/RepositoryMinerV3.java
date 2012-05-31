@@ -77,7 +77,9 @@ public class RepositoryMinerV3 extends AbstractMiner {
             contributors = service.getContributors(repo, false);
         } catch (IOException e) {
             log.error("Error fetching contributors for repository: {}", repo.generateId(), e);
-        }
+        } catch (NullPointerException e) {
+            log.error("NullPointerException fecthing contributors for repository: {}", repo.generateId(), e);
+	}
         return contributors;
     }
     
