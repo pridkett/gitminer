@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import net.wagstrom.research.github.algorithms.Traversals;
+
 import org.eclipse.egit.github.core.Comment;
 import org.eclipse.egit.github.core.Commit;
 import org.eclipse.egit.github.core.CommitComment;
@@ -108,7 +110,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
     protected final Index <Vertex> eventidx;
     protected final Index <Vertex> gollumidx;
     protected final Index <Vertex> downloadidx;
-
+    protected final Traversals traversals;
     /**
      * Base constructor for BlueprintsDriver
      * 
@@ -146,6 +148,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         eventidx = getOrCreateIndex(IndexNames.EVENT);
         gollumidx = getOrCreateIndex(IndexNames.GOLLUM);
         downloadidx = getOrCreateIndex(IndexNames.DOWNLOAD);
+        traversals = new Traversals(this);
     }
 
     /**
@@ -512,7 +515,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 ////            }
 ////        }).dedup();
 //        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
-        addValuesFromIterable(getAllRepositoryUsers(node), map, keyProperty, valueProperty);
+        addValuesFromIterable(traversals.getAllRepositoryUsers(node), map, keyProperty, valueProperty);
         return map;
     }
 
