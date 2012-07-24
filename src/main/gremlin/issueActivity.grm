@@ -1,0 +1,60 @@
+import net.wagstrom.research.github.IndexNames
+import net.wagstrom.research.github.IdCols
+import net.wagstrom.research.github.EdgeType
+import net.wagstrom.research.github.VertexType
+import net.wagstrom.research.github.PropertyName
+
+def zip(Collection a1, Collection a2) {
+    //println "zip"
+    return [a1, a2].transpose()
+}
+
+def deltas(Collection timestamps) {
+    //println "deltas"
+    if (timestamps.size() == 1 || timestamps.size() == 0) { return [] }
+    // zip each issue with its next issue
+    return zip(timestamps, timestamps[1..-1]). \
+        collect{ a, b -> b - a }
+}
+
+def repositoryIssues(Vertex repo) {
+    //println "repositoryIssues"
+    return repo.out(EdgeType.ISSUE ).toList()
+}
+
+def issueActivity(Vertex issue) {
+    //println "issueActivity"
+    return issue.out(EdgeType.ISSUEEVENT).toList()
+}
+
+def issueActivityDeltas(Vertex issue) {
+    // collect timestamps for all of this issue's activity
+    ts = issueActivity(issue). \
+        collect{ it.createdAt }. \
+        sort()
+    // then find the deltas between each of these timestamps
+    return deltas(ts)
+}
+
+def repositoryIssueActivityDeltas(Vertex repository) {
+    return repositoryIssues(repository). \
+        collect{ issueActivityDeltas(it) }. \
+        flatten(). \
+        findAll{ it != 0 }
+}
+
+g = new Neo4jGraph(Defaults.DBPATH)
+projects = ["rails/rails", "joyent/node", "twitter/bootstrap"]
+//projects = Defaults.PROJECTS
+
+println "reponame,delta"
+for (project in projects) {
+    repo = g.idx(IndexNames.REPOSITORY).get(IdCols.REPOSITORY, project).next()
+    deltas = repositoryIssueActivityDeltas(repo)
+    for (d in deltas) {
+        println repo.reponame + "," + d
+    }
+}
+
+g.shutdown()
+
