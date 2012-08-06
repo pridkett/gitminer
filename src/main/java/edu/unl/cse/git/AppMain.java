@@ -48,15 +48,23 @@ public class AppMain {
         Iterable<RevCommit> cmts = RepositoryLoader.getCommits( reponame );
         if (cmts != null) {
             for ( RevCommit cmt : cmts ) {
-                bp.saveCommit( cmt );
-                bp.saveCommitAuthor( cmt, cmt.getAuthorIdent() );
-                bp.saveCommitCommitter( cmt, cmt.getCommitterIdent() );
-                bp.saveCommitParents( cmt, cmt.getParents() );
-                Iterable<String> commitFiles = RepositoryLoader.filesChanged( reponame, cmt );
-                for ( String fileName : commitFiles ) {
-                    bp.saveFile( fileName );
+                try {
+                    bp.saveCommit( cmt );
+                    bp.saveCommitAuthor( cmt, cmt.getAuthorIdent() );
+                    bp.saveCommitCommitter( cmt, cmt.getCommitterIdent() );
+                    bp.saveCommitParents( cmt, cmt.getParents() );
+                    Iterable<String> commitFiles = RepositoryLoader.filesChanged( reponame, cmt );
+                    for ( String fileName : commitFiles ) {
+                        bp.saveFile( fileName );
+                    }
+                    bp.saveCommitFiles( cmt, commitFiles );
+		} catch (java.nio.charset.UnsupportedCharsetException uce) {
+                    // FIXME: there should be a more descriptive error message
+                    log.error("FIXME: Unsupported character set parsing commit", uce);
+                } catch (java.nio.charset.IllegalCharsetNameException ice) {
+                    // FIXME: there should be a more descriptive error message
+                    log.error("Illegal charset name exception", ice);
                 }
-                bp.saveCommitFiles( cmt, commitFiles );
             }
             // refresh the iterator otherwise it will be empty
             cmts = RepositoryLoader.getCommits( reponame );

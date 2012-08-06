@@ -84,6 +84,8 @@ public class RepositoryLoader {
         } catch (JGitInternalException e) {
             log.error("JGitInternalException: ", e);
             // System.exit( 1 );
+        } catch (NullPointerException npe) {
+            log.error("NullPointerException: ", npe);
         }
         return null;
     }
