@@ -37,10 +37,15 @@ public class CommitBlueprintsDriver extends BlueprintsDriver implements Shutdown
      */
 
     public Vertex saveCommit( final RevCommit cmt ) {
-        log.info( "Save Commit: " + gitHash( cmt) );
+        log.info( "Save Commit: {}", gitHash( cmt) );
         Vertex node = getOrCreateCommit( gitHash( cmt ) );
         setProperty( node, PropertyName.DATE, cmt.getCommitTime());
-        setProperty( node, PropertyName.MESSAGE, cmt.getFullMessage() );
+        try {
+            setProperty( node, PropertyName.MESSAGE, cmt.getFullMessage() );
+        } catch (java.nio.charset.IllegalCharsetNameException ice) {
+            // FIXME: should check to see if we can brute force the character set here
+            log.error("Illegal charset saving message for commit {}:", gitHash(cmt), ice);
+        }
         setProperty( node, PropertyName.IS_MERGE, cmt.getParentCount() > 1 );
         return node;
     }
