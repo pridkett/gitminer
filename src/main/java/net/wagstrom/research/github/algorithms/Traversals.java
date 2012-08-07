@@ -50,6 +50,7 @@ public class Traversals extends Algorithm {
     public Set<Vertex> getAllRepositoryUsers(final Vertex repo) {
         Set<Object> users = new HashSet<Object>();
         GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
+        
         List<? extends Element> userList = null;
         userList = pipe.start(repo).in(EdgeType.REPOCOLLABORATOR).toList();
         log.info("Collaboators: {}", userList.size());
