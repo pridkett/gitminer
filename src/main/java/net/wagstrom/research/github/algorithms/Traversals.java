@@ -2,16 +2,23 @@ package net.wagstrom.research.github.algorithms;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.List;
 
 import net.wagstrom.research.github.BlueprintsDriver;
 import net.wagstrom.research.github.EdgeType;
 import net.wagstrom.research.github.PropertyName;
 import net.wagstrom.research.github.VertexType;
 
+import com.tinkerpop.blueprints.pgm.Element;
 import com.tinkerpop.blueprints.pgm.Vertex;
 import com.tinkerpop.gremlin.java.GremlinPipeline;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class Traversals extends Algorithm {
+    private final static Logger log = LoggerFactory.getLogger(Algorithm.class); // NOPMD
+
     public Traversals(BlueprintsDriver driver) {
         super(driver);
     }
@@ -44,14 +51,37 @@ public class Traversals extends Algorithm {
         Set<Object> users = new HashSet<Object>();
         GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
         
-        users.addAll(pipe.start(repo).in(EdgeType.REPOWATCHED).toList());
-        users.addAll(pipe.start(repo).in(EdgeType.REPOCOLLABORATOR).toList());
-        users.addAll(pipe.start(repo).out(EdgeType.ISSUE).in(EdgeType.ISSUEOWNER).dedup().toList());
-        users.addAll(pipe.start(repo).out(EdgeType.ISSUE).out(EdgeType.ISSUECOMMENT).in(EdgeType.ISSUECOMMENTOWNER).dedup().toList());
-        users.addAll(pipe.start(repo).out(EdgeType.PULLREQUEST).in(EdgeType.PULLREQUESTOWNER).dedup().toList());
-        users.addAll(pipe.start(repo).out(EdgeType.PULLREQUEST).
+        List<? extends Element> userList = null;
+        userList = pipe.start(repo).in(EdgeType.REPOCOLLABORATOR).toList();
+        log.info("Collaboators: {}", userList.size());
+        users.addAll(userList);
+
+        pipe = new GremlinPipeline<Vertex, Vertex>();
+        userList = pipe.start(repo).in(EdgeType.REPOWATCHED).toList();
+        log.info("Watchers: {}", userList.size());
+        users.addAll(userList);
+        
+        pipe = new GremlinPipeline<Vertex, Vertex>();
+        userList = pipe.start(repo).out(EdgeType.ISSUE).in(EdgeType.ISSUEOWNER).dedup().toList();
+        log.info("Issue owners: {}", userList.size());
+        users.addAll(userList);
+        
+        pipe = new GremlinPipeline<Vertex, Vertex>();
+        userList = pipe.start(repo).out(EdgeType.ISSUE).out(EdgeType.ISSUECOMMENT).in(EdgeType.ISSUECOMMENTOWNER).dedup().toList();
+        log.info("Issue Comment owners: {}", userList.size()); 
+        users.addAll(userList);
+        
+        pipe = new GremlinPipeline<Vertex, Vertex>();
+        userList = pipe.start(repo).out(EdgeType.PULLREQUEST).in(EdgeType.PULLREQUESTOWNER).dedup().toList();
+        log.info("Pull Request owners: {}", userList.size());
+        users.addAll(userList);
+        
+        pipe = new GremlinPipeline<Vertex, Vertex>();
+        userList = pipe.start(repo).out(EdgeType.PULLREQUEST).
              out(EdgeType.PULLREQUESTDISCUSSION).in().
-             has(PropertyName.TYPE, VertexType.USER).dedup().toList());
+             has(PropertyName.TYPE, VertexType.USER).dedup().toList();
+        log.info("Discussion users: {}", userList.size());
+        users.addAll(userList);
         return (Set<Vertex>)(Set<?>)users;
     }
 
@@ -78,7 +108,6 @@ public class Traversals extends Algorithm {
         Set<Vertex> users = getAllRepositoryUsers(repo);
         GremlinPipeline<Vertex, String> pipe = new GremlinPipeline<Vertex, String>();
         
-        
         pipe.setStarts(users);
         pipe.out(EdgeType.USEREVENT).out().
              has(PropertyName.TYPE, VertexType.REPOSITORY).
@@ -86,7 +115,8 @@ public class Traversals extends Algorithm {
              property(PropertyName.FULLNAME).
              fill(childRepositories);
         
-        
+    
+        pipe = new GremlinPipeline<Vertex, String>();
         pipe.out(EdgeType.REPOWATCHED).dedup().
              property(PropertyName.FULLNAME).fill(childRepositories);
         

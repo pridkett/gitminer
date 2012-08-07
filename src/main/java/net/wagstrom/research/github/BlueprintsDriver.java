@@ -1458,8 +1458,10 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         HashMap<Repository,Vertex> mapper = new HashMap<Repository, Vertex>();
         for (Repository repo : repositories) {
             Vertex reponode = saveRepository(repo);
-            createEdgeIfNotExist(null, source, reponode, edgetype);
-            mapper.put(repo, reponode);
+            if (reponode != null) {
+                createEdgeIfNotExist(null, source, reponode, edgetype);
+                mapper.put(repo, reponode);
+            }
         }
         return mapper;
     }
