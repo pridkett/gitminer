@@ -6,3 +6,6 @@ target/
 .settings
 graph.*db
 graph.*db*.tar.gz
+/test.graph.db
+/rails.db.20120505
+/rails.data

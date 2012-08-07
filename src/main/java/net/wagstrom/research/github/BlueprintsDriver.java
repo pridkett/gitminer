@@ -190,57 +190,6 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return map;
     }
 
-//    public Vertex createCommentFromDiscussion(Discussion disc) {
-//        log.trace("createCommentFromDiscussion: enter");
-//        Comment comment = new Comment();
-//        comment.setBody(disc.getBody());
-//        comment.setCreatedAt(disc.getCreatedAt());
-//        comment.setGravatarId(disc.getGravatarId());
-//        try {
-//            comment.setId(Long.parseLong(disc.getId()));
-//        } catch (NumberFormatException e) {
-//            log.debug("Discussion has a null id: {}", disc);
-//        }
-//        comment.setUpdatedAt(disc.getUpdatedAt());
-//        comment.setUser(disc.getUser().getLogin());
-//        Vertex node = savePullRequestComment(comment);
-//        log.trace("createCommentFromDiscussion: exit");
-//        return node;
-//    }
-//
-//    public Vertex createCommitFromDiscussion(Discussion disc) {
-//        log.trace("createCommitFromDiscusion: enter");
-//        Commit commit = new Commit();
-//        commit.setCommittedDate(disc.getCommittedDate());
-//        commit.setAuthoredDate(disc.getAuthoredDate());
-//        commit.setId(disc.getId());
-//        commit.setAuthor(disc.getAuthor());
-//        commit.setCommitter(disc.getCommitter());
-//        commit.setMessage(disc.getMessage());
-//        commit.setTree(disc.getTree());
-//        commit.setParents(disc.getParents());
-//        Vertex node = saveCommit(commit);
-//        log.trace("createCommitFromDiscussion: exit");
-//        return node;
-//    }
-//
-//    public Vertex createPullRequestReviewCommentFromDiscussion(Discussion disc) {
-//        log.trace("createPullRequestReviewCommentFromDiscussion: enter");
-//        PullRequestReviewComment comment = new PullRequestReviewComment();
-//        comment.setDiffHunk(disc.getDiffHunk());
-//        comment.setBody(disc.getBody());
-//        comment.setPath(disc.getPath());
-//        comment.setPosition(disc.getPosition());
-//        comment.setCommitId(disc.getCommitId());
-//        comment.setOriginalCommitId(disc.getOriginalCommitId());
-//        comment.setUser(disc.getUser());
-//        comment.setCreatedAt(disc.getCreatedAt());
-//        comment.setUpdatedAt(disc.getUpdatedAt());
-//        Vertex node = savePullRequestReviewComment(comment);
-//        log.trace("createPullRequestReviewCommentFromDiscussion: exit");
-//        return node;
-//    }
-
     /**
      * Get a map of date when comments were added to each issue
      * 
@@ -256,7 +205,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         final GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.ISSUE);
 
-        addValuesFromIterable(pipe, map, PropertyName.NUMBER, PropertyName.SYS_COMMENTS_ADDED);
+        addValuesFromIterable(pipe, map, PropertyName.NUMBER,
+                PropertyName.SYS_COMMENTS_ADDED);
         log.warn("number of issues: {}", map.size());
         return map;
     }
@@ -276,25 +226,30 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.ISSUE.toString());
 
-        addValuesFromIterable(pipe, map, PropertyName.NUMBER, PropertyName.SYS_EVENTS_ADDED);
+        addValuesFromIterable(pipe, map, PropertyName.NUMBER,
+                PropertyName.SYS_EVENTS_ADDED);
 
         return map;
     }
 
     public Vertex getOrCreateComment(final long commentId) {
-        return getOrCreateVertexHelper(IdCols.COMMENT, commentId, VertexType.COMMENT, commentidx);
+        return getOrCreateVertexHelper(IdCols.COMMENT, commentId,
+                VertexType.COMMENT, commentidx);
     }
 
     public Vertex getOrCreateCommit(final String hash) {
-        return getOrCreateVertexHelper(IdCols.COMMIT, hash, VertexType.COMMIT, commitidx);
+        return getOrCreateVertexHelper(IdCols.COMMIT, hash, VertexType.COMMIT,
+                commitidx);
     }
 
     public Vertex getOrCreateDiscussion(final String discussionId) {
-        return getOrCreateVertexHelper(IdCols.DISCUSSION, discussionId, VertexType.DISCUSSION, discussionidx);
+        return getOrCreateVertexHelper(IdCols.DISCUSSION, discussionId,
+                VertexType.DISCUSSION, discussionidx);
     }
 
     private Vertex getOrCreateDownload(Download download) {
-        return getOrCreateVertexHelper(IdCols.DOWNLOAD, download.getId(), VertexType.DOWNLOAD, downloadidx);
+        return getOrCreateVertexHelper(IdCols.DOWNLOAD, download.getId(),
+                VertexType.DOWNLOAD, downloadidx);
     }
     
     /**
@@ -475,47 +430,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
             final String keyProperty, final String valueProperty) {
         Vertex node = getOrCreateRepository(reponame);
         HashMap<String, Date> map = new HashMap<String, Date>();
-//        GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
-//
-//        // first: get all the users watching the project
-//        pipe.start(node).in(EdgeType.REPOWATCHED);
-//        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
-//
-//        // add the collaborators
-//        pipe = new GremlinPipeline<Vertex, Vertex>();
-//        pipe.start(node).out(EdgeType.REPOCOLLABORATOR);
-//        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
-//
-//        // add the contributors
-//        pipe = new GremlinPipeline<Vertex, Vertex>();
-//        pipe.start(node).out(EdgeType.REPOCONTRIBUTOR);
-//        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
-//
-//        // add the issue owners
-//        pipe = new GremlinPipeline<Vertex, Vertex>();
-//        pipe.start(node).out(EdgeType.ISSUE).in(EdgeType.ISSUEOWNER).dedup();
-//        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
-//
-//        // add the individuals who commented on the issues
-//        pipe = new GremlinPipeline<Vertex, Vertex>();
-//        pipe.start(node).out(EdgeType.ISSUE).out(EdgeType.ISSUECOMMENT).in(EdgeType.ISSUECOMMENTOWNER).dedup();
-//        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
-//
-//        // add the pull request owners
-//        pipe = new GremlinPipeline<Vertex, Vertex>();
-//        pipe.start(node).out(EdgeType.PULLREQUEST).in(EdgeType.PULLREQUESTOWNER).dedup();
-//        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
-//
-//        // add the pull request commenters
-//        pipe = new GremlinPipeline<Vertex, Vertex>();
-//        pipe.start(node).out(EdgeType.PULLREQUEST).out(EdgeType.PULLREQUESTDISCUSSION).in().has(PropertyName.TYPE, VertexType.USER).dedup();
-////        filter(new PipeFunction<Vertex, Boolean>() {
-////            public Boolean compute(final Vertex argument) {
-////                return argument.getProperty(PropertyName.TYPE).equals(VertexType.USER);
-////            }
-////        }).dedup();
-//        addValuesFromIterable(pipe, map, keyProperty, valueProperty);
-        addValuesFromIterable(traversals.getAllRepositoryUsers(node), map, keyProperty, valueProperty);
+        addValuesFromIterable(traversals.getAllRepositoryUsers(node), map,
+                keyProperty, valueProperty);
         return map;
     }
 
@@ -532,7 +448,8 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
         GremlinPipeline<Vertex, Vertex> pipe = new GremlinPipeline<Vertex, Vertex>();
         pipe.start(node).out(EdgeType.PULLREQUEST.toString());
-        addValuesFromIterable(pipe, map, PropertyName.NUMBER, PropertyName.SYS_DISCUSSIONS_ADDED);
+        addValuesFromIterable(pipe, map, PropertyName.NUMBER,
+                PropertyName.SYS_DISCUSSIONS_ADDED);
         return map;
     }
 
