@@ -1,0 +1,30 @@
+import net.wagstrom.research.github.IndexNames
+import net.wagstrom.research.github.IdCols
+import net.wagstrom.research.github.EdgeType
+import net.wagstrom.research.github.VertexType
+import net.wagstrom.research.github.PropertyName
+
+g = new Neo4jGraph(Defaults.DBPATH)
+//projects = ["rails/rails"]
+//projects = Defaults.PROJECTS
+
+//def getCoreProjectUsers(Vertex repo) {
+//}
+
+userIndex = g.idx(IndexNames.USER)
+
+projects = new File("completed.txt").readLines()
+coreUsernames = new File("coreUsers.txt").readLines()
+coreUsers = coreUsernames.collect{ userIndex.get(IdCols.USER, it).next() }.toSet()
+
+println "destinationReponame,numUsers"
+for (project in projects) {
+    repo = g.idx(IndexNames.REPOSITORY).get(IdCols.REPOSITORY, project).next()
+    projectUsers = Helpers.getAllRepositoryUsers(repo)
+    overlap = coreUsers.intersect(projectUsers).size()
+
+    println project + "," + overlap
+}
+
+g.shutdown()
+
