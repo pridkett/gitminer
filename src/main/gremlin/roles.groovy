@@ -15,6 +15,7 @@ PRODDER_TIME_THRESHOLD=14*86400 // number of seconds that an issue should be idl
 CW_MIN_SPAN_TIME = 14*86400
 // minimum number of commits to be included in analysis, 3 because we need at least 2 deltas
 CW_MIN_COMMITS = 3
+PROJECTS_FILE = [System.getenv("HOME"), "Google Drive", "Ecosystem Research", "Data", "rails.db.20120505.coreMemberIntersections.txt"].join(File.separator)
 
 def calculateDeltas(Collection xs) {
     return (xs == null || xs.size()<2)?null:[xs, xs[1..xs.size()-1]].transpose().collect{a,b -> b-a}
@@ -226,7 +227,10 @@ def devInfo(IndexableGraph g, Vertex user, Vertex repo, Map userSet) {
 
 def devInfoThreshold(Map devInfo, String key, float threshold) {
     int numEntries = devInfo.size() * threshold
-    return devInfo.sort{a,b -> a.value[key] <=> b.value[key]}.keySet().asList().reverse()[0..numEntries] as Set    
+    if (numEntries == 0) { 
+        return []
+    }
+    return devInfo.sort{a,b -> a.value[key] <=> b.value[key]}.keySet().asList().reverse()[0..numEntries] as Set
 }
 
 /**
@@ -265,16 +269,32 @@ def allUserRoleOverload(Map allUserData, Collection projects, Collection metrics
     }
 }
 
+/**
+ * read in the list of projects from the file
+ *
+ * this is a really simple file format that consists of:
+ *   reponame, sharedusers
+ *
+ * where sharedusers is the number of users that are shared in common with rails/rails
+ */
+def readProjectListFile(String projectFile) {
+    file = new File(projectFile)
+    projects = file.readLines().collect{it.split(",")[0]}
+    return projects[1..projects.size-1]
+    // return projects[126..129]
+}
+
 g = new Neo4jGraph(Defaults.DBPATH)
 // projects = ["tinkerpop/gremlin", "tinkerpop/blueprints", "tinkerpop/pipes", "tinkerpop/rexster", "tinkerpop/frames"]
-projects = Defaults.PROJECTS
+// projects = Defaults.PROJECTS
+projects = readProjectListFile(PROJECTS_FILE)
 
 allUserData = [:]
 
 for (project in projects) {
     repo = g.idx(IndexNames.REPOSITORY).get(IdCols.REPOSITORY, project).next()
     println "\n\n******************************************"
-    println repo.name
+    println project
                              
     watchers = repo.in(EdgeType.REPOWATCHED).toSet()
         
@@ -469,38 +489,50 @@ for (project in projects) {
     }
     int numEntries = allProdders.size() * ROCKSTAR_THRESHOLD
     println "Prodders"
-    println allProdders.sort{a,b -> a.value <=> b.value}.keySet().asList().reverse()[0..numEntries].login.sort()
-    userSet["prodders"] = allProdders.sort{a,b -> a.value <=> b.value}.keySet().asList().reverse()[0..numEntries]
+    if (allProdders.size > 0) {
+        println allProdders.sort{a,b -> a.value <=> b.value}.keySet().asList().reverse()[0..numEntries].login.sort()
+        userSet["prodders"] = allProdders.sort{a,b -> a.value <=> b.value}.keySet().asList().reverse()[0..numEntries]
+    } else {
+        userSet["prodders"] = []
+    }
     
     println "Code Warriors"
     // this has been inlined in the following function because groovy fails to type 'correctly'
     //def zip(Collection a, Collection b) { [a, b].transpose() }
 
     // select all commits
-    committerDeltas = repo.in(EdgeType.REPOSITORY). \
-                           // group for each committer & extract from pipe
-                           groupBy{ getUserFromGitUser(it.out(EdgeType.COMMITAUTHOR).next()) }{it}. \
-                           //groupBy{ it.out(EdgeType.COMMITAUTHOR).next() }{it}. \
-                           cap.next(). \
-                           // extract commit times and sort by date
-                           collect{a, b -> [a, b*.outE("COMMITTER")*.when*.next().sort{it}]}. \
-                           // filter users whose commits have not spanned 14 days
-                           findAll{a, b -> b[-1]-b[0] > CW_MIN_SPAN_TIME && 
-                                                        b.size() > CW_MIN_COMMITS}. \
-                           // calculate deltas between times
-                           collect{a, b -> [a, calculateDeltas(b)]}. \
-                           // filter nil deltas (needed?)
-                           //findAll{a, b -> b != null }. \
-                           // run mean and sd
-                           collect{a, b -> [a, b.mean(), stdev(b)]}
+    try {
+        committerDeltas = repo.in(EdgeType.REPOSITORY). \
+                               // group for each committer & extract from pipe
+                               groupBy{ getUserFromGitUser(it.out(EdgeType.COMMITAUTHOR).next()) }{it}. \
+                               //groupBy{ it.out(EdgeType.COMMITAUTHOR).next() }{it}. \
+                               cap.next(). \
+                               // extract commit times and sort by date
+                               collect{a, b -> [a, b*.outE("COMMITTER")*.when*.next().sort{it}]}. \
+                               // filter users whose commits have not spanned 14 days
+                               findAll{a, b -> b[-1]-b[0] > CW_MIN_SPAN_TIME && 
+                                                            b.size() > CW_MIN_COMMITS}. \
+                               // calculate deltas between times
+                               collect{a, b -> [a, calculateDeltas(b)]}. \
+                               // filter nil deltas (needed?)
+                               //findAll{a, b -> b != null }. \
+                               // run mean and sd
+                               collect{a, b -> [a, b.mean(), stdev(b)]}
+    } catch ( java.util.NoSuchElementException nse ) {
+        committerDeltas = []
+    }
     //println committerDeltas
     // reverse sort by mean, take top 20%, extract github user
-    frequentUsers   = committerDeltas.findAll{it!=null}.sort{row -> -row[1]}[0..committerDeltas.size()*ROCKSTAR_THRESHOLD]*.get(0)
-    // reverse sort by sd, take top 20%, extract githubuser
-    consistentUsers = committerDeltas.findAll{it!=null}.sort{row -> -row[2]}[0..committerDeltas.size()*ROCKSTAR_THRESHOLD]*.get(0)
-    println frequentUsers.intersect(consistentUsers).login.sort()
-    userSet["codeWarriors"] = frequentUsers.intersect(consistentUsers)
-    
+    if (committerDeltas.size > 0) {
+        frequentUsers   = committerDeltas.findAll{it!=null}.sort{row -> -row[1]}[0..committerDeltas.size()*ROCKSTAR_THRESHOLD]*.get(0)
+        // reverse sort by sd, take top 20%, extract githubuser
+        consistentUsers = committerDeltas.findAll{it!=null}.sort{row -> -row[2]}[0..committerDeltas.size()*ROCKSTAR_THRESHOLD]*.get(0)
+        println frequentUsers.intersect(consistentUsers).login.sort()
+        userSet["codeWarriors"] = frequentUsers.intersect(consistentUsers)
+    } else {
+        userSet["codeWarriors"] = []
+    }
+
     println "Nomads"
 
     // select commits
@@ -533,21 +565,13 @@ g.shutdown()
 println allUserData.keySet()
 
 println "*************************************************"
-println "Tinkerpop Stuff"
-println "*************************************************"
-allUserDataCompare(allUserData, ["tinkerpop/blueprints", "tinkerpop/pipes", "tinkerpop/gremlin", "tinkerpop/rexster", "tinkerpop/frames"], \
-                   allUserData["tinkerpop/blueprints"].keySet().toList())
-allUserRoleOverload(allUserData, ["tinkerpop/blueprints"], allUserData["tinkerpop/blueprints"].keySet().toList())    
-
-println "*************************************************"
-println "Rails Stuff"
-println "*************************************************"
-allUserDataCompare(allUserData, ["rails/rails", "rack/rack", "sinatra/sinatra"], \
-    allUserData["tinkerpop/blueprints"].keySet().toList())
-
-println "*************************************************"
 println "MEGA COMPARE!"
 println "*************************************************"
-allUserDataCompare(allUserData, projects, \
-    allUserData["tinkerpop/blueprints"].keySet().toList())
-allUserRoleOverload(allUserData, projects, allUserData["tinkerpop/blueprints"].keySet().toList())
+println "a " + allUserData.keySet()
+println allUserData.keySet().toList()[0]
+println "c " + allUserData[allUserData.keySet().toList()[0]]
+println "d " + allUserData[allUserData.keySet().toList()[0]].keySet()
+metrics = allUserData[allUserData.keySet().toList()[0]].keySet().toList()
+println "Metrics: " + metrics
+allUserDataCompare(allUserData, projects, metrics)
+allUserRoleOverload(allUserData, projects, metrics)
