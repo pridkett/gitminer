@@ -248,7 +248,7 @@ def allUserDataCompare(Map allUserData, Collection projects, Collection metrics)
         for (int i = 0; i < projects.size(); i ++) {
             for (int j = 0; j <= i; j ++) {
                 overlap[i][j] = allUserData[projects[i]][metric].intersect(allUserData[projects[j]][metric]).size()
-                print sprintf("%4d", overlap[i][j])
+                print sprintf("%6d", overlap[i][j])
             }
             println ""
         }
@@ -264,7 +264,7 @@ def allUserRoleOverload(Map allUserData, Collection projects, Collection metrics
         for (int i = 0; i < metrics.size(); i ++) {
             for (int j = 0; j <= i; j ++) {
                 overlap[i][j] = allUserData[project][metrics[i]].intersect(allUserData[project][metrics[j]]).size()
-                print sprintf("%4d", overlap[i][j])
+                print sprintf("%6d", overlap[i][j])
             }
             println ""
         }
@@ -573,11 +573,11 @@ println allUserData.keySet()
 println "*************************************************"
 println "MEGA COMPARE!"
 println "*************************************************"
-println "a " + allUserData.keySet()
-println allUserData.keySet().toList()[0]
-println "c " + allUserData[allUserData.keySet().toList()[0]]
-println "d " + allUserData[allUserData.keySet().toList()[0]].keySet()
-metrics = allUserData[allUserData.keySet().toList()[0]].keySet().toList()
+# println "a " + allUserData.keySet()
+# println allUserData.keySet().toList()[0]
+# println "c " + allUserData[allUserData.keySet().toList()[0]]
+# println "d " + allUserData[allUserData.keySet().toList()[0]].keySet()
+# metrics = allUserData[allUserData.keySet().toList()[0]].keySet().toList()
 println "Metrics: " + metrics
 allUserDataCompare(allUserData, projects, metrics)
 allUserRoleOverload(allUserData, projects, metrics)
