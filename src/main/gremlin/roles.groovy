@@ -573,11 +573,6 @@ println allUserData.keySet()
 println "*************************************************"
 println "MEGA COMPARE!"
 println "*************************************************"
-# println "a " + allUserData.keySet()
-# println allUserData.keySet().toList()[0]
-# println "c " + allUserData[allUserData.keySet().toList()[0]]
-# println "d " + allUserData[allUserData.keySet().toList()[0]].keySet()
-# metrics = allUserData[allUserData.keySet().toList()[0]].keySet().toList()
 println "Metrics: " + metrics
 allUserDataCompare(allUserData, projects, metrics)
 allUserRoleOverload(allUserData, projects, metrics)
