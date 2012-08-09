@@ -17,7 +17,7 @@ CW_MIN_SPAN_TIME = 14*86400
 CW_MIN_COMMITS = 3
 
 PROJECTS_FILE = [System.getenv("HOME"), "Google Drive", "Ecosystem Research", "Data", "rails.db.20120505.coreMemberIntersections.txt"].join(File.separator)
-MIN_OVERLAP = 40 // minimum number of overlap users with rails/rails as determined by the above file
+MIN_OVERLAP = 100 // minimum number of overlap users with rails/rails as determined by the above file
 
 def calculateDeltas(Collection xs) {
     return (xs == null || xs.size()<2)?null:[xs, xs[1..xs.size()-1]].transpose().collect{a,b -> b-a}
@@ -573,6 +573,7 @@ println allUserData.keySet()
 println "*************************************************"
 println "MEGA COMPARE!"
 println "*************************************************"
+metrics = allUserData[allUserData.keySet().toList()[0]].keySet().toList()
 println "Metrics: " + metrics
 allUserDataCompare(allUserData, projects, metrics)
 allUserRoleOverload(allUserData, projects, metrics)
