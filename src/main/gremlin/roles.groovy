@@ -15,7 +15,9 @@ PRODDER_TIME_THRESHOLD=14*86400 // number of seconds that an issue should be idl
 CW_MIN_SPAN_TIME = 14*86400
 // minimum number of commits to be included in analysis, 3 because we need at least 2 deltas
 CW_MIN_COMMITS = 3
+
 PROJECTS_FILE = [System.getenv("HOME"), "Google Drive", "Ecosystem Research", "Data", "rails.db.20120505.coreMemberIntersections.txt"].join(File.separator)
+MIN_OVERLAP = 40 // minimum number of overlap users with rails/rails as determined by the above file
 
 def calculateDeltas(Collection xs) {
     return (xs == null || xs.size()<2)?null:[xs, xs[1..xs.size()-1]].transpose().collect{a,b -> b-a}
@@ -276,18 +278,22 @@ def allUserRoleOverload(Map allUserData, Collection projects, Collection metrics
  *   reponame, sharedusers
  *
  * where sharedusers is the number of users that are shared in common with rails/rails
+ *
  */
-def readProjectListFile(String projectFile) {
+def readProjectListFile(String projectFile, int minOverlap) {
     file = new File(projectFile)
-    projects = file.readLines().collect{it.split(",")[0]}
-    return projects[1..projects.size-1]
+    projects = file.readLines()
+    // there is a header line that we need to discard
+    // otherwise we take all projects with the specified overlap
+    return projects[1..projects.size()-1].findAll{Integer.parseInt(it.split(",")[1]) >= minOverlap}.collect{it.split(",")[0]}
+    // return projects[1..projects.size-1]
     // return projects[126..129]
 }
 
 g = new Neo4jGraph(Defaults.DBPATH)
 // projects = ["tinkerpop/gremlin", "tinkerpop/blueprints", "tinkerpop/pipes", "tinkerpop/rexster", "tinkerpop/frames"]
 // projects = Defaults.PROJECTS
-projects = readProjectListFile(PROJECTS_FILE)
+projects = readProjectListFile(PROJECTS_FILE, MIN_OVERLAP)
 
 allUserData = [:]
 
