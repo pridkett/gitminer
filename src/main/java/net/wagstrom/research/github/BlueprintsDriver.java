@@ -1483,7 +1483,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         String eventType = event.getType();
         Vertex eventVertex = getOrCreateEvent(event);
         Vertex repoVertex = null;
-        if (event.getActor() != null) {
+        if (event.getActor() != null && event.getActor().getLogin() != null) {
             Vertex userVertex = getOrCreateUser(event.getActor());
             createEdgeIfNotExist(userVertex, eventVertex, EdgeType.USEREVENT);
         }
