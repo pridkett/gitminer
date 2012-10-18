@@ -70,34 +70,34 @@ public class GitHubMain {
         ArrayList <String> organizations = new ArrayList<String> ();
         props = GithubProperties.props();
 
-        int v3MaxCalls = Integer.parseInt(props.getProperty("net.wagstrom.research.github.apiThrottle.maxCalls.v3", "0"));
-        int v3MaxCallsInterval = Integer.parseInt(props.getProperty("net.wagstrom.research.github.apiThrottle.maxCallsInterval.v3", "0"));
+        int v3MaxCalls = Integer.parseInt(props.getProperty(PropNames.GITHUB_THROTTLE_MAX_CALLS, PropDefaults.GITHUB_THROTTLE_MAX_CALLS));
+        int v3MaxCallsInterval = Integer.parseInt(props.getProperty(PropNames.GITHUB_THROTTLE_MAX_CALLS_INTERVAL, PropDefaults.GITHUB_THROTTLE_MAX_CALLS_INTERVAL));
         if (v3MaxCalls >0 && v3MaxCallsInterval > 0) {
-            log.info("Setting v3 Max Call Rate: {}/{}", v3MaxCalls, v3MaxCallsInterval);			
+            log.info("Setting v3 Max Call Rate: {}/{}", v3MaxCalls, v3MaxCallsInterval);
             v3throttle.setMaxRate(v3MaxCalls, v3MaxCallsInterval);
         }
         v3throttle.setId("v3");
 
         // set the minimum age for an artifact in milliseconds
-        double minAgeDouble = Double.parseDouble(props.getProperty("net.wagstrom.research.github.refreshTime", "0.0"));
+        double minAgeDouble = Double.parseDouble(props.getProperty(PropNames.GITHUB_REFRESH_TIME, PropDefaults.GITHUB_REFRESH_TIME));
         refreshTime = (long)minAgeDouble * 86400 * 1000;
         log.info("Minimum artifact refresh time: {}ms", refreshTime);
 
         // get the list of projects
-        for (String proj : props.getProperty("net.wagstrom.research.github.projects", "").split(",")) {
+        for (String proj : props.getProperty(PropNames.GITHUB_PROJECT_NAMES, PropDefaults.GITHUB_PROJECT_NAMES).split(",")) {
             if (!proj.trim().equals("")) {
                 projects.add(proj.trim());
             }
         }
 
-        for (String user : props.getProperty("net.wagstrom.research.github.users", "").split(",")) {
+        for (String user : props.getProperty(PropNames.GITHUB_USERNAMES, PropDefaults.GITHUB_USERNAMES).split(",")) {
             if (!user.trim().equals("")) {
                 users.add(user.trim());
             }
         }
 
         // get the list of organizations
-        for (String organization : props.getProperty("net.wagstrom.research.github.organizations", "").split(",")){
+        for (String organization : props.getProperty(PropNames.GITHUB_ORGANIZATIONS, PropDefaults.GITHUB_ORGANIZATIONS).split(",")){
             if (!organization.trim().equals("")) {
                 organizations.add(organization.trim());
             }
@@ -123,7 +123,7 @@ public class GitHubMain {
         CollaboratorMinerV3 cmv3 = new CollaboratorMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
         EventMinerV3 emv3 = new EventMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
 
-        if (props.getProperty("net.wagstrom.research.github.miner.repositories","true").equals("true")) {
+        if (props.getProperty(PropNames.GITHUB_MINE_REPOS, PropDefaults.GITHUB_MINE_REPOS).equals("true")) {
             for (String proj : projects) {
                 String [] projsplit = proj.split("/");
 
@@ -135,20 +135,20 @@ public class GitHubMain {
                 log.warn("handling project owner...");
                 handleProjectOwner(repo.getOwner(), umv3, omv3);
 
-                if (props.getProperty("net.wagstrom.research.github.miner.repositories.collaborators", "true").equals("true")) {
+                if (props.getProperty(PropNames.GITHUB_MINE_REPO_COLLABORATORS, PropDefaults.GITHUB_MINE_REPO_COLLABORATORS).equals("true")) {
                     bp.saveRepositoryCollaborators(repo, cmv3.getCollaborators(repo));
                 }
-                if (props.getProperty("net.wagstrom.research.github.miner.repositories.contributors", "true").equals("true")) {
+                if (props.getProperty(PropNames.GITHUB_MINE_REPO_CONTRIBUTORS, PropDefaults.GITHUB_MINE_REPO_CONTRIBUTORS).equals("true")) {
                     bp.saveRepositoryContributors(repo, rmv3.getContributors(repo));
                 }
-                if (props.getProperty("net.wagstrom.research.github.miner.repositories.watchers", "true").equals("true")) {
+                if (props.getProperty(PropNames.GITHUB_MINE_REPO_WATCHERS, PropDefaults.GITHUB_MINE_REPO_WATCHERS).equals("true")) {
                     bp.saveRepositoryWatchers(repo, wmv3.getWatchers(repo));
                 }
-                if (props.getProperty("net.wagstrom.research.github.miner.repositories.forks", "true").equals("true")) {
+                if (props.getProperty(PropNames.GITHUB_MINE_REPO_FORKS, PropDefaults.GITHUB_MINE_REPO_FORKS).equals("true")) {
                     bp.saveRepositoryForks(repo, rmv3.getForks(repo));
                 }
 
-                if (props.getProperty("net.wagstrom.research.github.miner.repositories.issues","true").equals("true")) {
+                if (props.getProperty(PropNames.GITHUB_MINE_REPO_ISSUES, PropDefaults.GITHUB_MINE_REPO_ISSUES).equals("true")) {
                     if (repo.isHasIssues()) {
                         Collection<org.eclipse.egit.github.core.Issue> issues3 = imv3.getAllIssues(projsplit[0], projsplit[1]);
                         if (issues3 != null) {
@@ -198,7 +198,7 @@ public class GitHubMain {
                     }
                 }
 
-                if (props.getProperty("net.wagstrom.research.github.miner.repositories.pullrequests", "true").equals("true")) {
+                if (props.getProperty(PropNames.GITHUB_MINE_REPO_PULLREQUESTS, PropDefaults.GITHUB_MINE_REPO_PULLREQUESTS).equals("true")) {
                     Collection<org.eclipse.egit.github.core.PullRequest> requests3 = pmv3.getAllPullRequests(repo);
                     if (requests3 != null) {
                         bp.savePullRequests(repo, requests3);
@@ -225,7 +225,7 @@ public class GitHubMain {
                     }
                 }
 
-                if (props.getProperty("net.wagstrom.research.github.miner.repositories.users", "true").equals("true")) {
+                if (props.getProperty(PropNames.GITHUB_MINE_REPO_USERS, PropDefaults.GITHUB_MINE_REPO_USERS).equals("true")) {
                     log.trace("calling getProjectUsersLastFullUpdate");
                     Map<String, Date> allProjectUsers = bp.getProjectUsersLastFullUpdate(proj);
                     Map<String, Date> allProjectUsersGists = bp.getProjectUsersLastGistsUpdate(proj);
@@ -252,7 +252,7 @@ public class GitHubMain {
                             log.debug("Fecthing {} user {}/{}: {} needs no update - last update {}", new Object[]{proj, ctr, numUsers, username, lastFullUpdate});
                         }
                         
-                        if (props.getProperty("net.wagstrom.research.github.miner.users.events", "true").equals("true") &&
+                        if (props.getProperty(PropNames.GITHUB_MINE_USER_EVENTS, PropDefaults.GITHUB_MINE_USER_EVENTS).equals("true") &&
                                 needsUpdate(lastEventsUpdate, true)) {
                             log.debug("Fetching {} events for user {}/{}: {} - last update: {}", new Object[]{proj, ctr, numUsers, username, lastEventsUpdate});
                             fetchAllUserEvents(bp, emv3, username);
@@ -260,7 +260,7 @@ public class GitHubMain {
                             log.debug("Fetching {} events for user {}/{}: {} needs no update/disabled - last update: {}", new Object[]{proj, ctr, numUsers, username, lastEventsUpdate});
                         }
                         
-                        if (props.getProperty("net.wagstrom.research.github.miner.users.gists", "true").equals("true") &&
+                        if (props.getProperty(PropNames.GITHUB_MINE_USER_GISTS, PropDefaults.GITHUB_MINE_USER_GISTS).equals("true") &&
                                 needsUpdate(lastGistsUpdate, true)) {
                             log.debug("Fetching {} gists for user {}/{}: {} - last update: {}", new Object[]{proj, ctr, numUsers, username, lastEventsUpdate});
                             fetchAllUserGists(bp, gmv3, username);
@@ -273,17 +273,19 @@ public class GitHubMain {
         }
 
         // FIXME: this should check for when the user was last updated
-        if (props.getProperty("net.wagstrom.research.github.miner.users","true").equals("true")) {
+        if (props.getProperty(PropNames.GITHUB_MINE_USERS, PropDefaults.GITHUB_MINE_USERS).equals("true")) {
             for (String username : users) {
                 fetchAllUserData(bp, umv3, rmv3, wmv3, username);
-                if (props.getProperty("net.wagstrom.research.github.miner.users.events", "true").equals("true")) {
+                if (props.getProperty(PropNames.GITHUB_MINE_USER_EVENTS, PropDefaults.GITHUB_MINE_USER_EVENTS).equals("true")) {
                     fetchAllUserEvents(bp, emv3, username);
                 }
-                fetchAllUserGists(bp, gmv3, username);
+                if (props.getProperty(PropNames.GITHUB_MINE_USER_GISTS, PropDefaults.GITHUB_MINE_USER_GISTS).equals("true")) {
+                    fetchAllUserGists(bp, gmv3, username);
+                }
             }
         }
 
-        if (props.getProperty("net.wagstrom.research.github.miner.organizations","true").equals("true")) {
+        if (props.getProperty(PropNames.GITHUB_MINE_ORGANIZATIONS, PropDefaults.GITHUB_MINE_ORGANIZATIONS).equals("true")) {
             for (String organizationName : organizations) {
                 log.warn("Fetching organization: {}", organizationName);
                 User organization = omv3.getOrganization(organizationName);
@@ -319,6 +321,12 @@ public class GitHubMain {
      */
     private void handleProjectOwner(final User owner, final UserMinerV3 umv3, final OrganizationMinerV3 omv3) {
         User user = umv3.getUser(owner.getLogin());
+        
+        if (user.getType() == null) {
+            log.warn("User has no type: {}", user);
+            return;
+        }
+        
         if (user.getType().toLowerCase().equals("organization")) {
             Collection<User> members = omv3.getPublicMembers(user.getLogin());
             bp.saveOrganizationPublicMembers(user, members);
@@ -458,7 +466,7 @@ public class GitHubMain {
 
     private void fetchAllUserGists(final BlueprintsDriver bp,
             final GistMinerV3 gmv3, final String user) {
-        if (props.getProperty("net.wagstrom.research.github.miner.gists","true").equals("true")) {
+        if (props.getProperty(PropNames.GITHUB_MINE_GISTS, PropDefaults.GITHUB_MINE_GISTS).equals("true")) {
             bp.saveUserGists(user, gmv3.getGists(user));
         }
     }
@@ -474,11 +482,11 @@ public class GitHubMain {
         }
 
         try {
-            String dbengine = p.getProperty("net.wagstrom.research.github.dbengine").trim();
-            String dburl = p.getProperty("net.wagstrom.research.github.dburl").trim();
+            String dbengine = p.getProperty(PropNames.DBENGINE, PropDefaults.DBURL).trim();
+            String dburl = p.getProperty(PropNames.DBURL, PropDefaults.DBURL).trim();
             bp = new BlueprintsDriver(dbengine, dburl, dbprops);
         } catch (NullPointerException e) {
-            log.error("properties undefined, must define both net.wagstrom.research.github.dbengine and net.wagstrom.research.github.dburl");
+            log.error("properties undefined, must define both {} and {}", PropNames.DBENGINE, PropNames.DBURL);
             bp = null;
         }
         return bp;

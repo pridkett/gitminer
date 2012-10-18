@@ -1434,13 +1434,23 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
         return saveUserFollowersFollowing(sourceuser, users, EdgeType.FOLLOWING);
     }
 
+    /**
+     * Given a string of a username and a list of Gists, saves all those gists
+     * to the database
+     * 
+     * @param user the username as a string
+     * @param gists the list of gists
+     * @return a map of gist to the vertex in the database
+     */
     public Map<Gist, Vertex> saveUserGists(final String user, final List<Gist> gists) {
         Vertex usernode = getOrCreateUser(user);
         HashMap<Gist, Vertex> mapper = new HashMap<Gist, Vertex>();
-        for (Gist gist : gists) {
-            Vertex gistnode = saveGist(gist);
-            createEdgeIfNotExist(usernode, gistnode, EdgeType.GISTOWNER);
-            mapper.put(gist, gistnode);
+        if (gists != null) {
+            for (Gist gist : gists) {
+                Vertex gistnode = saveGist(gist);
+                createEdgeIfNotExist(usernode, gistnode, EdgeType.GISTOWNER);
+                mapper.put(gist, gistnode);
+            }
         }
         setProperty(usernode, PropertyName.SYS_GISTS_ADDED, new Date());
         return mapper;
