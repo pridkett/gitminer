@@ -97,51 +97,112 @@ for the tool to function.
   probably set this much higher. This will GREATLY speed up your crawls if you
   set it to a high value.
 
-**Important (April 13, 2012):** Small changes have been made to the packaging of the code
-submitted along with the FSE2012 paper. Please see [artifacts.txt](https://github.com/pridkett/gitminer/blob/master/artifacts.md)
-for more information.
+* **name:** `net.wagstrom.research.github.apiThrottle.maxCalls.v3`<br>
+  **default** `4980`<br>
+  **description:** The maximum number of calls via the GitHub v3 API in a given
+  time period. Use this to rate limit under what the API says. I typically set
+  this value to `4980` or something like that to avoid problems when I hit API
+  limits. If the value is `0` then this is ignored.
+  
+* **name:** `net.wagstrom.research.github.apiThrottle.maxCallsInterval.v3`<br>
+  **default:** `3600`<br>
+  **description:** Time period (in seconds) to make the maximum number of calls
+  using the v3 GitHub API. Previously
+  some APIs allowed 60calls/min and others 5000/hr, but the API didn't set this.
+  Now it seems to always be 5000/hr, so this is generally set to `3600`.
 
-**Almost as important:** The rest of this document is out of date.
+* **name:** `net.wagstrom.research.github.miner.repositories`<br>
+  **default:** `true`<br>
+  **description:** a `true`/`false` parameter on whether or not to download
+  data for the projects specified in `net.wagstrom.research.github.users` property.
+  
+* **name:** `net.wagstrom.research.github.miner.repositories.collaborators`<br>
+  **default:** `true`<br>
+  **description:** a `true`/`false` parameter on whether or not to downlaod
+  data for the collaborators listed for each project.
+  
+* **name:** `net.wagstrom.research.github.miner.repositories.contributors`<br>
+  **default:** `true`<br>
+  **description:** a `true`/`false` parameter on whether or not to download
+  data for the contributors listed for each project.
+  
+* **name:** `net.wagstrom.research.github.miner.repositories.watchers`<br>
+  **default:** `true`<br>
+  **description:** a `true`/`false` parameter for whether or not to download
+  data for the watchers listed for each project.
+  
+* **name:** `net.wagstrom.research.github.miner.repositories.forks`<br>
+  **default:** `true`<br>
+  **description:** a `true`/`false` parameter for whether or not to download
+  data about forks for each project.
+  
+* **name:** `net.wagstrom.research.github.miner.repositories.issues`<br>
+  **default:** `true`<br>
+  **description:** a `true`/`false` parameter for whether or not to download
+  data about issues for each project.
+  
+* **name:** `net.wagstrom.research.github.miner.repositories.pullrequests`<br>
+  **default:** `true`<br>
+  **description:** a `true`/`false` parameter for whether or not to download
+  data about pull requests for each project.
 
-# Getting Going
+* **name:** `net.wagstrom.research.github.miner.repositories.users`<br>
+  **default:** `true`<br>
+  **description:** a `true`/`false` parameter for whether or not to download
+  all the data about all the users for each project. **FIXME:** I'm not certain
+  off the top of my head about what interplay this has with other settings above.
+  
+* **name:** `net.wagstrom.research.github.miner.users.events`<br>
+  **default:** `true`<br>
+  **description:** a `true`/`false` parameter for whether or not to download the
+  public events stream for each user mined.
+  
+* **name:** `net.wagstrom.research.github.miner.users.gists`<br>
+  **default:** `true`<br>
+  **description:** a `true`/`false` parameter for whether or not to download the
+  set of gists for each user mined.
 
-This will clean the source tree, compile the code, run the tests, package the
-code into a jar file, and finally copy all the libraries to a location that
-makes some modicum of sense. Then to run the mining scripts just run:
-    ./github.sh
+* **name:** `net.wagstrom.research.github.miner.users`<br>
+  **default:** `true`<br>
+  **description:** a `true`/`false` parameter for whether or not to download
+  any information for the users listed in `net.wagstrom.research.github.users`.
+  
+* **name:** `net.wagstrom.research.github.miner.organizations`<br>
+  **default:** `true`<br>
+  **description:** a `true`/`false` parameter for whether or not to download
+  any information for the organizations listed in `net.wagstrom.research.github.organizations`.
+  
+* **name:** `net.wagstrom.research.github.miner.gists`<br>
+  **default:** `true`<br>
+  **description:** a `true`/`false` parameter for whether or not to download
+  any gists at all.
+  
+* **name:** `net.wagstrom.research.github.dbengine`<br>
+  **default:** `neo4j`<br>
+  **description:** the name of the [Blueprints][blueprints] database backend
+  to use. Right now this has only been tested on `neo4j`, `orientdb`, and
+  `tinkergraph`. This feature is dependent on the features present in
+  [govscigraph][govscigraph].
+  
+* **name:** `net.wagstrom.research.github.dburl`<br>
+  **default:** `github.db`<br>
+  **description:** the URL of the database to save to. For neo4j this is
+  simply the directory where the database exists.
 
-# Configuration
-Project configuration is controlled through the `configuration.properties`
-file in `src/main/resources`. Don't commit it with your github username
-and apitoken, that would be bad.
+sample data
+-----------
 
-Actually, right now it doesn't actually use those fields and it probably won't
-anytime in the future. So don't worry so much about that.
+If you'd like to see the output of gitminer without having to execute it, we
+have made two full datasets available on github.
 
-## Additional important configuration parameters
-
-Various elements of the miner can be turned on and off by changing the values
-of their field to anything other than true. Those fields are:
-
-* net.wagstrom.research.github.miner.issues
-* net.wagstrom.research.github.miner.gists
-* net.wagstrom.research.github.miner.repositories
-* net.wagstrom.research.github.miner.organizations
-* net.wagstrom.research.github.miner.users
-
-# Explanation of fields
-Every Vertex in the database should have the following:
-* type: one of USER, REPOSITORY
-* created_at: ISO 8601 formatted date of when the node was created
-
-Every Edge in the database should have the followning fields:
-* label: not really a field, but always present
-* created_at: ISO 8601 formatted date of when the edge was created
-
-## User Vertex Fields
-
-## Repository Vertex Fields
-
+* [gitminer-data-rails][gitminer-data-rails]: a scrape of the rails ecosystem from
+the month of May 2012
+* [gitminer-data-tinkerpop][gitminer-data-tinkerpop]: a scrape of the projects
+in the tinkerpop stack from the month of May 2012
 
 [gh-api-limit]: http://developer.github.com/changes/2012-10-14-rate-limit-changes/
 [license]: http://www.apache.org/licenses/LICENSE-2.0.html
+[blueprints]: https://github.com/tinkerpop/blueprints
+[govscigraph]: https://github.com/pridkett/govscigraph
+[gitminer-data-rails]: https://github.com/pridkett/gitminer-data-rails
+[gitminer-data-tinkerpop]: https://github.com/pridkett/gitminer-data-tinkerpop

@@ -9,8 +9,8 @@ public class PropDefaults {
     public static final String GITHUB_USERNAMES = "";
     public static final String GITHUB_ORGANIZATIONS = "";
     public static final String GITHUB_REFRESH_TIME = "0.0";
-    public static final String GITHUB_THROTTLE_MAX_CALLS = "0";
-    public static final String GITHUB_THROTTLE_MAX_CALLS_INTERVAL = "0";
+    public static final String GITHUB_THROTTLE_MAX_CALLS = "4980";
+    public static final String GITHUB_THROTTLE_MAX_CALLS_INTERVAL = "3600";
     public static final String GITHUB_MINE_REPOS = "true";
     public static final String GITHUB_MINE_REPO_COLLABORATORS = "true";
     public static final String GITHUB_MINE_REPO_CONTRIBUTORS = "true";
