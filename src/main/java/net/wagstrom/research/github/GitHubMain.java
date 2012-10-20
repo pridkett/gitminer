@@ -104,7 +104,6 @@ public class GitHubMain {
         }
 
 
-        connectToGraph(props);
 
         // make sure that it gets shutdown properly
         GraphShutdownHandler gsh = new GraphShutdownHandler();
@@ -112,6 +111,23 @@ public class GitHubMain {
         Runtime.getRuntime().addShutdownHook(gsh);
 
         GitHubClient ghc = new GitHubClient();
+        String githubUsername = props.getProperty(PropNames.GITHUB_LOGIN, PropDefaults.GITHUB_LOGIN).trim();
+        String githubPassword = props.getProperty(PropNames.GITHUB_PASSWORD, PropDefaults.GITHUB_PASSWORD);
+        if (githubUsername.equals("") || githubPassword.equals("")) {
+            log.error("Must set properties {} and {}", PropNames.GITHUB_LOGIN, PropNames.GITHUB_PASSWORD);
+            log.error("Without these properties you'll be limited to 60 queries and hour, and I'm not going to do that.");
+            System.exit(-1);
+        }
+        String email = props.getProperty(PropNames.EMAIL_ADDRESS, PropDefaults.EMAIL_ADDRESS).trim();
+        if (email.equals("")) {
+            log.error("Must set property {}", PropNames.EMAIL_ADDRESS);
+            log.error("GitHub has requested that contact information be included in the user agent field. This address is only used to append to GitMiner user agent.");
+            System.exit(-1);
+        }
+        ghc.setCredentials(githubUsername, githubPassword);
+        ghc.setUserAgent("GitMiner ( version: " + Constants.VERSION + ", https://github.com/pridkett/gitminer, based off egit, user: " + githubUsername + " email: " + email + " )");
+
+        connectToGraph(props);
 
         IssueMinerV3 imv3 = new IssueMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
         PullMinerV3 pmv3 = new PullMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
