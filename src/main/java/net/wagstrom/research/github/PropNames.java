@@ -3,6 +3,7 @@ package net.wagstrom.research.github;
 public class PropNames {
     public static final String GITHUB_LOGIN = "net.wagstrom.research.github.login";
     public static final String GITHUB_PASSWORD = "net.wagstrom.research.github.password";
+    public static final String GITHUB_TOKEN = "net.wagstrom.research.github.token";
     public static final String EMAIL_ADDRESS = "net.wagstrom.research.github.email";
     
     public static final String GITHUB_PROJECT_NAMES = "net.wagstrom.research.github.projects";

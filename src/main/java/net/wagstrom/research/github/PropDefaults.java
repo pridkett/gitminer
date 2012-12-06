@@ -4,6 +4,7 @@ public class PropDefaults {
     public static final String EMAIL_ADDRESS = "";
     public static final String GITHUB_LOGIN = "";
     public static final String GITHUB_PASSWORD = "";
+    public static final String GITHUB_TOKEN = "";
     
     public static final String GITHUB_PROJECT_NAMES = "";
     public static final String GITHUB_USERNAMES = "";
