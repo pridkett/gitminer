@@ -32,6 +32,13 @@ enough to get you going. Copy this data to a file and name it something like
 
     net.wagstrom.research.github.projects=pridkett/gitminer
 
+Alternatively, you may authenticate by using an OAuth token to be
+configured as follows in lieu of giving login and password.
+
+    net.wagstrom.research.github.token=YOUROAUTHTOKEN
+
+See http://developer.github.com/v3/oauth/ for more information.
+
 Execution
 ---------
 Execution of GitMiner is a two step process that consists of first using the
@@ -66,6 +73,12 @@ for the tool to function.
 * **name:** `net.wagstrom.research.github.password`<br>
   **default:** no default<br>
   **description:** the companion to `net.wagstrom.research.github.login`.
+  
+* **name:** `net.wagstrom.research.github.token`<br>
+  **default:** no default<br>
+  **description:** this can be set instead of login and password to
+  authenticate with GitHub using the given OAuth token as documented on
+  http://developer.github.com/v3/oauth/.
   
 * **name:** `net.wagstrom.research.github.email`<br>
   **default:** no default<br>

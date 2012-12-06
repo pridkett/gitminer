@@ -113,8 +113,13 @@ public class GitHubMain {
         GitHubClient ghc = new GitHubClient();
         String githubUsername = props.getProperty(PropNames.GITHUB_LOGIN, PropDefaults.GITHUB_LOGIN).trim();
         String githubPassword = props.getProperty(PropNames.GITHUB_PASSWORD, PropDefaults.GITHUB_PASSWORD);
-        if (githubUsername.equals("") || githubPassword.equals("")) {
-            log.error("Must set properties {} and {}", PropNames.GITHUB_LOGIN, PropNames.GITHUB_PASSWORD);
+        String githubToken    = props.getProperty(PropNames.GITHUB_TOKEN, PropDefaults.GITHUB_TOKEN).trim();
+        if (!githubUsername.equals("") && !githubPassword.equals("")) {
+            ghc.setCredentials(githubUsername, githubPassword);
+        } else if (!githubToken.equals("")) {
+            ghc.setOAuth2Token(githubToken);
+        } else {
+            log.error("Must set properties {} and {}, or {}", new String[]{PropNames.GITHUB_LOGIN, PropNames.GITHUB_PASSWORD, PropNames.GITHUB_TOKEN});
             log.error("Without these properties you'll be limited to 60 queries and hour, and I'm not going to do that.");
             System.exit(-1);
         }
@@ -124,7 +129,6 @@ public class GitHubMain {
             log.error("GitHub has requested that contact information be included in the user agent field. This address is only used to append to GitMiner user agent.");
             System.exit(-1);
         }
-        ghc.setCredentials(githubUsername, githubPassword);
         ghc.setUserAgent("GitMiner ( version: " + Constants.VERSION + ", https://github.com/pridkett/gitminer, based off egit, user: " + githubUsername + " email: " + email + " )");
 
         connectToGraph(props);
