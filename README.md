@@ -63,7 +63,7 @@ To begin, run GitMiner so it downloads data from using the GitHub API:
 Next, use the repository loader functions of GitMiner to download the source
 code history for the projects.
 
-    ./repo-loader.sh -c configuration.properties
+    ./repository-loader.sh -c configuration.properties
 
 
 Configuration Parameters
