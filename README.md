@@ -3,7 +3,7 @@ GitMiner
 
 Copyright (c) 2011-2012 by IBM and the University of Nebraska-Lincoln
 
-By Patrick Wagstrom &lt;<patrick@wagstrom.net>&gt; and Corey Jurgenson
+By Patrick Wagstrom &lt;<patrick@wagstrom.net>&gt; and Corey Jergenson &lt;<corey.jergensen@gmail.com>&gt;
 
 This project is from a joint research project between IBM Research and the
 University of Nebraska-Lincoln. Under the terms of that agreement all output
