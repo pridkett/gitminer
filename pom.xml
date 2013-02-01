@@ -142,6 +142,25 @@
   <build>
     <directory>${basedir}/target</directory>
     <finalName>${project.artifactId}-${project.version}</finalName>
+    <resources>
+      <!-- don't pack logback.xml into the jar file
+           see: http://stackoverflow.com/questions/5637532/maven-how-to-place-resource-file-together-with-jar
+      -->
+      <resource>
+        <directory>src/main/resources</directory>
+        <excludes>
+          <exclude>logback.xml</exclude>
+        </excludes>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <includes>
+          <include>logback.xml</include>
+        </includes>
+        <!-- location is relative to target/classes -->
+        <targetPath>..</targetPath>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
