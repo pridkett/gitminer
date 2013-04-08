@@ -67,6 +67,7 @@ public final class PropertyName {
     public static final String GIT_PUSH_URL = "gitPushUrl";
     public static final String GIT_URL = "gitUrl";
     public static final String GRAVATAR_ID = "gravatarId";
+    public static final String HASH = "hash";
     public static final String HAS_DOWNLOADS = "hasDownloads";
     public static final String HAS_ISSUES = "hasIssues";
     public static final String HAS_WIKI = "hasWiki";
