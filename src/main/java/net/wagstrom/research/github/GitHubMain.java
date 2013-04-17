@@ -202,12 +202,16 @@ public class GitHubMain {
                                     log.warn("issue {} - last updated: {}", issue.getNumber(), savedIssues.get(issue.getNumber()));
                                 }
                                 log.debug("Pulling events for issue: {} - {}", new Object[]{issueId, savedIssues.get(issue.getNumber())});
-                                Collection<IssueEvent> evts = imv3.getIssueEvents(repo, issue);
-                                log.trace("issue {} events: {}", new Object[]{issueId, evts.size()});
                                 try {
-                                    bp.saveIssueEvents(repo, issue, evts);
+                                    Collection<IssueEvent> evts = imv3.getIssueEvents(repo, issue);
+                                    if (evts != null) {
+                                        log.trace("issue {} events: {}", new Object[]{issueId, evts.size()});
+                                        bp.saveIssueEvents(repo, issue, evts);
+                                    } else {
+                                        log.warn("issue {} events returned null", issueId);
+                                    }
                                 } catch (NullPointerException e) {
-                                    log.error("NullPointer exception saving issue events: {}", issueId);
+                                    log.error("NullPointer exception getting issue events: {}", issueId);
                                 }
                             }
                         } else {
