@@ -1353,7 +1353,7 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
 
     public Vertex saveUser(final User user, final boolean overwrite) {
         Vertex node = getOrCreateUser(user.getLogin());
-        log.debug("Saving User: {}", user.toString());
+        log.debug("Saving User: {}", user.getLogin());
 
         setProperty(node, PropertyName.BIOGRAPHY, user.getBiography());
         setProperty(node, PropertyName.BLOG, user.getBlog());
