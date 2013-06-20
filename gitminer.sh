@@ -14,4 +14,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-target/github-*-standalone/bin/github.sh $@
+target/gitminer-*-standalone/bin/gitminer.sh $@

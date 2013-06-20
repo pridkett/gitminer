@@ -3,11 +3,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>net.wagstrom.research</groupId>
-  <artifactId>github</artifactId>
-  <version>0.2-SNAPSHOT</version>
+  <artifactId>gitminer</artifactId>
+  <version>0.3-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>github</name>
+  <name>gitminer</name>
   <description>A collection of tools for mining archival data from GitHub using
     the GitHub public APIs
   </description>
@@ -47,10 +47,8 @@
     <logback.version>0.9.29</logback.version>
     <logbackAddOns.version>0.1-SNAPSHOT</logbackAddOns.version>
     <args4j.version>2.0.16</args4j.version>
-    <govscigraph.version>0.2-SNAPSHOT</govscigraph.version>
-    <blueprints.version>1.2</blueprints.version>
-    <pipes.version>1.0</pipes.version>
-    <gremlin.version>1.5</gremlin.version>
+    <govscigraph.version>2.1.0-SNAPSHOT</govscigraph.version>
+    <blueprints.version>2.1.0</blueprints.version>
     <jgit.version>1.1.0.201109151100-r</jgit.version>
     <mylyn.github.version>1.3.0-SNAPSHOT-WAGSTROM</mylyn.github.version>
     <findbugs.version>2.4.0</findbugs.version>
@@ -86,12 +84,12 @@
     <dependency>
       <groupId>com.tinkerpop</groupId>
       <artifactId>pipes</artifactId>
-      <version>${pipes.version}</version>
+      <version>${blueprints.version}</version>
     </dependency>
     <dependency>
       <groupId>com.tinkerpop.gremlin</groupId>
       <artifactId>gremlin-java</artifactId>
-      <version>${gremlin.version}</version>
+      <version>${blueprints.version}</version>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>

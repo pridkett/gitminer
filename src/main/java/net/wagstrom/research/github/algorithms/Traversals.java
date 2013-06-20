@@ -9,8 +9,8 @@ import net.wagstrom.research.github.EdgeType;
 import net.wagstrom.research.github.PropertyName;
 import net.wagstrom.research.github.VertexType;
 
-import com.tinkerpop.blueprints.pgm.Element;
-import com.tinkerpop.blueprints.pgm.Vertex;
+import com.tinkerpop.blueprints.Element;
+import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.gremlin.java.GremlinPipeline;
 
 import org.slf4j.Logger;

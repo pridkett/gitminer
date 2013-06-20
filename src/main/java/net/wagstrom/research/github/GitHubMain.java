@@ -61,6 +61,7 @@ public class GitHubMain {
 
     public GitHubMain() {
         v3throttle = new ApiThrottle();
+        bp = null;
     }
 
     public void main() {
@@ -107,8 +108,7 @@ public class GitHubMain {
 
         // make sure that it gets shutdown properly
         GraphShutdownHandler gsh = new GraphShutdownHandler();
-        gsh.addShutdownHandler(bp);
-        Runtime.getRuntime().addShutdownHook(gsh);
+
 
         GitHubClient ghc = new GitHubClient();
         String githubUsername = props.getProperty(PropNames.GITHUB_LOGIN, PropDefaults.GITHUB_LOGIN).trim();
@@ -132,6 +132,8 @@ public class GitHubMain {
         ghc.setUserAgent("GitMiner ( version: " + Constants.VERSION + ", https://github.com/pridkett/gitminer, based off egit, user: " + githubUsername + " email: " + email + " )");
 
         connectToGraph(props);
+        gsh.addShutdownHandler(bp);
+        Runtime.getRuntime().addShutdownHook(gsh);
 
         IssueMinerV3 imv3 = new IssueMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));
         PullMinerV3 pmv3 = new PullMinerV3(ThrottledGitHubInvocationHandler.createThrottledGitHubClient((IGitHubClient)ghc, v3throttle));

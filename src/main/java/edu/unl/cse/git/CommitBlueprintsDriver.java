@@ -16,8 +16,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ibm.research.govsci.graph.Shutdownable;
-import com.tinkerpop.blueprints.pgm.Edge;
-import com.tinkerpop.blueprints.pgm.Vertex;
+import com.tinkerpop.blueprints.Edge;
+import com.tinkerpop.blueprints.Vertex;
 
 public class CommitBlueprintsDriver extends BlueprintsDriver implements Shutdownable {
     private final static Logger log = LoggerFactory.getLogger(CommitBlueprintsDriver.class); // NOPMD

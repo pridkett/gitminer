@@ -71,10 +71,10 @@ import org.slf4j.LoggerFactory;
 
 import com.ibm.research.govsci.graph.BlueprintsBase;
 import com.ibm.research.govsci.graph.Shutdownable;
-import com.tinkerpop.blueprints.pgm.Edge;
-import com.tinkerpop.blueprints.pgm.Element;
-import com.tinkerpop.blueprints.pgm.Index;
-import com.tinkerpop.blueprints.pgm.Vertex;
+import com.tinkerpop.blueprints.Edge;
+import com.tinkerpop.blueprints.Element;
+import com.tinkerpop.blueprints.Index;
+import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.gremlin.java.GremlinPipeline;
 
 /**
@@ -120,8 +120,6 @@ public class BlueprintsDriver extends BlueprintsBase implements Shutdownable {
      */
     public BlueprintsDriver(final String dbengine, final String dburl, final Map<String, String> config) {
         super(dbengine, dburl, config);
-        // FIXME: eventually this should be configurable
-        setMaxBufferSize(100000);
 
         useridx = getOrCreateIndex(IndexNames.USER);
         repoidx = getOrCreateIndex(IndexNames.REPOSITORY);

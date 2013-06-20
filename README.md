@@ -48,7 +48,7 @@ has all the settings you'll need for stages.
 
 To begin, run GitMiner so it downloads data from using the GitHub API:
 
-    ./github.sh -c configuration.properties
+    ./gitminer.sh -c configuration.properties
 
 Next, use the repository loader functions of GitMiner to download the source
 code history for the projects.
