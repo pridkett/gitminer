@@ -1,3 +1,3 @@
 #!/bin/bash
 
-target/github-*-standalone/bin/repository_loader.sh $@
+target/gitminer-*-standalone/bin/repository_loader.sh $@
