@@ -39,6 +39,16 @@ configured as follows in lieu of giving login and password.
 
 See http://developer.github.com/v3/oauth/ for more information.
 
+If you plan on using the Git Repository loading functionality then you'll need
+to set the following options that are specific to that functionality. In the
+future these options will be merged together, but for right now you'll just
+need to repeat them.
+
+    edu.unl.cse.git.dbengine=neo4j
+    edu.unl.cse.git.dburl=graph.db
+    edu.unl.cse.git.repositories=pridkett/gitminer
+
+
 Execution
 ---------
 Execution of GitMiner is a two step process that consists of first using the
