@@ -20,7 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RepositoryLoader {
-    private final static String METHOD = "http://";
+    private final static String METHOD = "https://";
     private final static String BASE = "github.com/";
     private final static File LOCAL_STORE = new File(GithubProperties.props().getProperty("edu.unl.cse.git.localStore", "/tmp/repo_loader" ));
     private final static Logger log = LoggerFactory.getLogger(RepositoryLoader.class); // NOPMD

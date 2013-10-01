@@ -15,6 +15,14 @@ public class AppMain {
     public AppMain() {
     }
 
+    private String getProperty( Properties p, String key, String dft ) {
+        String rv = p.getProperty(key);
+        if (rv == null) {
+            rv = dft;
+        }
+        return rv.trim();
+    }
+
     private String getProperty( Properties p, String key ) {
         try {
             return p.getProperty( key ).trim();
@@ -77,11 +85,11 @@ public class AppMain {
 
         CommitBlueprintsDriver bp = connectToGraph(p);
 
-        String[] repositories = getProperty( p, "edu.unl.cse.git.repositories" ).split(",");
+        String[] repositories = getProperty(p, "edu.unl.cse.git.repositories" ).split(",");
         for ( String reponame : repositories ) {
        	    loadRepository(bp, reponame);
             // remove if configured to
-            if (getProperty(p,"edu.unl.cse.git.repositories.removeAfterLoad").equals("true")) {
+            if (getProperty(p,"edu.unl.cse.git.repositories.removeAfterLoad", "false").equals("true")) {
             	log.info("Removing Local Repository: " + reponame);
             	RepositoryLoader.removeRepository(reponame);
             }
