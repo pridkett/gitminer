@@ -217,6 +217,7 @@ Java Options
   In some cases, for some repositories, substantial java memory is required.  
   In these cases, setting the java memory as follows seems to work. 
   *this fixes ISSUE 34
+  
   export JAVA_OPTIONS="-Xms12g -Xmx12g"
 
 sample data
