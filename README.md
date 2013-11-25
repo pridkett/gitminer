@@ -212,6 +212,14 @@ for the tool to function.
   **description:** the URL of the database to save to. For neo4j this is
   simply the directory where the database exists.
 
+Java Options
+-----------
+  In some cases, for some repositories, substantial java memory is required.  
+  In these cases, setting the java memory as follows seems to work. 
+  *this fixes ISSUE 34
+  
+  export JAVA_OPTIONS="-Xms12g -Xmx12g"
+
 sample data
 -----------
 
