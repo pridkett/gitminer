@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 public final class Utils {
     private static final Logger log = LoggerFactory.getLogger(Utils.class);  // NOPMD
     private static final Pattern GRAVATAR_PATTERN = Pattern.compile("([a-f0-9]{32})");
+    private static final Pattern GITHUB_AVATAR_PATTERN = Pattern.compile("/([0-9]+)\\??");
     
     /**
      * All methods of this class are static. Do not initialize it.
@@ -70,7 +71,11 @@ public final class Utils {
         String hash = null;
         Matcher matcher = GRAVATAR_PATTERN.matcher(gravatarId);
         if (matcher.find()) {
-            hash = matcher.group(0);
+            return matcher.group(0);
+        }
+        matcher = GITHUB_AVATAR_PATTERN.matcher(gravatarId);
+        if (matcher.find()) {
+            return matcher.group(1);
         }
         return hash;
     }
