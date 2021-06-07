@@ -44,7 +44,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <slf4j.version>1.6.1</slf4j.version>
     <junit.version>4.10</junit.version>
-    <logback.version>0.9.29</logback.version>
+    <logback.version>1.2.0</logback.version>
     <logbackAddOns.version>0.1-SNAPSHOT</logbackAddOns.version>
     <args4j.version>2.0.16</args4j.version>
     <govscigraph.version>2.1.0-SNAPSHOT</govscigraph.version>
